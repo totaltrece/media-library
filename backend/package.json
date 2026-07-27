@@ -1,7 +1,10 @@
 {
-  "name": "backend",
+  "name": "@media-library/backend",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "tsx watch src/main.ts"
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js"
   }
 }
