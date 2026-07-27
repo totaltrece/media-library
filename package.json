@@ -1,9 +1,33 @@
 {
   "name": "media-library",
   "private": true,
-  "packageManager": "pnpm@10",
+  "packageManager": "pnpm@10.17.1",
   "scripts": {
-    "dev": "echo Configure workspaces",
-    "build": "echo build"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "turbo": "^2.10.7",
+    "typescript": "^7.0.2"
+  }
+}
+
+{
+  "name": "media-library",
+  "private": true,
+  "packageManager": "pnpm@10.17.1",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2"
   }
 }
