@@ -1,0 +1,9 @@
+{
+  "name": "media-library",
+  "private": true,
+  "packageManager": "pnpm@10",
+  "scripts": {
+    "dev": "echo Configure workspaces",
+    "build": "echo build"
+  }
+}
