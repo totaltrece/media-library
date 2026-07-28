@@ -13,6 +13,24 @@ test("indexes real TagSpaces metadata and extracts only tag titles", async () =>
 
   assert.deepEqual(indexedVideos, [
     {
+      videoPath: resolve(libraryPath, "PXL_20260130_200612818.TS.mp4"),
+      metadataPath: resolve(
+        libraryPath,
+        ".ts/PXL_20260130_200612818.TS.mp4.json",
+      ),
+      thumbnailPath: resolve(
+        libraryPath,
+        ".ts/PXL_20260130_200612818.TS.mp4.jpg",
+      ),
+      tags: [
+        "pascual",
+        "gabriela",
+        "salsa",
+        "mano-cadera",
+        "rosca",
+      ],
+    },
+    {
       videoPath: resolve(libraryPath, "PXL_20260702_201741381.TS.mp4"),
       metadataPath: resolve(libraryPath, ".ts/PXL_20260702_201741381.TS.mp4.json"),
       thumbnailPath: resolve(libraryPath, ".ts/PXL_20260702_201741381.TS.mp4.jpg"),
@@ -30,6 +48,7 @@ test("indexes real TagSpaces metadata and extracts only tag titles", async () =>
       thumbnailPath: resolve(libraryPath, ".ts/PXL_20260703_202126509.TS.mp4.jpg"),
       tags: ["salsa", "on2", "gabriela", "pedro"],
     },
+
   ]);
 });
 
