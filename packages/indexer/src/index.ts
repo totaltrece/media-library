@@ -1,12 +1,13 @@
-import { readdir, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
 
 const videoExtensions = new Set([".mp4", ".mov", ".mkv", ".avi"]);
 
 export interface IndexedVideo {
   videoPath: string;
-  metadataPath: string | undefined;
-  thumbnailPath: string | undefined;
+  metadataPath?: string;
+  thumbnailPath?: string;
+  tags: string[];
 }
 
 /**
@@ -19,14 +20,36 @@ export async function indexLibrary(libraryPath: string): Promise<IndexedVideo[]>
   return Promise.all(
     videoPaths.map(async (videoPath) => {
       const sidecarBasePath = join(libraryPath, ".ts", basename(videoPath));
+      const metadataPath = await existingFilePath(`${sidecarBasePath}.json`);
 
       return {
         videoPath,
-        metadataPath: await existingFilePath(`${sidecarBasePath}.json`),
+        metadataPath,
         thumbnailPath: await existingFilePath(`${sidecarBasePath}.jpg`),
+        tags: await extractTagTitles(metadataPath),
       };
     }),
   );
+}
+
+async function extractTagTitles(metadataPath: string | undefined): Promise<string[]> {
+  if (metadataPath === undefined) {
+    return [];
+  }
+
+  try {
+    const metadata: unknown = JSON.parse(await readFile(metadataPath, "utf8"));
+
+    if (!isRecord(metadata) || !Array.isArray(metadata.tags)) {
+      return [];
+    }
+
+    return metadata.tags.flatMap((tag: unknown) =>
+      isRecord(tag) && typeof tag.title === "string" ? [tag.title] : [],
+    );
+  } catch {
+    return [];
+  }
 }
 
 async function findVideoPaths(directoryPath: string): Promise<string[]> {
@@ -63,4 +86,8 @@ async function existingFilePath(path: string): Promise<string | undefined> {
 
 function isMissingFileError(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
