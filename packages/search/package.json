@@ -1,0 +1,15 @@
+{
+  "name": "@media-library/search",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "pnpm --filter @media-library/indexer build && tsc --project tsconfig.test.json && node --test dist-test/test/index.test.js"
+  },
+  "dependencies": {
+    "@media-library/indexer": "workspace:*"
+  }
+}

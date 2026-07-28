@@ -24,6 +24,12 @@ importers:
 
   packages/indexer: {}
 
+  packages/search:
+    dependencies:
+      '@media-library/indexer':
+        specifier: workspace:*
+        version: link:../indexer
+
   packages/shared: {}
 
 packages:
