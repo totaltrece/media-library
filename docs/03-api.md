@@ -1,285 +1,169 @@
-# Frontend Architecture
+# REST API
 
-Version: 1.0
+Version: 2.0
 
 ---
 
 # Purpose
 
-The frontend provides a simple and responsive web interface for exploring a
-TagSpaces media library.
+The REST API is the only communication channel between clients and the Media
+Library backend.
 
-Its only responsibility is presenting information returned by the backend.
+Clients never access the filesystem directly.
 
-All business logic remains on the server.
+The API exposes search capabilities, thumbnails and video streaming using stable
+media identifiers.
+
+---
+
+# Principles
+
+The API should be:
+
+- simple
+- predictable
+- read-only
+- stateless
+
+All responses use JSON except media streaming endpoints.
+
+---
+
+# Endpoints
+
+## Health
+
+```text
+GET /health
+```
+
+Response
+
+```json
+{
+  "status": "ok"
+}
+```
+
+---
+
+## Search
+
+```text
+GET /search?tag=salsa
+```
+
+Multiple tags:
+
+```text
+GET /search?tag=salsa&tag=bea
+```
+
+Response
+
+```json
+{
+  "query": {
+    "tags": [
+      "salsa",
+      "bea"
+    ]
+  },
+  "count": 2,
+  "results": [
+    {
+      "id": "bachata/20250630_193642391.TS.mp4",
+      "name": "20250630_193642391.TS.mp4",
+      "thumbnail": "/thumbnail/bachata/20250630_193642391.TS.mp4",
+      "video": "/video/bachata/20250630_193642391.TS.mp4",
+      "tags": [
+        "y:2025",
+        "m:06",
+        "d:30",
+        "bachata",
+        "damian",
+        "bea"
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Thumbnail
+
+```text
+GET /thumbnail/:id
+```
+
+Returns the existing TagSpaces thumbnail associated with the requested media.
+
+If no thumbnail exists, the endpoint returns **404 Not Found**.
+
+---
+
+## Video
+
+```text
+GET /video/:id
+```
+
+Streams the original video from the media library.
+
+The endpoint supports HTTP Range requests and is compatible with the HTML5
+`<video>` element.
+
+---
+
+# Media Identifier
+
+Every indexed video has a stable identifier.
+
+The identifier is the relative path of the video inside the configured media
+library.
+
+Example:
+
+```text
+bachata/2025/course/PXL_20250630_193642391.TS.mp4
+```
+
+Clients treat the identifier as an opaque value.
+
+They never construct or modify it.
+
+---
+
+# Error Responses
+
+Errors use the following structure:
+
+```json
+{
+  "error": {
+    "message": "Video not found"
+  }
+}
+```
 
 ---
 
 # Responsibilities
 
-The frontend is responsible for:
+Backend
 
-- allowing users to search videos
-- displaying search results
+- indexing
+- searching
+- identifier resolution
+- thumbnail serving
+- video streaming
+
+Frontend
+
+- sending search requests
+- displaying results
 - displaying thumbnails
-- opening selected videos
-- showing application status
+- playing streamed videos
 
-The frontend is not responsible for:
-
-- indexing the library
-- searching directly in the filesystem
-- reading TagSpaces metadata
-- implementing business rules
-
----
-
-# Technology
-
-The frontend is implemented using:
-
-- Vue 3
-- TypeScript
-- Vite
-
-The application is a Single Page Application (SPA).
-
----
-
-# Communication
-
-The frontend communicates only with the backend REST API.
-
-It never accesses the filesystem directly.
-
-All application data comes from HTTP requests.
-
----
-
-# Application Layout
-
-Version 1.0 consists of a single page.
-
-```text
-+--------------------------------------------------+
-
-                Search Bar
-
-----------------------------------------------------
-
-             Search Results
-
-----------------------------------------------------
-
-             Status Bar
-
-+--------------------------------------------------+
-```
-
----
-
-# Main Components
-
-## App
-
-Application root.
-
-Responsible for application initialization.
-
----
-
-## SearchBar
-
-Allows entering one or more tags.
-
-Responsibilities:
-
-- edit search query
-- submit search
-- clear search
-
----
-
-## SearchResults
-
-Displays matching videos.
-
-Responsibilities:
-
-- render result list
-- handle empty searches
-- handle no results
-
----
-
-## SearchResultCard
-
-Displays one video.
-
-Shows:
-
-- thumbnail
-- filename
-- tags
-
-Provides:
-
-- open video
-
----
-
-## StatusBar
-
-Displays application information.
-
-Examples:
-
-- indexed videos
-- search duration
-- backend status
-
----
-
-# User Flow
-
-```text
-Application Starts
-
-↓
-
-Load statistics
-
-↓
-
-User types tags
-
-↓
-
-Search request
-
-↓
-
-Results displayed
-
-↓
-
-User opens video
-```
-
----
-
-# State Management
-
-Version 1.0 keeps state simple.
-
-Application state includes:
-
-- current query
-- search results
-- loading state
-- backend status
-- statistics
-
-A dedicated state management library is not required.
-
-Vue's built-in reactivity is sufficient.
-
----
-
-# Routing
-
-Version 1.0 uses a single route.
-
-```
-/
-```
-
-Additional routes may be introduced in future versions.
-
----
-
-# Error Handling
-
-The frontend should gracefully handle:
-
-- backend unavailable
-- empty searches
-- no results
-- unexpected errors
-
-Users should always receive a clear message.
-
----
-
-# Styling
-
-Version 1.0 prioritizes usability over visual design.
-
-Goals:
-
-- responsive layout
-- desktop friendly
-- tablet friendly
-- mobile friendly
-
-Avoid unnecessary visual complexity.
-
----
-
-# Accessibility
-
-The interface should:
-
-- support keyboard navigation
-- provide meaningful labels
-- maintain sufficient contrast
-- remain usable without a mouse
-
----
-
-# Performance
-
-The frontend should:
-
-- avoid unnecessary renders
-- minimize API requests
-- remain responsive with large result sets
-
-Premature optimization should be avoided.
-
----
-
-# Testing Strategy
-
-Frontend tests should cover:
-
-- components
-- API integration
-- user interaction
-
-Visual appearance should not be tested unless behaviour depends on it.
-
----
-
-# Design Principles
-
-The frontend should remain:
-
-- simple
-- responsive
-- predictable
-- framework-idiomatic
-- independent from backend implementation details
-
----
-
-# Cursor Notes
-
-Before implementing frontend changes:
-
-- Read AGENTS.md.
-- Read docs/00-vision.md.
-- Read docs/03-api.md.
-- Keep business logic on the backend.
-- Do not duplicate server-side logic.
-- Add component tests whenever practical.
+Filesystem paths are never exposed to clients.

@@ -1,279 +1,222 @@
-# REST API
+# Frontend
 
-Version: 1.0
+Version: 2.0
 
 ---
 
 # Purpose
 
-This document defines the public HTTP API exposed by the Media Library backend.
+The frontend is the primary user interface of Media Library.
 
-The API is intentionally small.
+Its responsibility is to allow users to browse, search and watch videos from
+their TagSpaces library using a standard web browser.
 
-Its primary purpose is to allow the frontend to browse a TagSpaces media library
-through a read-only interface.
+The frontend contains no business logic.
 
-All responses use JSON.
-
----
-
-# General Principles
-
-The API:
-
-- is read-only
-- never modifies the media library
-- never modifies TagSpaces metadata
-- is stateless
-- uses UTF-8 JSON
+All media information is obtained through the backend API.
 
 ---
 
-# Base URL
+# Design Principles
 
-```
-http://localhost:3000
-```
+The frontend should be:
 
----
+- responsive
+- lightweight
+- fast
+- mobile-first
+- framework-independent where practical
 
-# Endpoints
+Business rules belong in the backend.
 
-Version 1.0 provides the following endpoints.
-
-| Method | Endpoint | Description |
-|----------|----------|-------------|
-| GET | /health | Backend status |
-| GET | /stats | Library statistics |
-| GET | /search | Search videos |
-| POST | /reindex | Rebuild the internal index |
+The frontend focuses exclusively on user interaction and presentation.
 
 ---
 
-# GET /health
+# Main Responsibilities
 
-Returns the backend status.
+The frontend is responsible for:
 
-## Response
+- searching videos
+- displaying search results
+- displaying thumbnails
+- selecting videos
+- playing streamed videos
+- handling loading and error states
 
-```json
-{
-  "status": "ok"
-}
-```
-
-HTTP Status
-
-```
-200 OK
-```
+The frontend never accesses the filesystem.
 
 ---
 
-# GET /stats
+# Main Screens
 
-Returns general information about the indexed library.
+## Search
 
-## Response
+The initial screen contains:
 
-```json
-{
-  "videos": 352,
-  "tags": 146,
-  "indexedAt": "2026-08-04T18:21:03Z"
-}
-```
+- search box
+- active tag filters
+- search button (optional)
+- search results
 
-Fields
-
-| Field | Description |
-|--------|-------------|
-| videos | Number of indexed videos |
-| tags | Number of unique tags |
-| indexedAt | Last successful indexing |
+Searching should feel immediate and responsive.
 
 ---
 
-# GET /search
+## Results
 
-Searches the indexed library.
+Each result displays:
 
-The backend never scans the filesystem while executing a search.
+- thumbnail
+- filename
+- tags
+
+Selecting a result opens the embedded player.
 
 ---
 
-## Query Parameters
+## Video Player
 
-### tags
+The player streams the selected video directly from the backend.
 
-Comma-separated list of tags.
+Playback uses the standard HTML5 `<video>` element.
 
-Example
+The player supports:
 
-```
-GET /search?tags=salsa,bea
+- play
+- pause
+- seek
+- fullscreen
+
+The frontend never downloads or copies media files.
+
+---
+
+# Layout
+
+The application follows a simple two-area layout.
+
+Desktop:
+
+```text
++-------------------------------+
+| Search                        |
++-------------------------------+
+| Results       | Video Player  |
+|               |               |
+|               |               |
++---------------+---------------+
 ```
 
-The search returns videos containing every requested tag.
+Tablet / Mobile:
 
-Tag matching is case-insensitive.
+```text
+Search
 
----
+↓
 
-## Successful Response
+Results
 
-```json
-{
-  "count": 2,
-  "results": [
-    {
-      "path": "20250630_193642391.TS.mp4",
-      "thumbnail": "/thumbnails/20250630_193642391.TS.mp4.jpg",
-      "tags": [
-        "bachata",
-        "bea",
-        "damian",
-        "top"
-      ]
-    }
-  ]
-}
+↓
+
+Video Player
 ```
 
----
-
-## Response Fields
-
-### count
-
-Number of matching videos.
-
-### results
-
-Array of matching videos.
-
-Each object contains:
-
-| Field | Description |
-|--------|-------------|
-| path | Relative video path |
-| thumbnail | Thumbnail URL |
-| tags | Video tags |
+The interface should remain comfortable on portrait-oriented devices.
 
 ---
 
-## Empty Result
+# Communication
 
-```json
-{
-  "count": 0,
-  "results": []
-}
+The frontend communicates exclusively with the REST API.
+
+Typical flow:
+
+```text
+User searches
+
+↓
+
+GET /search
+
+↓
+
+Display results
+
+↓
+
+User selects a video
+
+↓
+
+GET /video/:id
+
+↓
+
+HTML5 video playback
 ```
 
----
-
-# POST /reindex
-
-Rebuilds the internal search index.
-
-This operation reads the TagSpaces library again.
-
-The original files are never modified.
+No direct filesystem access exists.
 
 ---
 
-## Successful Response
+# Components
 
-```json
-{
-  "status": "ok",
-  "videos": 352
-}
-```
+The MVP should contain a small number of reusable components.
 
----
+Suggested components:
 
-# Error Responses
+- SearchBar
+- SearchResults
+- SearchResultItem
+- VideoPlayer
+- LoadingIndicator
+- ErrorMessage
 
-Unexpected errors use the following format.
-
-```json
-{
-  "error": {
-    "message": "Internal Server Error"
-  }
-}
-```
+Additional components can be introduced only when they simplify the codebase.
 
 ---
 
-# HTTP Status Codes
+# State Management
 
-| Code | Meaning |
-|------|---------|
-| 200 | Success |
-| 400 | Invalid request |
-| 404 | Resource not found |
-| 500 | Internal server error |
+The MVP should keep state management simple.
 
----
+Typical application state:
 
-# Versioning
+- current query
+- search results
+- selected video
+- loading state
+- error state
 
-Version 1.0 does not expose an explicit API version.
-
-If breaking changes become necessary in the future, the API should move to a
-versioned path.
-
-Example
-
-```
-/api/v2/search
-```
+Global state libraries are unnecessary unless future complexity justifies them.
 
 ---
 
-# Future Endpoints
+# Responsive Behaviour
 
-The following endpoints are outside the scope of version 1.0 but may be added
-later.
+The application is designed primarily for tablets.
 
-```
-GET /tags
+Portrait orientation should provide the best experience.
 
-GET /video
+Fullscreen playback must work correctly for vertically recorded videos.
 
-GET /duplicates
-
-GET /recent
-
-GET /library
-
-GET /config
-```
+Desktop browsers should also provide a comfortable experience.
 
 ---
 
-# Design Rules
+# Responsibilities Summary
 
-The API should remain:
+Frontend
 
-- simple
-- predictable
-- read-only
-- stable
-- independent from the frontend implementation
+- user interaction
+- presentation
+- navigation
+- video playback
 
----
+Backend
 
-# Cursor Notes
-
-Before implementing API changes:
-
-- Read AGENTS.md.
-- Read docs/00-vision.md.
-- Read docs/02-backend.md.
-- Preserve backward compatibility whenever possible.
-- Keep request and response models simple.
-- Add integration tests for every endpoint.
+- indexing
+- searching
+- streaming
+- filesystem access

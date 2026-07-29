@@ -1,194 +1,174 @@
-# Media Library Roadmap
+# Roadmap
 
-Version: 1.0
-
----
-
-# Goal
-
-This roadmap describes the planned evolution of Media Library from the current
-command-line prototype to a complete web application.
-
-Every milestone must end with a working application that can be executed and
-tested.
-
-Architecture improvements are welcome only when they directly support the
-current milestone.
+Version: 2.0
 
 ---
 
-# Current Status
+# Vision
 
-The project already provides:
+Media Library evolves in small, independently usable increments.
 
-- Monorepo using pnpm and Turborepo.
-- Hexagonal architecture.
-- Indexer package.
-- Search package.
-- Command-line search tool.
-- Automated tests.
+Each stage must produce a working application that users can immediately benefit
+from.
 
-Example:
-
-```bash
-pnpm run search -- --library "D:\Library" salsa bea
-```
-
-The CLI indexes the library and returns matching videos.
+The project grows by expanding capabilities rather than replacing previous
+implementations.
 
 ---
 
-# Milestone 1 — Backend API
+# Stage 1 — Foundation
 
 Goal
 
-Expose the existing search engine through a REST API.
+Build the technical foundations of the project.
+
+Completed
+
+- Monorepo
+- Turborepo workspace
+- TypeScript packages
+- Hexagonal architecture
+- Automated tests
 
 Result
 
-The following request should work:
-
-```text
-GET /search?tags=salsa,bea
-```
-
-and return JSON results.
-
-The existing packages must be reused.
-
-No frontend yet.
+A maintainable project structure ready for development.
 
 ---
 
-# Milestone 2 — Web Interface
+# Stage 2 — Library Discovery
 
 Goal
 
-Replace the command line with a browser.
+Understand the TagSpaces library.
+
+Completed
+
+- Recursive video discovery
+- TagSpaces metadata parsing
+- Thumbnail discovery
+- Tag extraction
 
 Result
 
-A user can:
-
-- open the application
-- search by tags
-- see matching videos
-
-The frontend communicates only with the backend API.
+The application can understand an existing TagSpaces library without modifying
+it.
 
 ---
 
-# Milestone 3 — Video Browser
+# Stage 3 — Search Engine
 
 Goal
 
-Turn search results into a pleasant browsing experience.
+Search indexed videos efficiently.
+
+Completed
+
+- Tag search
+- Multiple tag search
+- Case-insensitive search
+- CLI search tool
 
 Result
 
-Each result displays:
-
-- thumbnail
-- filename
-- tags
-
-The user can sort and browse results comfortably.
+Videos can be searched from the command line.
 
 ---
 
-# Milestone 4 — Open Videos
+# Stage 4 — HTTP Backend
 
 Goal
 
-Open videos directly from the browser.
+Expose Media Library through a REST API.
+
+Current status
+
+In progress.
+
+Capabilities
+
+- Health endpoint
+- Search endpoint
+- Statistics endpoint
+- Reindex endpoint
 
 Result
 
-Selecting a result opens the corresponding video using the operating system.
-
-No video streaming is required.
+Any client can communicate with the application through HTTP.
 
 ---
 
-# Milestone 5 — Persistent Index
+# Stage 5 — Media Streaming
 
 Goal
 
-Avoid rebuilding the index every time the backend starts.
+Serve media files over HTTP.
+
+Capabilities
+
+- Video streaming
+- Thumbnail streaming
+- HTTP Range support
+- Read-only access
 
 Result
 
-The application stores an internal index that can be reused across executions.
-
-The original media library remains untouched.
+Clients can browse and watch videos without direct filesystem access.
 
 ---
 
-# Milestone 6 — Reindexing
+# Stage 6 — Web Interface
 
 Goal
 
-Allow the user to refresh the index after modifying the TagSpaces library.
+Replace the command line with a browser interface.
+
+Capabilities
+
+- Search page
+- Results list
+- Embedded video player
+- Responsive layout
+- Fullscreen playback
 
 Result
 
-The application provides an explicit reindex operation.
-
-Automatic filesystem monitoring is not required.
+Users can browse and watch videos from any modern browser.
 
 ---
 
-# Milestone 7 — Statistics
+# Stage 7 — Daily Usage
 
 Goal
 
-Provide useful information about the library.
+Turn the application into a practical everyday tool.
 
-Examples
+Capabilities
 
-- total videos
-- total tags
-- most used tags
-
----
-
-# Milestone 8 — Remote Access
-
-Goal
-
-Allow Media Library to run as a permanent server.
+- Fast startup
+- Stable indexing
+- Smooth playback
+- Clear error reporting
+- Production build
 
 Result
 
-The same library can be accessed from:
-
-- desktop
-- tablet
-- mobile phone
-
-through a web browser.
+Media Library becomes the primary way of consuming a personal TagSpaces video
+library.
 
 ---
 
-# Version 1.0
+# Guiding Principles
 
-Media Library is considered version 1.0 when:
+Throughout every stage the project must remain:
 
-- indexing is reliable
-- searching is fast
-- the web interface is complete
-- the application is stable
-- the original TagSpaces library is never modified
+- read-only
+- self-hosted
+- simple
+- testable
+- maintainable
+- incremental
 
----
+No stage should require rewriting previous work.
 
-# Development Rules
-
-Every milestone must:
-
-- produce a working application
-- include automated tests
-- preserve the read-only guarantee
-- keep the hexagonal architecture
-- avoid unnecessary dependencies
-- finish with a small, reviewable commit
+Each stage builds upon the previous one.

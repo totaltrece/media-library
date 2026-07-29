@@ -1,194 +1,196 @@
-# Indexing Architecture
+# Indexing
 
-Version: 1.0
+Version: 2.0
 
 ---
 
 # Purpose
 
-The index is the core of Media Library.
+The indexing package is responsible for discovering and understanding an
+existing TagSpaces library.
 
-Its purpose is to transform a TagSpaces media library into a searchable
-representation optimized for fast queries.
+Its output is an in-memory representation of the media library that can be used
+by the search engine and the backend.
 
-The indexing process is completely read-only.
-
-No source file is ever modified.
-
----
-
-# Source of Truth
-
-The original media library is always the source of truth.
-
-Media Library never owns the data.
-
-The index is only a derived representation built from:
-
-- video files
-- TagSpaces JSON sidecar files
-- TagSpaces thumbnails
-
-If the original library changes, the index can always be rebuilt.
+The indexer never modifies the original library.
 
 ---
 
-# Indexing Process
+# Responsibilities
 
-The indexing process performs the following steps.
+The indexer is responsible for:
 
-1. Discover video files.
-2. Locate TagSpaces metadata.
-3. Read metadata.
-4. Extract searchable information.
-5. Build the internal index.
+- discovering videos recursively
+- locating TagSpaces sidecar metadata
+- locating TagSpaces thumbnails
+- extracting tag information
+- producing a searchable in-memory index
 
-After indexing, searches operate only on the generated index.
-
----
-
-# Search Process
-
-Searching never scans the filesystem.
-
-Instead, every search is executed against the current index.
-
-This guarantees predictable and fast search performance regardless of the number
-of queries.
-
----
-
-# Indexed Information
-
-Version 1.0 indexes:
-
-- video filename
-- relative path
-- thumbnail
-- tags
-
-Future versions may include additional searchable fields.
-
----
-
-# Index Lifecycle
-
-The application maintains one active index.
-
-The lifecycle is:
-
-```text
-Application starts
-
-↓
-
-Index library
-
-↓
-
-Serve searches
-
-↓
-
-Reindex (optional)
-
-↓
-
-Replace old index
-```
-
-The previous index remains available until a new one has been successfully built.
-
----
-
-# Reindexing
-
-Reindexing is an explicit operation.
-
-It rebuilds the complete index from the original TagSpaces library.
-
-A failed reindex must never leave the application without a valid index.
-
-The previous index remains active until the replacement is ready.
+The indexer does not perform searches or serve media files.
 
 ---
 
 # Read-only Guarantee
 
-The indexing process may:
+The indexing process must never:
 
-- read directories
-- read metadata
-- read thumbnails
-
-It must never:
-
-- write metadata
-- rename files
-- delete files
+- modify video files
+- modify TagSpaces metadata
 - modify thumbnails
+- rename files
+- move files
+- delete files
+
+The original TagSpaces library remains the single source of truth.
+
+---
+
+# Input
+
+The indexer receives a library root directory.
+
+Example:
+
+```text
+D:\baile
+```
+
+The library contains:
+
+- videos
+- TagSpaces JSON metadata
+- TagSpaces thumbnails
+
+No additional project-specific files are required.
+
+---
+
+# Output
+
+The result of indexing is a collection of indexed videos.
+
+Each indexed video contains the information required by the rest of the
+application.
+
+Typical fields include:
+
+- unique identifier
+- filename
+- original video path
+- thumbnail path (if available)
+- metadata path (if available)
+- extracted tags
+
+The original metadata is not exposed directly.
+
+Only the information needed by the application is extracted.
+
+---
+
+# Indexing Flow
+
+```text
+Library root
+
+↓
+
+Discover videos
+
+↓
+
+Locate TagSpaces metadata
+
+↓
+
+Extract tags
+
+↓
+
+Locate thumbnails
+
+↓
+
+Build in-memory index
+```
 
 ---
 
 # Error Handling
 
-Individual metadata errors should not stop indexing.
+Indexing should continue whenever possible.
 
 Examples:
 
 - missing metadata
-- invalid JSON
-- unsupported files
+- missing thumbnail
+- invalid metadata
 
-The indexer should continue whenever possible and report errors for diagnostic
-purposes.
+These situations affect only the corresponding video.
+
+They must never interrupt indexing of the rest of the library.
 
 ---
 
-# Performance Goals
+# Performance
 
-The indexing process is expected to be significantly slower than searching.
+Indexing is expected to happen infrequently.
 
-This is acceptable because indexing happens infrequently.
+Searching should never scan the filesystem.
 
-Searches should remain responsive regardless of library size.
+Instead:
+
+```text
+Index once
+
+↓
+
+Search many times
+
+↓
+
+Stream from original files
+```
+
+The generated index becomes the source used by the search engine.
+
+When a video is selected, the backend streams the original media file directly
+from the library.
 
 ---
 
 # Future Evolution
 
-Future versions may introduce:
+The internal representation of the index may evolve over time.
+
+Possible improvements include:
 
 - persistent indexes
 - incremental indexing
-- background indexing
-- filesystem monitoring
+- automatic reindexing
+- additional metadata extraction
 
-These improvements must not change the public behaviour of the application.
-
-Searching should continue to operate independently of the original filesystem.
+These improvements must preserve the read-only guarantee.
 
 ---
 
-# Design Principles
+# Responsibilities Summary
 
-The indexing subsystem should remain:
+Indexer
 
-- deterministic
-- reproducible
-- read-only
-- independent from HTTP
-- independent from the user interface
+- discovers videos
+- extracts metadata
+- extracts tags
+- builds the index
 
----
+Search package
 
-# Cursor Notes
+- queries the index
 
-Before modifying the indexing system:
+Backend
 
-- Read AGENTS.md.
-- Read docs/00-vision.md.
-- Preserve the read-only guarantee.
-- Keep indexing independent from searching.
-- Add regression tests for every bug fix.
-- Avoid introducing persistence unless required by the current milestone.
+- exposes the index through the REST API
+- streams original media files
+
+Frontend
+
+- consumes the REST API

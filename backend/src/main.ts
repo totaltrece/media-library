@@ -2,19 +2,14 @@ import { indexLibrary } from "@media-library/indexer";
 
 import { InMemoryVideoIndex } from "./adapters/in-memory-video-index.js";
 import { createApp } from "./app.js";
+import { config } from "./config.js";
 
 const defaultPort = 3000;
 
 async function main(): Promise<void> {
-  const libraryPath = process.env.LIBRARY_PATH;
+  const libraryPath = config.libraryPath
 
-  if (libraryPath === undefined || libraryPath.length === 0) {
-    console.error("LIBRARY_PATH environment variable is required.");
-    process.exitCode = 1;
-    return;
-  }
-
-  const port = Number(process.env.PORT ?? defaultPort);
+  const port = Number(config.port ?? defaultPort);
 
   let indexedVideos: Awaited<ReturnType<typeof indexLibrary>>;
 

@@ -1,278 +1,286 @@
-# Development Milestones
+# Milestones
 
-Version: 1.0
-
----
-
-# Purpose
-
-This document defines the implementation milestones for Media Library.
-
-Each milestone must:
-
-- produce a working application
-- be independently testable
-- preserve the project architecture
-- finish with a working commit
-
-No milestone should require unfinished work from a future milestone.
+Version: 2.0
 
 ---
 
-# Current Status
+# Philosophy
 
-Completed
+Media Library is developed through small, independent milestones.
 
-- [x] Monorepo
-- [x] Workspace configuration
-- [x] Hexagonal architecture
-- [x] Indexer package
-- [x] Search package
-- [x] CLI search tool
-- [x] Automated tests
+Each milestone should:
 
-Current command:
+- produce working software
+- be fully testable
+- preserve the read-only philosophy
+- avoid unnecessary refactoring
+- leave the project in a releasable state
 
-```bash
-pnpm run search -- --library "D:\Library" salsa bea
-```
+Every milestone should end with all tests passing.
 
 ---
 
-# Milestone 1
+# Milestone 1 — Project Foundation
 
-## Fastify Backend
+Status: ✅ Completed
 
-Goal
+Objectives
 
-Create the backend application.
+- Create the monorepo
+- Configure pnpm workspace
+- Configure Turborepo
+- Configure TypeScript
+- Establish project structure
 
-Tasks
+Deliverable
 
-- [x] Create Fastify server
-- [x] Add health endpoint
-- [x] Configure application startup
-- [x] Add backend tests
+A clean, buildable workspace.
 
-Result
+---
 
-Running
+# Milestone 2 — Library Indexer
+
+Status: ✅ Completed
+
+Objectives
+
+- Discover videos recursively
+- Locate TagSpaces metadata
+- Locate thumbnails
+- Extract tag titles
+- Handle missing or invalid metadata
+
+Deliverable
+
+A complete in-memory representation of the media library.
+
+---
+
+# Milestone 3 — Search Engine
+
+Status: ✅ Completed
+
+Objectives
+
+- Search by tags
+- Multiple tag matching
+- Case-insensitive matching
+- Preserve search order
+
+Deliverable
+
+A reusable search package independent of any transport.
+
+---
+
+# Milestone 4 — Command Line Tool
+
+Status: ✅ Completed
+
+Objectives
+
+- Index a library
+- Execute searches
+- Display matching videos
+
+Deliverable
+
+A working CLI capable of searching a real TagSpaces library.
+
+---
+
+# Milestone 5 — Backend API
+
+Status: ✅ Completed
+
+Objectives
+
+- Fastify server
+- Dependency wiring
+- Health endpoint
+- Search endpoint
+- JSON responses
+
+Deliverable
+
+A REST API exposing search functionality.
+
+---
+
+# Milestone 6 — Search Response Redesign
+
+Status: ⏳ Planned
+
+Objectives
+
+- Introduce a stable media identifier
+- Return the executed query
+- Include media name
+- Return future thumbnail URL
+- Return future video URL
+- Keep filesystem paths hidden
+
+Deliverable
+
+A stable API contract that the frontend can consume without modification as new endpoints are added.
+
+---
+
+# Milestone 7 — Thumbnail API
+
+Status: ⏳ Planned
+
+Objectives
+
+- Resolve media identifiers
+- Serve existing TagSpaces thumbnails
+- Return correct content types
+- Handle missing thumbnails gracefully
+
+Deliverable
+
+A `/thumbnail/:id` endpoint.
+
+---
+
+# Milestone 8 — Video Streaming
+
+Status: ⏳ Planned
+
+Objectives
+
+- Stream original videos
+- Support HTTP Range requests
+- Avoid temporary copies
+- Preserve read-only behaviour
+
+Deliverable
+
+A `/video/:id` endpoint compatible with HTML5 video players.
+
+---
+
+# Milestone 9 — Vue Frontend
+
+Status: ⏳ Planned
+
+Objectives
+
+- Vue application
+- API client
+- Search interface
+- Search results
+- Thumbnail display
+- Responsive layout
+
+Deliverable
+
+A browser-based interface capable of searching and browsing the media library.
+
+---
+
+# Milestone 10 — Video Player
+
+Status: ⏳ Planned
+
+Objectives
+
+- Play streamed videos
+- Portrait-first layout
+- Fullscreen playback
+- Tablet-friendly interface
+
+Deliverable
+
+A complete end-to-end workflow from search to video playback.
+
+---
+
+# Milestone 11 — Library Statistics
+
+Status: ⏳ Planned
+
+Objectives
+
+- Number of indexed videos
+- Number of unique tags
+- Library location
+- Last indexing time
+
+Deliverable
+
+A `/stats` endpoint.
+
+---
+
+# Milestone 12 — MVP Completion
+
+Status: ⏳ Planned
+
+Objectives
+
+- Improve error handling
+- Improve loading states
+- Verify responsiveness
+- Verify streaming performance
+- Prepare production build
+
+Deliverable
+
+A stable application suitable for everyday personal use.
+
+---
+
+# MVP Definition
+
+The MVP is complete when a user can:
+
+1. Open Media Library from another device.
+2. Search videos using TagSpaces tags.
+3. Browse matching results with thumbnails.
+4. Select a video.
+5. Watch it immediately through streaming.
+6. Never access the original filesystem directly.
+
+---
+
+# Current Progress
 
 ```text
-GET /health
+Foundation             ██████████ 100%
+
+Indexer                ██████████ 100%
+
+Search                 ██████████ 100%
+
+CLI                    ██████████ 100%
+
+Backend API            ██████████ 100%
+
+Search Response        ░░░░░░░░░░   0%
+
+Thumbnail API          ░░░░░░░░░░   0%
+
+Video Streaming        ░░░░░░░░░░   0%
+
+Vue Frontend           ░░░░░░░░░░   0%
+
+Video Player           ░░░░░░░░░░   0%
+
+Library Statistics     ░░░░░░░░░░   0%
+
+Production             ░░░░░░░░░░   0%
 ```
 
-returns
-
-```json
-{
-  "status": "ok"
-}
-```
-
 ---
 
-# Milestone 2
+# Development Rule
 
-## Search API
+Work on one milestone at a time.
 
-Goal
+A milestone is considered complete only when:
 
-Expose the existing search package.
-
-Tasks
-
-- [x] Create Search Controller
-- [x] Parse query parameters
-- [x] Call Search package
-- [x] Return JSON response
-- [x] Add integration tests
-
-Result
-
-```text
-GET /search?tags=salsa,bea
-```
-
-returns matching videos.
-
----
-
-# Milestone 3
-
-## Library Statistics
-
-Goal
-
-Expose library statistics.
-
-Tasks
-
-- [ ] Statistics service
-- [ ] Stats endpoint
-- [ ] Tests
-
-Result
-
-```text
-GET /stats
-```
-
-returns application statistics.
-
----
-
-# Milestone 4
-
-## Reindex API
-
-Goal
-
-Allow rebuilding the search index.
-
-Tasks
-
-- [ ] Reindex endpoint
-- [ ] Replace active index
-- [ ] Preserve previous index on failure
-- [ ] Tests
-
-Result
-
-```text
-POST /reindex
-```
-
-rebuilds the index.
-
----
-
-# Milestone 5
-
-## Vue Application
-
-Goal
-
-Create the frontend.
-
-Tasks
-
-- [ ] Create Vue application
-- [ ] Connect to backend
-- [ ] Basic layout
-
-Result
-
-Opening
-
-```
-http://localhost:5173
-```
-
-shows the application.
-
----
-
-# Milestone 6
-
-## Search Interface
-
-Goal
-
-Replace the CLI.
-
-Tasks
-
-- [ ] Search bar
-- [ ] Search button
-- [ ] Results list
-- [ ] Loading indicator
-- [ ] Empty state
-
-Result
-
-Users can search from the browser.
-
----
-
-# Milestone 7
-
-## Result Cards
-
-Goal
-
-Improve browsing.
-
-Tasks
-
-- [ ] Thumbnail
-- [ ] Filename
-- [ ] Tags
-- [ ] Better layout
-
-Result
-
-Search results become easy to browse.
-
----
-
-# Milestone 8
-
-## Open Video
-
-Goal
-
-Open the selected video.
-
-Tasks
-
-- [ ] Backend endpoint
-- [ ] Frontend action
-- [ ] Error handling
-
-Result
-
-Selecting a result opens the corresponding video.
-
----
-
-# Milestone 9
-
-## Production Build
-
-Goal
-
-Prepare the application for daily use.
-
-Tasks
-
-- [ ] Production configuration
-- [ ] Build scripts
-- [ ] Documentation review
-- [ ] Manual testing
-
-Result
-
-Media Library can be used as a normal desktop application.
-
----
-
-# Definition of Done
-
-A milestone is complete when:
-
-- all tasks are finished
+- implementation is finished
 - tests pass
 - documentation is updated
-- the application works end-to-end
-- the commit is small and reviewable
-
----
-
-# Rules
-
-Do not start the next milestone until the current one is complete.
-
-Avoid implementing future milestones in advance.
-
-Keep every milestone independently executable.
+- the application remains functional

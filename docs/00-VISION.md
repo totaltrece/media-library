@@ -1,210 +1,146 @@
-# Media Library Vision
+# Vision
 
-Version: 1.0
+Version: 2.0
 
 ---
 
 # Purpose
 
-Media Library is a read-only web application for browsing, searching and exploring
-a personal multimedia library managed with TagSpaces.
+Media Library is a self-hosted web application for browsing and streaming
+TagSpaces video libraries.
 
-The project reuses the metadata already maintained by TagSpaces and makes the
-same library available through a web interface that can be accessed from any
-device.
+It allows users to search videos by their TagSpaces tags and watch them from
+other devices without copying or modifying the original media library.
 
-Media Library never replaces TagSpaces. TagSpaces remains responsible for
-organizing and tagging the collection, while Media Library focuses on consuming
-that information in a fast and convenient way.
+The application is designed for personal use across devices connected to the
+same network, while remaining extensible for future remote access.
 
 ---
 
 # The Problem
 
-The media library is already organized and tagged with TagSpaces.
+TagSpaces provides an excellent way to organize videos using tags.
 
-The challenge is not managing or editing the collection, but accessing it
-comfortably from devices where TagSpaces is not available or is not the preferred
-way to consume the library.
+However, its primary workflow assumes that the media library is accessed
+directly from the local machine.
 
-Typical scenarios include:
+Media Library solves a different problem.
 
-- browsing the library from a tablet
-- searching videos from a mobile phone
-- accessing the collection through a web browser
-- consuming the same tagged library from multiple devices
-- keeping a single source of truth without duplicating metadata
+It allows the original TagSpaces library to remain on a dedicated computer while
+making the tagged videos easily accessible from tablets, phones or other
+computers through a web browser.
 
-Media Library is intended to expose an existing TagSpaces library through a
-lightweight web application while fully preserving TagSpaces as the metadata
-management tool.
+The original organization and metadata remain entirely managed by TagSpaces.
 
 ---
 
-# Target Users
+# Goals
 
-The first target user is the repository owner.
+The application must:
 
-The application is intentionally designed around a real personal library
-containing dance videos tagged with TagSpaces.
-
-Typical tags include:
-
-- dance styles
-- teachers
-- events
-- figures
-- years
-- difficulty
-- quality notes
-- custom personal tags
-
-Although the first use case is dance videos, the architecture should remain
-generic enough to support any TagSpaces-based media collection.
-
----
-
-# Product Principles
-
-The following principles should never be compromised.
-
-## Read-only
-
-Media Library never writes, renames, deletes or modifies:
-
-- videos
-- images
-- TagSpaces metadata
-- thumbnails
-
-The original library is the source of truth.
-
----
-
-## Fast Search
-
-Searching should feel instantaneous regardless of the library size.
-
-The implementation may evolve over time, but the user experience must always
-prioritize responsiveness.
-
----
-
-## Simplicity
-
-The project prefers simple solutions over sophisticated ones.
-
-Avoid introducing technologies before they solve a real problem.
-
-Examples:
-
-- no database in the MVP
-- no authentication
-- no cloud synchronization
-- no background workers
-- no microservices
-
----
-
-## Clean Architecture
-
-Business logic must remain independent from:
-
-- HTTP
-- Fastify
-- Vue
-- filesystem
-- databases
-- operating system
-
-Hexagonal Architecture is used to keep the domain independent from infrastructure.
-
----
-
-## Incremental Development
-
-Every milestone should produce something usable.
-
-Avoid long periods spent preparing infrastructure without delivering visible
-features.
-
-The application should evolve through small working increments.
-
----
-
-# MVP
-
-Version 0.1 allows a user to:
-
-1. Open the web application.
-2. Search videos using one or more tags.
-3. Browse the matching results.
-4. View video thumbnails.
-5. Open the selected video using the operating system.
-
-The application is intended for personal use and a single media library.
+- browse existing TagSpaces libraries
+- search videos using TagSpaces tags
+- stream videos without copying them
+- preserve the original library
+- work from any device with a web browser
+- remain simple to deploy on a home network
 
 ---
 
 # Non Goals
 
-The following features are explicitly outside the scope of version 0.1:
+Media Library is not intended to:
 
-- editing tags
-- editing metadata
-- uploading videos
-- deleting videos
-- authentication
-- user management
-- cloud storage
-- AI tagging
-- video transcoding
-- streaming server
-- mobile applications
+- replace TagSpaces
+- edit TagSpaces metadata
+- organize media
+- rename files
+- move files
+- import media into its own database
+- become a media server for movies or TV shows
 
-These features may be considered in future versions.
+TagSpaces remains responsible for organizing and tagging the library.
 
 ---
 
-# Long-Term Vision
+# Read-only Philosophy
 
-Future versions may include:
+The original media library is the source of truth.
 
-- persistent indexing
-- advanced filtering
-- full-text search
-- fuzzy search
-- saved searches
-- statistics
-- duplicate detection
-- multiple libraries
-- remote access
-- AI-assisted search
+Media Library never modifies:
 
-These features should always preserve the read-only guarantee.
+- video files
+- TagSpaces JSON metadata
+- TagSpaces thumbnails
+- directory structure
+
+All operations are strictly read-only.
+
+---
+
+# Typical Workflow
+
+```text
+Tag videos with TagSpaces
+
+↓
+
+Leave the library on the server PC
+
+↓
+
+Open Media Library from another device
+
+↓
+
+Search videos by tag
+
+↓
+
+Watch the selected video by streaming
+```
+
+---
+
+# Target Environment
+
+Typical deployment:
+
+- Mini PC (AceMagic)
+- Windows
+- TagSpaces installed
+- Video library stored locally
+- Fastify backend
+- Vue frontend
+
+Typical clients:
+
+- Android tablet
+- Android phone
+- Windows laptop
+- Any modern web browser
+
+---
+
+# Design Principles
+
+Media Library should remain:
+
+- read-only
+- lightweight
+- self-hosted
+- easy to understand
+- easy to maintain
+- independent from TagSpaces internals whenever possible
 
 ---
 
 # Success Criteria
 
-The project will be considered successful when the same TagSpaces library can be
-comfortably explored from any web browser without modifying the original media or
-its metadata.
+The MVP is successful when a user can:
 
-TagSpaces remains the tool used to organize the collection, while Media Library
-becomes the preferred way to consume it from other devices.
-
----
-
-# Cursor Notes
-
-Before implementing new features:
-
-- Read AGENTS.md.
-- Read this document.
-- Preserve the read-only guarantee.
-- Keep the hexagonal architecture.
-- Prefer incremental improvements.
-- Reuse existing packages whenever possible.
-- Add tests for every new behaviour.
-- Avoid introducing new dependencies unless they are clearly justified.
+1. open the web application from another device
+2. search videos by tag
+3. browse matching results
+4. play a selected video directly in the browser
+5. watch the video without downloading or copying it
