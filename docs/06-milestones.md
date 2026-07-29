@@ -82,11 +82,11 @@ Expose the existing search package.
 
 Tasks
 
-- [ ] Create Search Controller
-- [ ] Parse query parameters
-- [ ] Call Search package
-- [ ] Return JSON response
-- [ ] Add integration tests
+- [x] Create Search Controller
+- [x] Parse query parameters
+- [x] Call Search package
+- [x] Return JSON response
+- [x] Add integration tests
 
 Result
 

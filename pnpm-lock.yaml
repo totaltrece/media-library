@@ -23,6 +23,12 @@ importers:
 
   backend:
     dependencies:
+      '@media-library/indexer':
+        specifier: workspace:*
+        version: link:../packages/indexer
+      '@media-library/search':
+        specifier: workspace:*
+        version: link:../packages/search
       fastify:
         specifier: ^5.7.4
         version: 5.10.0
