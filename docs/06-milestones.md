@@ -49,10 +49,10 @@ Create the backend application.
 
 Tasks
 
-- [ ] Create Fastify server
-- [ ] Add health endpoint
-- [ ] Configure application startup
-- [ ] Add backend tests
+- [x] Create Fastify server
+- [x] Add health endpoint
+- [x] Configure application startup
+- [x] Add backend tests
 
 Result
 
