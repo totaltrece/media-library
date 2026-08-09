@@ -228,3 +228,17 @@ Backend
 - searching
 - streaming
 - filesystem access
+
+---
+
+# Deployment Build
+
+The production build output in `frontend/dist` is versioned in Git.
+
+When changing frontend source files:
+
+1. Run `pnpm --filter frontend build`.
+2. Commit the updated `frontend/dist` files together with the source changes.
+
+A remote server can pull the committed `frontend/dist` and serve it through
+Fastify without building the frontend locally.
