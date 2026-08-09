@@ -40,7 +40,7 @@ test("GET /tags returns distinct tags from the in-memory index", async () => {
 
   const response = await app.inject({
     method: "GET",
-    url: "/tags",
+    url: "/api/tags",
   });
 
   assert.strictEqual(response.statusCode, 200);
@@ -62,7 +62,7 @@ test("GET /tags returns an empty list when the index has no videos", async () =>
 
   const response = await app.inject({
     method: "GET",
-    url: "/tags",
+    url: "/api/tags",
   });
 
   assert.strictEqual(response.statusCode, 200);
@@ -83,7 +83,7 @@ test("GET /tags reads from the existing index without re-indexing", async () => 
 
   const response = await app.inject({
     method: "GET",
-    url: "/tags",
+    url: "/api/tags",
   });
 
   assert.strictEqual(response.statusCode, 200);

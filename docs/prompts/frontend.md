@@ -31,9 +31,9 @@ Avoid unnecessary global state.
 
 Prefer composition over complexity.
 
-Load available tags from `GET /tags`.
+Load available tags from `GET /api/tags`.
 
-Use `GET /search?tag=...&tag=...` for multi-tag searches.
+Use `GET /api/search?tag=...&tag=...` for multi-tag searches.
 
 Use the `thumbnail` and `video` URLs returned by the search API directly.
 
@@ -43,5 +43,5 @@ Playback must use the backend streaming endpoint.
 
 Do not duplicate business logic implemented by the backend.
 
-During development, rely on the Vite proxy for API requests unless
-`VITE_API_BASE` is configured.
+Use relative `/api/...` URLs. During frontend-only development, rely on the Vite
+proxy for API requests.

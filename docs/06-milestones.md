@@ -199,7 +199,25 @@ streaming endpoint.
 
 ---
 
-# Milestone 10 — Video Player
+# Milestone 10 — Unified Application Server
+
+Status: ✅ Completed
+
+Objectives
+
+- Serve the built Vue frontend from Fastify at `/`
+- Expose all API endpoints under `/api`
+- Use relative `/api/...` URLs in the frontend
+- Keep Vite for building the frontend
+- Preserve tag search, thumbnails, and video streaming
+
+Deliverable
+
+A single-port application where Fastify serves both the web UI and the REST API.
+
+---
+
+# Milestone 11 — Video Player
 
 Status: ⏳ Planned
 
@@ -215,7 +233,7 @@ A polished end-to-end workflow from search to video playback.
 
 ---
 
-# Milestone 11 — Library Statistics
+# Milestone 12 — Library Statistics
 
 Status: ⏳ Planned
 
@@ -232,7 +250,7 @@ A `/stats` endpoint.
 
 ---
 
-# Milestone 12 — MVP Completion
+# Milestone 13 — MVP Completion
 
 Status: ⏳ Planned
 
@@ -285,6 +303,8 @@ Video Streaming        ██████████ 100%
 Tags API               ██████████ 100%
 
 Vue Frontend           ██████████ 100%
+
+Unified Server         ██████████ 100%
 
 Video Player           ░░░░░░░░░░   0%
 

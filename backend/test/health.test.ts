@@ -6,7 +6,7 @@ import { createApp } from "../src/app.js";
 
 import { testLibraryPath, testVideos } from "./fixtures.js";
 
-test("GET /health returns ok status", async () => {
+test("GET /api/health returns ok status", async () => {
   const app = await createApp({
     videoIndex: new InMemoryVideoIndex(testVideos),
     libraryPath: testLibraryPath,
@@ -14,7 +14,7 @@ test("GET /health returns ok status", async () => {
 
   const response = await app.inject({
     method: "GET",
-    url: "/health",
+    url: "/api/health",
   });
 
   assert.strictEqual(response.statusCode, 200);

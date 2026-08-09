@@ -1,6 +1,6 @@
 # Frontend
 
-Version: 2.0
+Version: 2.1
 
 ---
 
@@ -127,7 +127,10 @@ The interface should remain comfortable on portrait-oriented devices.
 
 # Communication
 
-The frontend communicates exclusively with the REST API.
+The frontend communicates exclusively with the REST API under `/api`.
+
+In production and local end-to-end testing, the Vue application is served by
+Fastify from `/` on the same port as the API.
 
 Typical flow:
 
@@ -136,7 +139,7 @@ User searches
 
 ↓
 
-GET /search
+GET /api/search
 
 ↓
 
@@ -148,12 +151,18 @@ User selects a video
 
 ↓
 
-GET /video/:id
+GET /api/video/:id
 
 ↓
 
 HTML5 video playback
 ```
+
+During frontend development, Vite can still run separately and proxy `/api`
+requests to the backend.
+
+The frontend uses relative `/api/...` URLs. It never reads `LIBRARY_PATH` or
+constructs filesystem paths.
 
 No direct filesystem access exists.
 

@@ -30,7 +30,7 @@ test("GET /video/:id returns the full video with the correct Content-Type", asyn
 
     const response = await app.inject({
       method: "GET",
-      url: "/video/salsa/first.mp4",
+      url: "/api/video/salsa/first.mp4",
     });
 
     assert.strictEqual(response.statusCode, 200);
@@ -56,7 +56,7 @@ test("GET /video/:id returns 206 Partial Content for valid Range requests", asyn
 
     const response = await app.inject({
       method: "GET",
-      url: "/video/salsa/first.mp4",
+      url: "/api/video/salsa/first.mp4",
       headers: {
         range: "bytes=0-4",
       },
@@ -86,7 +86,7 @@ test("GET /video/:id returns 404 when the video does not exist", async () => {
 
     const response = await app.inject({
       method: "GET",
-      url: "/video/salsa/missing.mp4",
+      url: "/api/video/salsa/missing.mp4",
     });
 
     assert.strictEqual(response.statusCode, 404);
@@ -114,7 +114,7 @@ test("GET /video/:id returns 416 for invalid or unsatisfiable Range requests", a
 
     const invalidRange = await app.inject({
       method: "GET",
-      url: "/video/salsa/first.mp4",
+      url: "/api/video/salsa/first.mp4",
       headers: {
         range: "invalid",
       },
@@ -130,7 +130,7 @@ test("GET /video/:id returns 416 for invalid or unsatisfiable Range requests", a
 
     const unsatisfiableRange = await app.inject({
       method: "GET",
-      url: "/video/salsa/first.mp4",
+      url: "/api/video/salsa/first.mp4",
       headers: {
         range: "bytes=20-30",
       },

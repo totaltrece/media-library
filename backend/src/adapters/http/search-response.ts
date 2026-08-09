@@ -35,11 +35,11 @@ export function toSearchResult(video: IndexedVideo, libraryPath: string): Search
 }
 
 export function toThumbnailUrl(mediaId: string): string {
-  return `/thumbnail/${mediaId}`;
+  return `/api/thumbnail/${mediaId}`;
 }
 
 export function toVideoUrl(mediaId: string): string {
-  return `/video/${mediaId}`;
+  return `/api/video/${mediaId}`;
 }
 
 export function buildSearchResponse(

@@ -7,6 +7,7 @@ import { StreamVideoUseCase } from "./application/stream-video.js";
 import { FilesystemVideoStore } from "./adapters/filesystem/filesystem-video-store.js";
 import { TagSpacesThumbnailStore } from "./adapters/filesystem/tagspaces-thumbnail-store.js";
 import { registerSearchRoutes } from "./adapters/http/search-controller.js";
+import { registerStaticFrontend } from "./adapters/http/register-static-frontend.js";
 import { registerTagsRoutes } from "./adapters/http/tags-controller.js";
 import { registerThumbnailRoutes } from "./adapters/http/thumbnail-controller.js";
 import { registerVideoRoutes } from "./adapters/http/video-controller.js";
@@ -15,14 +16,11 @@ import type { VideoIndex } from "./ports/video-index.js";
 export interface AppDependencies {
   videoIndex: VideoIndex;
   libraryPath: string;
+  staticRoot?: string;
 }
 
 export async function createApp(dependencies: AppDependencies) {
   const app = Fastify({ logger: false });
-
-  app.get("/health", async () => {
-    return { status: "ok" };
-  });
 
   const searchVideosUseCase = new SearchVideosUseCase(dependencies.videoIndex);
   const getTagsUseCase = new GetTagsUseCase(dependencies.videoIndex);
@@ -33,22 +31,32 @@ export async function createApp(dependencies: AppDependencies) {
     new FilesystemVideoStore(dependencies.libraryPath),
   );
 
-  registerSearchRoutes(app, {
-    libraryPath: dependencies.libraryPath,
-    searchVideosUseCase,
-  });
+  await app.register(async (api) => {
+    api.get("/health", async () => {
+      return { status: "ok" };
+    });
 
-  registerTagsRoutes(app, {
-    getTagsUseCase,
-  });
+    registerSearchRoutes(api, {
+      libraryPath: dependencies.libraryPath,
+      searchVideosUseCase,
+    });
 
-  registerThumbnailRoutes(app, {
-    getThumbnailUseCase,
-  });
+    registerTagsRoutes(api, {
+      getTagsUseCase,
+    });
 
-  registerVideoRoutes(app, {
-    streamVideoUseCase,
-  });
+    registerThumbnailRoutes(api, {
+      getThumbnailUseCase,
+    });
+
+    registerVideoRoutes(api, {
+      streamVideoUseCase,
+    });
+  }, { prefix: "/api" });
+
+  if (dependencies.staticRoot !== undefined) {
+    await registerStaticFrontend(app, dependencies.staticRoot);
+  }
 
   return app;
 }

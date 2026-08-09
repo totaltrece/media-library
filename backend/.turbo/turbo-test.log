@@ -1,6 +1,6 @@
 
 > @media-library/backend@ test C:\Users\Carlos\Documents\proyectos\media-library\backend
-> pnpm --filter @media-library/indexer build && pnpm --filter @media-library/search build && tsc --project tsconfig.test.json && node --test dist-test/test/health.test.js dist-test/test/search.test.js dist-test/test/search-response.test.js dist-test/test/search-controller.test.js dist-test/test/resolve-media-id.test.js dist-test/test/thumbnail.test.js dist-test/test/parse-range-header.test.js dist-test/test/video.test.js dist-test/test/tags.test.js
+> pnpm --filter @media-library/indexer build && pnpm --filter @media-library/search build && tsc --project tsconfig.test.json && node --test dist-test/test/health.test.js dist-test/test/search.test.js dist-test/test/search-response.test.js dist-test/test/search-controller.test.js dist-test/test/resolve-media-id.test.js dist-test/test/thumbnail.test.js dist-test/test/parse-range-header.test.js dist-test/test/video.test.js dist-test/test/tags.test.js dist-test/test/static.test.js
 
 
 > @media-library/indexer@0.1.0 build C:\Users\Carlos\Documents\proyectos\media-library\packages\indexer
@@ -11,246 +11,270 @@
 > tsc
 
 TAP version 13
-# Subtest: GET /health returns ok status
-ok 1 - GET /health returns ok status
+# Subtest: GET /api/health returns ok status
+ok 1 - GET /api/health returns ok status
   ---
-  duration_ms: 177.9611
+  duration_ms: 177.382
   type: 'test'
   ...
 # Subtest: parseRangeHeader returns full when Range header is absent
 ok 2 - parseRangeHeader returns full when Range header is absent
   ---
-  duration_ms: 4.3294
+  duration_ms: 2.9944
   type: 'test'
   ...
 # Subtest: parseRangeHeader parses a closed byte range
 ok 3 - parseRangeHeader parses a closed byte range
   ---
-  duration_ms: 0.707
+  duration_ms: 1.5224
   type: 'test'
   ...
 # Subtest: parseRangeHeader parses an open-ended byte range
 ok 4 - parseRangeHeader parses an open-ended byte range
   ---
-  duration_ms: 1.6968
+  duration_ms: 2.2333
   type: 'test'
   ...
 # Subtest: parseRangeHeader parses a suffix byte range
 ok 5 - parseRangeHeader parses a suffix byte range
   ---
-  duration_ms: 0.4997
+  duration_ms: 0.5226
   type: 'test'
   ...
 # Subtest: parseRangeHeader returns unsatisfiable for invalid range syntax
 ok 6 - parseRangeHeader returns unsatisfiable for invalid range syntax
   ---
-  duration_ms: 0.4933
+  duration_ms: 0.4713
   type: 'test'
   ...
 # Subtest: parseRangeHeader returns unsatisfiable when the range starts beyond the file
 ok 7 - parseRangeHeader returns unsatisfiable when the range starts beyond the file
   ---
-  duration_ms: 0.2718
+  duration_ms: 0.2927
   type: 'test'
   ...
 # Subtest: resolveMediaPath maps a media id to a library-relative file path
 ok 8 - resolveMediaPath maps a media id to a library-relative file path
   ---
-  duration_ms: 2.2854
+  duration_ms: 2.1256
   type: 'test'
   ...
 # Subtest: resolveMediaPath accepts backslash separators in the media id
 ok 9 - resolveMediaPath accepts backslash separators in the media id
   ---
-  duration_ms: 0.4211
+  duration_ms: 0.4511
   type: 'test'
   ...
 # Subtest: resolveMediaPath rejects path traversal using parent segments
 ok 10 - resolveMediaPath rejects path traversal using parent segments
   ---
-  duration_ms: 0.3305
+  duration_ms: 0.6406
   type: 'test'
   ...
 # Subtest: resolveMediaPath rejects absolute media ids
 ok 11 - resolveMediaPath rejects absolute media ids
   ---
-  duration_ms: 0.2773
+  duration_ms: 0.3323
   type: 'test'
   ...
 # Subtest: resolveMediaPath rejects empty media ids
 ok 12 - resolveMediaPath rejects empty media ids
   ---
-  duration_ms: 0.4188
+  duration_ms: 0.3814
   type: 'test'
   ...
 # Subtest: resolveMediaPath never resolves outside the configured library root
 ok 13 - resolveMediaPath never resolves outside the configured library root
   ---
-  duration_ms: 0.4055
+  duration_ms: 0.3392
   type: 'test'
   ...
 # Subtest: parseTagQuery returns an empty array when tag is absent
 ok 14 - parseTagQuery returns an empty array when tag is absent
   ---
-  duration_ms: 2.59
+  duration_ms: 3.121
   type: 'test'
   ...
 # Subtest: parseTagQuery preserves a single tag exactly as received
 ok 15 - parseTagQuery preserves a single tag exactly as received
   ---
-  duration_ms: 0.3404
+  duration_ms: 0.4922
   type: 'test'
   ...
 # Subtest: parseTagQuery preserves repeated tag values exactly as received
 ok 16 - parseTagQuery preserves repeated tag values exactly as received
   ---
-  duration_ms: 1.0656
+  duration_ms: 2.0425
   type: 'test'
   ...
 # Subtest: toMediaId returns a library-relative path with forward slashes
 ok 17 - toMediaId returns a library-relative path with forward slashes
   ---
-  duration_ms: 1.3619
+  duration_ms: 4.0186
   type: 'test'
   ...
 # Subtest: toSearchResult maps indexed videos to the public search item shape
 ok 18 - toSearchResult maps indexed videos to the public search item shape
   ---
-  duration_ms: 2.1897
+  duration_ms: 3.2678
   type: 'test'
   ...
 # Subtest: buildSearchResponse includes query, count, and mapped results
 ok 19 - buildSearchResponse includes query, count, and mapped results
   ---
-  duration_ms: 0.4428
+  duration_ms: 0.8039
   type: 'test'
   ...
 # Subtest: media URLs are derived from the media id
 ok 20 - media URLs are derived from the media id
   ---
-  duration_ms: 0.1896
+  duration_ms: 0.3096
   type: 'test'
   ...
 # Subtest: GET /search returns videos matching every requested tag
 ok 21 - GET /search returns videos matching every requested tag
   ---
-  duration_ms: 184.8353
+  duration_ms: 189.3351
   type: 'test'
   ...
 # Subtest: GET /search echoes requested tags exactly as received
 ok 22 - GET /search echoes requested tags exactly as received
   ---
-  duration_ms: 6.5698
+  duration_ms: 8.1724
   type: 'test'
   ...
 # Subtest: GET /search without tags returns all indexed videos
 ok 23 - GET /search without tags returns all indexed videos
   ---
-  duration_ms: 8.9159
+  duration_ms: 6.5508
   type: 'test'
   ...
 # Subtest: GET /search returns an empty result when no videos match
 ok 24 - GET /search returns an empty result when no videos match
   ---
-  duration_ms: 4.3434
+  duration_ms: 4.4375
   type: 'test'
   ...
 # Subtest: GET /search never exposes filesystem paths in the response
 ok 25 - GET /search never exposes filesystem paths in the response
   ---
-  duration_ms: 8.4075
+  duration_ms: 6.0865
   type: 'test'
   ...
 # Subtest: GET /search builds thumbnail and video URLs from the media id
 ok 26 - GET /search builds thumbnail and video URLs from the media id
   ---
-  duration_ms: 8.4366
+  duration_ms: 5.9919
+  type: 'test'
+  ...
+# Subtest: GET / serves the built frontend index.html
+ok 27 - GET / serves the built frontend index.html
+  ---
+  duration_ms: 207.2566
+  type: 'test'
+  ...
+# Subtest: unknown frontend routes fall back to index.html
+ok 28 - unknown frontend routes fall back to index.html
+  ---
+  duration_ms: 14.9344
+  type: 'test'
+  ...
+# Subtest: API routes remain available when static frontend is enabled
+ok 29 - API routes remain available when static frontend is enabled
+  ---
+  duration_ms: 25.4659
+  type: 'test'
+  ...
+# Subtest: unknown API routes return JSON 404 responses
+ok 30 - unknown API routes return JSON 404 responses
+  ---
+  duration_ms: 10.6285
   type: 'test'
   ...
 # Subtest: collectDistinctTags returns unique tags in alphabetical order
-ok 27 - collectDistinctTags returns unique tags in alphabetical order
+ok 31 - collectDistinctTags returns unique tags in alphabetical order
   ---
-  duration_ms: 12.6999
+  duration_ms: 13.2514
   type: 'test'
   ...
 # Subtest: GET /tags returns distinct tags from the in-memory index
-ok 28 - GET /tags returns distinct tags from the in-memory index
+ok 32 - GET /tags returns distinct tags from the in-memory index
   ---
-  duration_ms: 186.2967
+  duration_ms: 197.169
   type: 'test'
   ...
 # Subtest: GET /tags returns an empty list when the index has no videos
-ok 29 - GET /tags returns an empty list when the index has no videos
+ok 33 - GET /tags returns an empty list when the index has no videos
   ---
-  duration_ms: 7.2513
+  duration_ms: 5.6616
   type: 'test'
   ...
 # Subtest: GET /tags reads from the existing index without re-indexing
-ok 30 - GET /tags reads from the existing index without re-indexing
+ok 34 - GET /tags reads from the existing index without re-indexing
   ---
-  duration_ms: 6.8488
+  duration_ms: 8.462
   type: 'test'
   ...
 # Subtest: GET /thumbnail/:id returns the TagSpaces thumbnail with image/jpeg
-ok 31 - GET /thumbnail/:id returns the TagSpaces thumbnail with image/jpeg
+ok 35 - GET /thumbnail/:id returns the TagSpaces thumbnail with image/jpeg
   ---
-  duration_ms: 187.4924
+  duration_ms: 196.8186
   type: 'test'
   ...
 # Subtest: GET /thumbnail/:id returns 404 when the video does not exist
-ok 32 - GET /thumbnail/:id returns 404 when the video does not exist
+ok 36 - GET /thumbnail/:id returns 404 when the video does not exist
   ---
-  duration_ms: 21.7173
+  duration_ms: 14.0724
   type: 'test'
   ...
 # Subtest: GET /thumbnail/:id returns 404 when the TagSpaces thumbnail is missing
-ok 33 - GET /thumbnail/:id returns 404 when the TagSpaces thumbnail is missing
+ok 37 - GET /thumbnail/:id returns 404 when the TagSpaces thumbnail is missing
   ---
-  duration_ms: 13.6768
+  duration_ms: 10.1711
   type: 'test'
   ...
 # Subtest: TagSpacesThumbnailStore rejects path traversal media ids
-ok 34 - TagSpacesThumbnailStore rejects path traversal media ids
+ok 38 - TagSpacesThumbnailStore rejects path traversal media ids
   ---
-  duration_ms: 7.639
+  duration_ms: 6.6248
   type: 'test'
   ...
 # Subtest: GET /video/:id returns the full video with the correct Content-Type
-ok 35 - GET /video/:id returns the full video with the correct Content-Type
+ok 39 - GET /video/:id returns the full video with the correct Content-Type
   ---
-  duration_ms: 212.7559
+  duration_ms: 197.9107
   type: 'test'
   ...
 # Subtest: GET /video/:id returns 206 Partial Content for valid Range requests
-ok 36 - GET /video/:id returns 206 Partial Content for valid Range requests
+ok 40 - GET /video/:id returns 206 Partial Content for valid Range requests
   ---
-  duration_ms: 14.4229
+  duration_ms: 13.2894
   type: 'test'
   ...
 # Subtest: GET /video/:id returns 404 when the video does not exist
-ok 37 - GET /video/:id returns 404 when the video does not exist
+ok 41 - GET /video/:id returns 404 when the video does not exist
   ---
-  duration_ms: 12.1295
+  duration_ms: 10.6347
   type: 'test'
   ...
 # Subtest: GET /video/:id returns 416 for invalid or unsatisfiable Range requests
-ok 38 - GET /video/:id returns 416 for invalid or unsatisfiable Range requests
+ok 42 - GET /video/:id returns 416 for invalid or unsatisfiable Range requests
   ---
-  duration_ms: 11.3545
+  duration_ms: 11.3421
   type: 'test'
   ...
 # Subtest: FilesystemVideoStore rejects path traversal media ids
-ok 39 - FilesystemVideoStore rejects path traversal media ids
+ok 43 - FilesystemVideoStore rejects path traversal media ids
   ---
-  duration_ms: 4.1816
+  duration_ms: 4.0016
   type: 'test'
   ...
-1..39
-# tests 39
+1..43
+# tests 43
 # suites 0
-# pass 39
+# pass 43
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 709.1528
+# duration_ms 779.8249

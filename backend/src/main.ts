@@ -1,15 +1,16 @@
+import { existsSync } from "node:fs";
+
 import { indexLibrary } from "@media-library/indexer";
 
 import { InMemoryVideoIndex } from "./adapters/in-memory-video-index.js";
 import { createApp } from "./app.js";
 import { config } from "./config.js";
-
-const defaultPort = 3000;
+import { resolveFrontendDistPath } from "./resolve-frontend-dist.js";
 
 async function main(): Promise<void> {
-  const libraryPath = config.libraryPath
-
-  const port = Number(config.port ?? defaultPort);
+  const libraryPath = config.libraryPath;
+  const port = config.port;
+  const staticRoot = resolveFrontendDistPath(import.meta.url);
 
   let indexedVideos: Awaited<ReturnType<typeof indexLibrary>>;
 
@@ -24,7 +25,14 @@ async function main(): Promise<void> {
   const app = await createApp({
     videoIndex: new InMemoryVideoIndex(indexedVideos),
     libraryPath,
+    staticRoot: existsSync(staticRoot) ? staticRoot : undefined,
   });
+
+  if (!existsSync(staticRoot)) {
+    console.warn(
+      `Frontend build not found at ${staticRoot}. Run "pnpm --filter frontend build" to serve the web UI.`,
+    );
+  }
 
   try {
     await app.listen({ port, host: "0.0.0.0" });

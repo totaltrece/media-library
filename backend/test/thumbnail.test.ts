@@ -42,7 +42,7 @@ test("GET /thumbnail/:id returns the TagSpaces thumbnail with image/jpeg", async
 
     const response = await app.inject({
       method: "GET",
-      url: "/thumbnail/salsa/first.mp4",
+      url: "/api/thumbnail/salsa/first.mp4",
     });
 
     assert.strictEqual(response.statusCode, 200);
@@ -66,7 +66,7 @@ test("GET /thumbnail/:id returns 404 when the video does not exist", async () =>
 
     const response = await app.inject({
       method: "GET",
-      url: "/thumbnail/salsa/missing.mp4",
+      url: "/api/thumbnail/salsa/missing.mp4",
     });
 
     assert.strictEqual(response.statusCode, 404);
@@ -94,7 +94,7 @@ test("GET /thumbnail/:id returns 404 when the TagSpaces thumbnail is missing", a
 
     const response = await app.inject({
       method: "GET",
-      url: "/thumbnail/salsa/first.mp4",
+      url: "/api/thumbnail/salsa/first.mp4",
     });
 
     assert.strictEqual(response.statusCode, 404);

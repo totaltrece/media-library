@@ -1,13 +1,19 @@
 import type { ApiErrorResponse, SearchResponse, TagsResponse } from "./types.js";
 
-const apiBase = import.meta.env.VITE_API_BASE ?? "";
+const API_PREFIX = "/api";
 
 export function buildApiUrl(path: string): string {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
   }
 
-  return `${apiBase}${path}`;
+  if (path.startsWith(`${API_PREFIX}/`) || path === API_PREFIX) {
+    return path;
+  }
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  return `${API_PREFIX}${normalizedPath}`;
 }
 
 export function buildSearchUrl(tags: string[]): string {

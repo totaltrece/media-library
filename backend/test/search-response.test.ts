@@ -23,8 +23,8 @@ test("toSearchResult maps indexed videos to the public search item shape", () =>
   assert.deepEqual(toSearchResult(testVideos[0]!, testLibraryPath), {
     id: "salsa/first.mp4",
     name: "first.mp4",
-    thumbnail: "/thumbnail/salsa/first.mp4",
-    video: "/video/salsa/first.mp4",
+    thumbnail: "/api/thumbnail/salsa/first.mp4",
+    video: "/api/video/salsa/first.mp4",
     tags: ["salsa", "bea", "linea"],
   });
 });
@@ -39,8 +39,8 @@ test("buildSearchResponse includes query, count, and mapped results", () => {
       {
         id: "salsa/first.mp4",
         name: "first.mp4",
-        thumbnail: "/thumbnail/salsa/first.mp4",
-        video: "/video/salsa/first.mp4",
+        thumbnail: "/api/thumbnail/salsa/first.mp4",
+        video: "/api/video/salsa/first.mp4",
         tags: ["salsa", "bea", "linea"],
       },
     ],
@@ -50,6 +50,6 @@ test("buildSearchResponse includes query, count, and mapped results", () => {
 test("media URLs are derived from the media id", () => {
   const mediaId = "bachata/20250630_193642391.TS.mp4";
 
-  assert.strictEqual(toThumbnailUrl(mediaId), "/thumbnail/bachata/20250630_193642391.TS.mp4");
-  assert.strictEqual(toVideoUrl(mediaId), "/video/bachata/20250630_193642391.TS.mp4");
+  assert.strictEqual(toThumbnailUrl(mediaId), "/api/thumbnail/bachata/20250630_193642391.TS.mp4");
+  assert.strictEqual(toVideoUrl(mediaId), "/api/video/bachata/20250630_193642391.TS.mp4");
 });

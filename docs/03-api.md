@@ -1,6 +1,6 @@
 # REST API
 
-Version: 2.0
+Version: 2.1
 
 ---
 
@@ -10,6 +10,9 @@ The REST API is the only communication channel between clients and the Media
 Library backend.
 
 Clients never access the filesystem directly.
+
+The API is exposed under the `/api` prefix. All endpoints below are relative to
+that prefix.
 
 The API exposes search capabilities, thumbnails and video streaming using stable
 media identifiers.
@@ -34,7 +37,7 @@ All responses use JSON except media streaming endpoints.
 ## Health
 
 ```text
-GET /health
+GET /api/health
 ```
 
 Response
@@ -50,13 +53,13 @@ Response
 ## Search
 
 ```text
-GET /search?tag=salsa
+GET /api/search?tag=salsa
 ```
 
 Multiple tags:
 
 ```text
-GET /search?tag=salsa&tag=bea
+GET /api/search?tag=salsa&tag=bea
 ```
 
 Response
@@ -74,8 +77,8 @@ Response
     {
       "id": "bachata/20250630_193642391.TS.mp4",
       "name": "20250630_193642391.TS.mp4",
-      "thumbnail": "/thumbnail/bachata/20250630_193642391.TS.mp4",
-      "video": "/video/bachata/20250630_193642391.TS.mp4",
+      "thumbnail": "/api/thumbnail/bachata/20250630_193642391.TS.mp4",
+      "video": "/api/video/bachata/20250630_193642391.TS.mp4",
       "tags": [
         "y:2025",
         "m:06",
@@ -94,7 +97,7 @@ Response
 ## Tags
 
 ```text
-GET /tags
+GET /api/tags
 ```
 
 Returns all distinct tags from the indexed library.
@@ -121,7 +124,7 @@ Tags are unique and sorted alphabetically.
 ## Thumbnail
 
 ```text
-GET /thumbnail/:id
+GET /api/thumbnail/:id
 ```
 
 Returns the existing TagSpaces thumbnail associated with the requested media.
@@ -133,7 +136,7 @@ If no thumbnail exists, the endpoint returns **404 Not Found**.
 ## Video
 
 ```text
-GET /video/:id
+GET /api/video/:id
 ```
 
 Streams the original video from the media library.
