@@ -160,6 +160,23 @@ A `/video/:id` endpoint compatible with HTML5 video players.
 
 ---
 
+# Milestone 8.5 — Tags API
+
+Status: ✅ Completed
+
+Objectives
+
+- Expose all distinct indexed tags through the REST API
+- Reuse the in-memory video index built at startup
+- Return tags in deterministic alphabetical order
+- Keep the endpoint read-only
+
+Deliverable
+
+A `/tags` endpoint that returns `{ count, tags }` for frontend tag selection and autocomplete.
+
+---
+
 # Milestone 9 — Vue Frontend
 
 Status: ⏳ Planned
@@ -262,6 +279,8 @@ Search Response        ██████████ 100%
 Thumbnail API          ██████████ 100%
 
 Video Streaming        ██████████ 100%
+
+Tags API               ██████████ 100%
 
 Vue Frontend           ░░░░░░░░░░   0%
 

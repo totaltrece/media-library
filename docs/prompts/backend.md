@@ -14,6 +14,7 @@ The backend is responsible for:
 - exposing the REST API
 - invoking application services
 - serving JSON responses
+- listing indexed tags
 - streaming media
 - hiding filesystem details
 

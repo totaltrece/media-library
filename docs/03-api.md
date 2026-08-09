@@ -91,6 +91,33 @@ Response
 
 ---
 
+## Tags
+
+```text
+GET /tags
+```
+
+Returns all distinct tags from the indexed library.
+
+The backend never scans the filesystem while executing this request.
+
+Response
+
+```json
+{
+  "count": 3,
+  "tags": [
+    "bachata",
+    "bea",
+    "salsa"
+  ]
+}
+```
+
+Tags are unique and sorted alphabetically.
+
+---
+
 ## Thumbnail
 
 ```text
@@ -155,6 +182,7 @@ Backend
 
 - indexing
 - searching
+- tag listing
 - identifier resolution
 - thumbnail serving
 - video streaming
@@ -162,6 +190,7 @@ Backend
 Frontend
 
 - sending search requests
+- loading available tags
 - displaying results
 - displaying thumbnails
 - playing streamed videos

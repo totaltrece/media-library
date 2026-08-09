@@ -18,6 +18,7 @@ Never construct local file paths.
 The frontend is responsible for:
 
 - search UI
+- tag selection and autocomplete
 - results
 - thumbnails
 - video playback
@@ -29,6 +30,10 @@ Keep components focused.
 Avoid unnecessary global state.
 
 Prefer composition over complexity.
+
+Load available tags from `GET /tags`.
+
+Do not infer the tag catalog from search results alone.
 
 Playback must use the backend streaming endpoint.
 
