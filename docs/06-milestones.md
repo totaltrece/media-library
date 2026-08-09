@@ -145,7 +145,7 @@ A `/thumbnail/:id` endpoint.
 
 # Milestone 8 — Video Streaming
 
-Status: ⏳ Planned
+Status: ✅ Completed
 
 Objectives
 
@@ -261,7 +261,7 @@ Search Response        ██████████ 100%
 
 Thumbnail API          ██████████ 100%
 
-Video Streaming        ░░░░░░░░░░   0%
+Video Streaming        ██████████ 100%
 
 Vue Frontend           ░░░░░░░░░░   0%
 
