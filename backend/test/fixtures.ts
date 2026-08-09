@@ -6,15 +6,15 @@ export const testLibraryPath = "C:\\media-library";
 
 export const testVideos: IndexedVideo[] = [
   {
-    videoPath: join(testLibraryPath, "first.mp4"),
+    videoPath: join(testLibraryPath, "salsa", "first.mp4"),
     tags: ["salsa", "bea", "linea"],
   },
   {
-    videoPath: join(testLibraryPath, "second.mp4"),
+    videoPath: join(testLibraryPath, "salsa", "second.mp4"),
     tags: ["salsa", "damian"],
   },
   {
-    videoPath: join(testLibraryPath, "third.mp4"),
+    videoPath: join(testLibraryPath, "bachata", "third.mp4"),
     tags: ["bachata", "bea"],
   },
 ];

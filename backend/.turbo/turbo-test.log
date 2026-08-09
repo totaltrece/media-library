@@ -1,6 +1,6 @@
 
 > @media-library/backend@ test C:\Users\Carlos\Documents\proyectos\media-library\backend
-> pnpm --filter @media-library/indexer build && pnpm --filter @media-library/search build && tsc --project tsconfig.test.json && node --test dist-test/test/health.test.js dist-test/test/search.test.js
+> pnpm --filter @media-library/indexer build && pnpm --filter @media-library/search build && tsc --project tsconfig.test.json && node --test dist-test/test/health.test.js dist-test/test/search.test.js dist-test/test/search-response.test.js dist-test/test/search-controller.test.js
 
 
 > @media-library/indexer@0.1.0 build C:\Users\Carlos\Documents\proyectos\media-library\packages\indexer
@@ -14,33 +14,93 @@ TAP version 13
 # Subtest: GET /health returns ok status
 ok 1 - GET /health returns ok status
   ---
-  duration_ms: 123.0795
+  duration_ms: 133.9716
+  type: 'test'
+  ...
+# Subtest: parseTagQuery returns an empty array when tag is absent
+ok 2 - parseTagQuery returns an empty array when tag is absent
+  ---
+  duration_ms: 2.5818
+  type: 'test'
+  ...
+# Subtest: parseTagQuery preserves a single tag exactly as received
+ok 3 - parseTagQuery preserves a single tag exactly as received
+  ---
+  duration_ms: 0.4412
+  type: 'test'
+  ...
+# Subtest: parseTagQuery preserves repeated tag values exactly as received
+ok 4 - parseTagQuery preserves repeated tag values exactly as received
+  ---
+  duration_ms: 1.1189
+  type: 'test'
+  ...
+# Subtest: toMediaId returns a library-relative path with forward slashes
+ok 5 - toMediaId returns a library-relative path with forward slashes
+  ---
+  duration_ms: 1.9028
+  type: 'test'
+  ...
+# Subtest: toSearchResult maps indexed videos to the public search item shape
+ok 6 - toSearchResult maps indexed videos to the public search item shape
+  ---
+  duration_ms: 2.5496
+  type: 'test'
+  ...
+# Subtest: buildSearchResponse includes query, count, and mapped results
+ok 7 - buildSearchResponse includes query, count, and mapped results
+  ---
+  duration_ms: 0.5578
+  type: 'test'
+  ...
+# Subtest: media URLs are derived from the media id
+ok 8 - media URLs are derived from the media id
+  ---
+  duration_ms: 0.2556
   type: 'test'
   ...
 # Subtest: GET /search returns videos matching every requested tag
-ok 2 - GET /search returns videos matching every requested tag
+ok 9 - GET /search returns videos matching every requested tag
   ---
-  duration_ms: 127.8087
+  duration_ms: 136.1156
+  type: 'test'
+  ...
+# Subtest: GET /search echoes requested tags exactly as received
+ok 10 - GET /search echoes requested tags exactly as received
+  ---
+  duration_ms: 5.0422
   type: 'test'
   ...
 # Subtest: GET /search without tags returns all indexed videos
-ok 3 - GET /search without tags returns all indexed videos
+ok 11 - GET /search without tags returns all indexed videos
   ---
-  duration_ms: 4.1089
+  duration_ms: 3.7899
   type: 'test'
   ...
 # Subtest: GET /search returns an empty result when no videos match
-ok 4 - GET /search returns an empty result when no videos match
+ok 12 - GET /search returns an empty result when no videos match
   ---
-  duration_ms: 3.5015
+  duration_ms: 3.7445
   type: 'test'
   ...
-1..4
-# tests 4
+# Subtest: GET /search never exposes filesystem paths in the response
+ok 13 - GET /search never exposes filesystem paths in the response
+  ---
+  duration_ms: 3.0425
+  type: 'test'
+  ...
+# Subtest: GET /search builds thumbnail and video URLs from the media id
+ok 14 - GET /search builds thumbnail and video URLs from the media id
+  ---
+  duration_ms: 2.734
+  type: 'test'
+  ...
+1..14
+# tests 14
 # suites 0
-# pass 4
+# pass 14
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 357.58
+# duration_ms 486.1375

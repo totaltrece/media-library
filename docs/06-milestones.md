@@ -109,7 +109,7 @@ A REST API exposing search functionality.
 
 # Milestone 6 — Search Response Redesign
 
-Status: ⏳ Planned
+Status: ✅ Completed
 
 Objectives
 
@@ -257,7 +257,7 @@ CLI                    ██████████ 100%
 
 Backend API            ██████████ 100%
 
-Search Response        ░░░░░░░░░░   0%
+Search Response        ██████████ 100%
 
 Thumbnail API          ░░░░░░░░░░   0%
 

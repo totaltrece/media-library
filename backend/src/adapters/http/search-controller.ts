@@ -1,9 +1,7 @@
-import { basename, relative } from "node:path";
-
-import type { IndexedVideo } from "@media-library/indexer";
 import type { FastifyInstance } from "fastify";
 
 import type { SearchVideosUseCase } from "../../application/search-videos.js";
+import { buildSearchResponse } from "./search-response.js";
 
 export interface SearchControllerOptions {
   libraryPath: string;
@@ -15,40 +13,29 @@ export function registerSearchRoutes(
   options: SearchControllerOptions,
 ): void {
   app.get("/search", async (request) => {
-    const tags = parseTagsQuery(request.query);
+    const requestedTags = parseTagQuery(request.query);
+    const searchTags = requestedTags.length > 0 ? requestedTags : undefined;
 
-    const matches = options.searchVideosUseCase.execute({ tags });
+    const matches = options.searchVideosUseCase.execute({ tags: searchTags });
 
-    return {
-      count: matches.length,
-      results: matches.map((video) => toSearchResult(video, options.libraryPath)),
-    };
+    return buildSearchResponse(requestedTags, matches, options.libraryPath);
   });
 }
 
-function parseTagsQuery(query: unknown): string[] | undefined {
-  if (typeof query !== "object" || query === null || !("tags" in query)) {
-    return undefined;
+export function parseTagQuery(query: unknown): string[] {
+  if (typeof query !== "object" || query === null || !("tag" in query)) {
+    return [];
   }
 
-  const rawTags = query.tags;
+  const rawTag = query.tag;
 
-  if (typeof rawTags !== "string" || rawTags.length === 0) {
-    return undefined;
+  if (typeof rawTag === "string") {
+    return rawTag.length > 0 ? [rawTag] : [];
   }
 
-  const tags = rawTags
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter((tag) => tag.length > 0);
+  if (Array.isArray(rawTag)) {
+    return rawTag.filter((tag): tag is string => typeof tag === "string");
+  }
 
-  return tags.length > 0 ? tags : undefined;
-}
-
-function toSearchResult(video: IndexedVideo, libraryPath: string) {
-  return {
-    path: relative(libraryPath, video.videoPath),
-    thumbnail: `/thumbnails/${basename(video.videoPath)}.jpg`,
-    tags: video.tags,
-  };
+  return [];
 }

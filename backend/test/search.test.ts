@@ -18,20 +18,46 @@ test("GET /search returns videos matching every requested tag", async () => {
 
   const response = await app.inject({
     method: "GET",
-    url: "/search?tags=salsa,bea",
+    url: "/search?tag=salsa&tag=bea",
   });
 
   assert.strictEqual(response.statusCode, 200);
   assert.deepEqual(response.json(), {
+    query: {
+      tags: ["salsa", "bea"],
+    },
     count: 1,
     results: [
       {
-        path: "first.mp4",
-        thumbnail: "/thumbnails/first.mp4.jpg",
+        id: "salsa/first.mp4",
+        name: "first.mp4",
+        thumbnail: "/thumbnail/salsa/first.mp4",
+        video: "/video/salsa/first.mp4",
         tags: ["salsa", "bea", "linea"],
       },
     ],
   });
+
+  await app.close();
+});
+
+test("GET /search echoes requested tags exactly as received", async () => {
+  const app = await createTestApp();
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/search?tag=SALSA&tag=bea",
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+
+  const body = response.json();
+
+  assert.deepEqual(body.query, {
+    tags: ["SALSA", "bea"],
+  });
+  assert.strictEqual(body.count, 1);
+  assert.strictEqual(body.results[0]?.id, "salsa/first.mp4");
 
   await app.close();
 });
@@ -46,21 +72,30 @@ test("GET /search without tags returns all indexed videos", async () => {
 
   assert.strictEqual(response.statusCode, 200);
   assert.deepEqual(response.json(), {
+    query: {
+      tags: [],
+    },
     count: 3,
     results: [
       {
-        path: "first.mp4",
-        thumbnail: "/thumbnails/first.mp4.jpg",
+        id: "salsa/first.mp4",
+        name: "first.mp4",
+        thumbnail: "/thumbnail/salsa/first.mp4",
+        video: "/video/salsa/first.mp4",
         tags: ["salsa", "bea", "linea"],
       },
       {
-        path: "second.mp4",
-        thumbnail: "/thumbnails/second.mp4.jpg",
+        id: "salsa/second.mp4",
+        name: "second.mp4",
+        thumbnail: "/thumbnail/salsa/second.mp4",
+        video: "/video/salsa/second.mp4",
         tags: ["salsa", "damian"],
       },
       {
-        path: "third.mp4",
-        thumbnail: "/thumbnails/third.mp4.jpg",
+        id: "bachata/third.mp4",
+        name: "third.mp4",
+        thumbnail: "/thumbnail/bachata/third.mp4",
+        video: "/video/bachata/third.mp4",
         tags: ["bachata", "bea"],
       },
     ],
@@ -74,14 +109,56 @@ test("GET /search returns an empty result when no videos match", async () => {
 
   const response = await app.inject({
     method: "GET",
-    url: "/search?tags=unknown",
+    url: "/search?tag=unknown",
   });
 
   assert.strictEqual(response.statusCode, 200);
   assert.deepEqual(response.json(), {
+    query: {
+      tags: ["unknown"],
+    },
     count: 0,
     results: [],
   });
+
+  await app.close();
+});
+
+test("GET /search never exposes filesystem paths in the response", async () => {
+  const app = await createTestApp();
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/search?tag=salsa",
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+
+  const serialized = JSON.stringify(response.json());
+
+  assert.doesNotMatch(serialized, /C:\\\\media-library/i);
+  assert.doesNotMatch(serialized, /videoPath/);
+  assert.doesNotMatch(serialized, /metadataPath/);
+  assert.doesNotMatch(serialized, /thumbnailPath/);
+
+  await app.close();
+});
+
+test("GET /search builds thumbnail and video URLs from the media id", async () => {
+  const app = await createTestApp();
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/search?tag=bachata",
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+
+  const result = response.json().results[0];
+
+  assert.strictEqual(result.id, "bachata/third.mp4");
+  assert.strictEqual(result.thumbnail, "/thumbnail/bachata/third.mp4");
+  assert.strictEqual(result.video, "/video/bachata/third.mp4");
 
   await app.close();
 });
