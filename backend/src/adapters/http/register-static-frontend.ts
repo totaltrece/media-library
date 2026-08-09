@@ -21,6 +21,6 @@ export async function registerStaticFrontend(
       });
     }
 
-    return reply.sendFile("index.html");
+    return reply.status(404).send();
   });
 }

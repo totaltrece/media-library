@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -12,7 +12,9 @@ import { testLibraryPath, testVideos } from "./fixtures.js";
 async function createStaticFixture(): Promise<string> {
   const staticRoot = await mkdtemp(join(tmpdir(), "media-library-static-"));
 
+  await mkdir(join(staticRoot, "assets"), { recursive: true });
   await writeFile(join(staticRoot, "index.html"), "<!doctype html><title>Media Library</title>");
+  await writeFile(join(staticRoot, "assets", "app.js"), "console.log('app');");
 
   return staticRoot;
 }
@@ -36,7 +38,7 @@ test("GET / serves the built frontend index.html", async () => {
   await app.close();
 });
 
-test("unknown frontend routes fall back to index.html", async () => {
+test("GET /assets/* serves static frontend assets", async () => {
   const staticRoot = await createStaticFixture();
   const app = await createApp({
     videoIndex: new InMemoryVideoIndex(testVideos),
@@ -46,11 +48,31 @@ test("unknown frontend routes fall back to index.html", async () => {
 
   const response = await app.inject({
     method: "GET",
-    url: "/some-client-route",
+    url: "/assets/app.js",
   });
 
   assert.strictEqual(response.statusCode, 200);
-  assert.match(response.body, /Media Library/);
+  assert.match(response.body, /console\.log\('app'\)/);
+
+  await app.close();
+});
+
+test("unknown non-API routes return 404", async () => {
+  const staticRoot = await createStaticFixture();
+  const app = await createApp({
+    videoIndex: new InMemoryVideoIndex(testVideos),
+    libraryPath: testLibraryPath,
+    staticRoot,
+  });
+
+  for (const url of ["/foo", "/anything", "/foo/bar"]) {
+    const response = await app.inject({
+      method: "GET",
+      url,
+    });
+
+    assert.strictEqual(response.statusCode, 404, `expected 404 for ${url}`);
+  }
 
   await app.close();
 });
