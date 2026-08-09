@@ -6,8 +6,8 @@
     @click="$emit('select')"
   >
     <img :alt="`Thumbnail for video tagged ${result.tags.join(', ')}`" :src="thumbnailUrl" />
-    <div class="result-tags">
-      <span v-for="tag in result.tags" :key="tag" class="tag-chip">{{ tag }}</span>
+    <div class="result-card-tags">
+      <span v-for="tag in result.tags" :key="tag" class="result-card-tag">{{ tag }}</span>
     </div>
   </button>
 </template>

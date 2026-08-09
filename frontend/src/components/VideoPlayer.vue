@@ -1,27 +1,45 @@
 <template>
-  <section class="video-panel" aria-label="Video player">
-    <h2>Now playing</h2>
+  <div
+    class="video-modal-backdrop"
+    role="presentation"
+    @click.self="$emit('close')"
+  >
+    <section
+      aria-label="Video player"
+      aria-modal="true"
+      class="video-modal"
+      role="dialog"
+    >
+      <button
+        aria-label="Close video"
+        class="video-modal-close"
+        type="button"
+        @click="$emit('close')"
+      >
+        ×
+      </button>
 
-    <div class="video-player">
-      <video
-        ref="videoElement"
-        controls
-        playsinline
-        :src="videoUrl"
-        @error="onVideoError"
-      />
-    </div>
+      <div class="video-player">
+        <video
+          ref="videoElement"
+          controls
+          playsinline
+          :src="videoUrl"
+          @error="onVideoError"
+        />
+      </div>
 
-    <ErrorMessage v-if="playbackError" :message="playbackError" />
+      <ErrorMessage v-if="playbackError" :message="playbackError" />
 
-    <div class="result-tags">
-      <span v-for="tag in tags" :key="tag" class="tag-chip">{{ tag }}</span>
-    </div>
-  </section>
+      <div class="result-tags">
+        <span v-for="tag in tags" :key="tag" class="tag-chip">{{ tag }}</span>
+      </div>
+    </section>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import { buildApiUrl } from "../api/client.js";
 import ErrorMessage from "./ErrorMessage.vue";
@@ -29,6 +47,10 @@ import ErrorMessage from "./ErrorMessage.vue";
 const props = defineProps<{
   videoPath: string;
   tags: string[];
+}>();
+
+const emit = defineEmits<{
+  close: [];
 }>();
 
 const videoElement = ref<HTMLVideoElement | null>(null);
@@ -50,4 +72,18 @@ watch(
 function onVideoError(): void {
   playbackError.value = "Unable to play this video.";
 }
+
+function onKeyDown(event: KeyboardEvent): void {
+  if (event.key === "Escape") {
+    emit("close");
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", onKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", onKeyDown);
+});
 </script>

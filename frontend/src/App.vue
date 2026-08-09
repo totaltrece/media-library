@@ -27,20 +27,21 @@
 
     <ErrorMessage v-if="searchError" :message="searchError" />
 
-    <div class="content-layout" :class="{ 'has-player': selectedVideo !== null }">
+    <div class="content-layout">
       <SearchResults
         :results="searchResults"
         :searched="hasSearched"
         :selected-video-id="selectedVideo?.id ?? null"
         @select-video="selectVideo"
       />
-
-      <VideoPlayer
-        v-if="selectedVideo"
-        :tags="selectedVideo.tags"
-        :video-path="selectedVideo.video"
-      />
     </div>
+
+    <VideoPlayer
+      v-if="selectedVideo"
+      :tags="selectedVideo.tags"
+      :video-path="selectedVideo.video"
+      @close="closeVideo"
+    />
   </div>
 </template>
 
@@ -120,5 +121,9 @@ async function runSearch(): Promise<void> {
 
 function selectVideo(result: SearchResultItem): void {
   selectedVideo.value = result;
+}
+
+function closeVideo(): void {
+  selectedVideo.value = null;
 }
 </script>
