@@ -128,7 +128,7 @@ A stable API contract that the frontend can consume without modification as new 
 
 # Milestone 7 — Thumbnail API
 
-Status: ⏳ Planned
+Status: ✅ Completed
 
 Objectives
 
@@ -259,7 +259,7 @@ Backend API            ██████████ 100%
 
 Search Response        ██████████ 100%
 
-Thumbnail API          ░░░░░░░░░░   0%
+Thumbnail API          ██████████ 100%
 
 Video Streaming        ░░░░░░░░░░   0%
 
