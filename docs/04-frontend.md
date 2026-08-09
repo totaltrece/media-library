@@ -68,10 +68,9 @@ Searching should feel immediate and responsive.
 Each result displays:
 
 - thumbnail
-- filename
 - tags
 
-Selecting a result opens the embedded player.
+The MVP does not display filenames. Selecting a result opens the embedded player.
 
 ---
 

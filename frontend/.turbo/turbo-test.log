@@ -1,0 +1,14 @@
+
+> frontend@ test C:\Users\Carlos\Documents\proyectos\media-library\frontend
+> vitest run
+
+
+ RUN  v3.2.7 C:/Users/Carlos/Documents/proyectos/media-library/frontend
+
+ ✓ test/api.test.ts (3 tests) 8ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  14:37:03
+   Duration  2.04s (transform 160ms, setup 0ms, collect 84ms, tests 8ms, environment 1.21s, prepare 307ms)
+

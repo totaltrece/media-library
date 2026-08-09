@@ -179,7 +179,7 @@ A `/tags` endpoint that returns `{ count, tags }` for frontend tag selection and
 
 # Milestone 9 — Vue Frontend
 
-Status: ⏳ Planned
+Status: ✅ Completed
 
 Objectives
 
@@ -194,6 +194,9 @@ Deliverable
 
 A browser-based interface capable of searching and browsing the media library.
 
+The MVP frontend also includes basic HTML5 video playback using the existing
+streaming endpoint.
+
 ---
 
 # Milestone 10 — Video Player
@@ -202,14 +205,13 @@ Status: ⏳ Planned
 
 Objectives
 
-- Play streamed videos
-- Portrait-first layout
-- Fullscreen playback
-- Tablet-friendly interface
+- Refine portrait-first playback
+- Improve fullscreen experience
+- Enhance tablet-specific player interactions
 
 Deliverable
 
-A complete end-to-end workflow from search to video playback.
+A polished end-to-end workflow from search to video playback.
 
 ---
 
@@ -282,7 +284,7 @@ Video Streaming        ██████████ 100%
 
 Tags API               ██████████ 100%
 
-Vue Frontend           ░░░░░░░░░░   0%
+Vue Frontend           ██████████ 100%
 
 Video Player           ░░░░░░░░░░   0%
 

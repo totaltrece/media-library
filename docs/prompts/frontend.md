@@ -33,8 +33,15 @@ Prefer composition over complexity.
 
 Load available tags from `GET /tags`.
 
+Use `GET /search?tag=...&tag=...` for multi-tag searches.
+
+Use the `thumbnail` and `video` URLs returned by the search API directly.
+
 Do not infer the tag catalog from search results alone.
 
 Playback must use the backend streaming endpoint.
 
 Do not duplicate business logic implemented by the backend.
+
+During development, rely on the Vite proxy for API requests unless
+`VITE_API_BASE` is configured.
