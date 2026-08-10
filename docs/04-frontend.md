@@ -243,4 +243,5 @@ When changing frontend source files:
 2. Commit the updated `frontend/dist` files together with the source changes.
 
 A remote server can pull the committed `frontend/dist` and serve it through
-Fastify without building the frontend locally.
+Fastify without building the frontend locally. The backend serves `index.html`
+at `/` and hashed files from `/assets/*` directly from that directory.

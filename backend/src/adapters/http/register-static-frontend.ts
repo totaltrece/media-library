@@ -7,7 +7,7 @@ export async function registerStaticFrontend(
 ): Promise<void> {
   await app.register(fastifyStatic, {
     root: staticRoot,
-    wildcard: false,
+    wildcard: true,
   });
 
   app.setNotFoundHandler(async (request, reply) => {
