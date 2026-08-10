@@ -1,7 +1,7 @@
 <template>
   <section class="tag-search" aria-label="Tag search">
     <div class="tag-input-row">
-      <div class="tag-input-wrapper">
+      <div ref="tagInputWrapper" class="tag-input-wrapper">
         <label class="visually-hidden" for="tag-input">Search tags</label>
         <input
           id="tag-input"
@@ -62,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 const props = defineProps<{
   availableTags: string[];
@@ -79,6 +79,7 @@ const emit = defineEmits<{
 
 const query = ref("");
 const showSuggestions = ref(false);
+const tagInputWrapper = ref<HTMLElement | null>(null);
 
 const filteredSuggestions = computed(() => {
   const normalizedQuery = query.value.trim().toLowerCase();
@@ -117,6 +118,28 @@ function selectHighlightedSuggestion(): void {
 function closeSuggestions(): void {
   showSuggestions.value = false;
 }
+
+function handleDocumentClick(event: MouseEvent): void {
+  if (!showSuggestions.value) {
+    return;
+  }
+
+  const target = event.target;
+
+  if (target instanceof Node && tagInputWrapper.value?.contains(target)) {
+    return;
+  }
+
+  closeSuggestions();
+}
+
+onMounted(() => {
+  document.addEventListener("click", handleDocumentClick);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", handleDocumentClick);
+});
 </script>
 
 <style scoped>

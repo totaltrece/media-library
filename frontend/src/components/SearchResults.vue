@@ -1,5 +1,5 @@
 <template>
-  <section class="search-results" aria-live="polite">
+  <section v-if="searched" class="search-results" aria-live="polite">
     <h2>{{ heading }}</h2>
 
     <p v-if="results.length === 0" class="status-message info">
@@ -36,10 +36,6 @@ defineEmits<{
 }>();
 
 const heading = computed(() => {
-  if (!props.searched) {
-    return "Search results";
-  }
-
   return `${props.results.length} result${props.results.length === 1 ? "" : "s"}`;
 });
 </script>

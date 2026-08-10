@@ -215,6 +215,7 @@
 .search-results {
   display: grid;
   gap: 1rem;
+  margin-top: 1.5rem;
 }
 
 .search-results h2 {
