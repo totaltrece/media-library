@@ -1,4 +1,4 @@
-import type { ApiErrorResponse, SearchResponse, TagsResponse } from "./types.js";
+import type { ApiErrorResponse, RefreshLibraryResponse, SearchResponse, TagsResponse } from "./types.js";
 
 const API_PREFIX = "/api";
 
@@ -58,4 +58,12 @@ export async function searchVideos(tags: string[]): Promise<SearchResponse> {
   const response = await fetch(buildSearchUrl(tags));
 
   return readJsonResponse<SearchResponse>(response);
+}
+
+export async function refreshLibrary(): Promise<RefreshLibraryResponse> {
+  const response = await fetch(buildApiUrl("/library/refresh"), {
+    method: "POST",
+  });
+
+  return readJsonResponse<RefreshLibraryResponse>(response);
 }

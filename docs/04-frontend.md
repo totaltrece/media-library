@@ -42,6 +42,7 @@ The frontend is responsible for:
 - displaying thumbnails
 - selecting videos
 - playing streamed videos
+- refreshing the indexed library
 - handling loading and error states
 
 The frontend never accesses the filesystem.
@@ -57,6 +58,7 @@ The initial screen contains:
 - search box
 - active tag filters
 - search button (optional)
+- refresh library button
 - search results
 
 Searching should feel immediate and responsive.

@@ -24,3 +24,7 @@ export interface ApiErrorResponse {
     message: string;
   };
 }
+
+export interface RefreshLibraryResponse {
+  count: number;
+}

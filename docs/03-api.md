@@ -121,6 +121,27 @@ Tags are unique and sorted alphabetically.
 
 ---
 
+## Library Refresh
+
+```text
+POST /api/library/refresh
+```
+
+Re-indexes the configured media library and replaces the in-memory video index.
+
+The endpoint does not modify video files or TagSpaces metadata. If indexing
+fails, the existing in-memory index remains unchanged.
+
+Response
+
+```json
+{
+  "count": 123
+}
+```
+
+---
+
 ## Thumbnail
 
 ```text
@@ -186,6 +207,7 @@ Backend
 - indexing
 - searching
 - tag listing
+- in-memory index refresh
 - identifier resolution
 - thumbnail serving
 - video streaming
@@ -194,6 +216,7 @@ Frontend
 
 - sending search requests
 - loading available tags
+- refreshing the indexed library
 - displaying results
 - displaying thumbnails
 - playing streamed videos

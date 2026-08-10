@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { buildApiUrl, buildSearchUrl } from "../src/api/client.js";
 
@@ -25,5 +25,24 @@ describe("buildSearchUrl", () => {
 
   it("builds the search endpoint without tags", () => {
     expect(buildSearchUrl([])).toBe("/api/search");
+  });
+});
+
+describe("refreshLibrary", () => {
+  it("posts to the library refresh endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ count: 3 }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { refreshLibrary } = await import("../src/api/client.js");
+    const response = await refreshLibrary();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/library/refresh", { method: "POST" });
+    expect(response).toEqual({ count: 3 });
+
+    vi.unstubAllGlobals();
   });
 });

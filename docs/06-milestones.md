@@ -217,7 +217,25 @@ A single-port application where Fastify serves both the web UI and the REST API.
 
 ---
 
-# Milestone 11 — Video Player
+# Milestone 11 — Library Refresh
+
+Status: ✅ Completed
+
+Objectives
+
+- Re-index the library without restarting the server
+- Expose `POST /api/library/refresh`
+- Replace the in-memory video index safely
+- Add a frontend refresh control with loading and error states
+
+Deliverable
+
+Users can pick up newly added videos and updated TagSpaces metadata while the
+application keeps running.
+
+---
+
+# Milestone 12 — Video Player
 
 Status: ⏳ Planned
 
@@ -233,7 +251,7 @@ A polished end-to-end workflow from search to video playback.
 
 ---
 
-# Milestone 12 — Library Statistics
+# Milestone 13 — Library Statistics
 
 Status: ⏳ Planned
 
@@ -250,7 +268,7 @@ A `/stats` endpoint.
 
 ---
 
-# Milestone 13 — MVP Completion
+# Milestone 14 — MVP Completion
 
 Status: ⏳ Planned
 
@@ -305,6 +323,8 @@ Tags API               ██████████ 100%
 Vue Frontend           ██████████ 100%
 
 Unified Server         ██████████ 100%
+
+Library Refresh        ██████████ 100%
 
 Video Player           ░░░░░░░░░░   0%
 

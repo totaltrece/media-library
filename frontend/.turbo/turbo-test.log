@@ -5,10 +5,10 @@
 
  RUN  v3.2.7 C:/Users/Carlos/Documents/proyectos/media-library/frontend
 
- ✓ test/api.test.ts (5 tests) 5ms
+ ✓ test/api.test.ts (6 tests) 8ms
 
  Test Files  1 passed (1)
-      Tests  5 passed (5)
-   Start at  15:25:16
-   Duration  1.76s (transform 58ms, setup 0ms, collect 44ms, tests 5ms, environment 952ms, prepare 218ms)
+      Tests  6 passed (6)
+   Start at  21:51:09
+   Duration  15.19s (transform 66ms, setup 0ms, collect 89ms, tests 8ms, environment 13.64s, prepare 716ms)
 

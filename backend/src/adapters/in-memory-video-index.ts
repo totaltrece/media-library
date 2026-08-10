@@ -1,11 +1,15 @@
 import type { IndexedVideo } from "@media-library/indexer";
 
-import type { VideoIndex } from "../ports/video-index.js";
+import type { MutableVideoIndex } from "../ports/video-index.js";
 
-export class InMemoryVideoIndex implements VideoIndex {
-  constructor(private readonly videos: IndexedVideo[]) {}
+export class InMemoryVideoIndex implements MutableVideoIndex {
+  constructor(private videos: IndexedVideo[]) {}
 
   getVideos(): IndexedVideo[] {
     return this.videos;
+  }
+
+  replaceVideos(videos: IndexedVideo[]): void {
+    this.videos = videos;
   }
 }
