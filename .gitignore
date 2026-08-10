@@ -1,3 +1,6 @@
 node_modules/
 dist/
+!frontend/dist/
+dist-test/
+samples/indexer-library/
 .env

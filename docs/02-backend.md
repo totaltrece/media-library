@@ -1,0 +1,279 @@
+# Backend Architecture
+
+Version: 2.0
+
+---
+
+# Purpose
+
+The backend is responsible for exposing the media library through a simple,
+read-only HTTP API.
+
+It coordinates indexing, searching and future application services while keeping
+the domain independent from infrastructure and frameworks.
+
+The backend must never modify the original media library or any TagSpaces
+metadata.
+
+---
+
+# Responsibilities
+
+The backend is responsible for:
+
+- serving the HTTP API
+- coordinating indexing
+- executing searches
+- exposing application statistics
+- managing the application lifecycle
+
+The backend is not responsible for:
+
+- rendering the user interface
+- editing metadata
+- modifying media files
+- implementing business logic inside HTTP handlers
+
+---
+
+# Architectural Style
+
+The backend follows Hexagonal Architecture.
+
+Dependencies always point inward.
+
+```text
+                 HTTP
+                  │
+          Fastify Adapter
+                  │
+        Application Services
+                  │
+         Ports and Interfaces
+                  │
+              Domain Model
+                  │
+    -------------------------------
+          Infrastructure
+```
+
+Frameworks are implementation details.
+
+Business rules must never depend on Fastify or any other framework.
+
+---
+
+# Layers
+
+## Domain
+
+Contains business concepts.
+
+Examples:
+
+- IndexedVideo
+- SearchQuery
+- SearchResult
+
+The domain contains no filesystem code, HTTP code or framework-specific types.
+
+---
+
+## Application
+
+Contains use cases.
+
+Examples:
+
+- IndexLibrary
+- SearchVideos
+- GetStatistics
+- ReindexLibrary
+
+Each use case coordinates one task.
+
+Application services communicate only through ports.
+
+---
+
+## Ports
+
+Ports describe capabilities required by the application.
+
+Examples:
+
+- LibraryIndexer
+- VideoSearcher
+- StatisticsProvider
+
+Ports are interfaces.
+
+They contain no implementation.
+
+---
+
+## Adapters
+
+Adapters implement ports.
+
+Examples:
+
+- TagSpaces filesystem reader
+- Search adapter
+- HTTP controllers
+- Future persistence adapters
+
+Adapters may depend on external libraries.
+
+The application layer never depends on adapters.
+
+---
+
+# Composition Root
+
+The backend application is the only place where concrete implementations are
+wired together.
+
+Example:
+
+```text
+Fastify
+        │
+SearchController
+        │
+SearchVideosUseCase
+        │
+SearchRepository
+```
+
+Dependency creation should never leak into the domain.
+
+---
+
+# Request Flow
+
+A typical request follows this sequence.
+
+```text
+HTTP Request
+      │
+Fastify Route
+      │
+Controller
+      │
+Application Use Case
+      │
+Port
+      │
+Adapter
+      │
+Response
+```
+
+Every layer has a single responsibility.
+
+---
+
+# Existing Packages
+
+The backend reuses workspace packages.
+
+Current packages:
+
+- packages/indexer
+- packages/search
+
+Future packages should be added only when they represent a clear architectural
+boundary.
+
+---
+
+# Error Handling
+
+Expected errors should be translated into meaningful HTTP responses.
+
+Unexpected errors should:
+
+- be logged
+- never expose internal details
+- never crash the application unnecessarily
+
+The backend should fail gracefully whenever possible.
+
+---
+
+# Configuration
+
+Runtime configuration should be externalized.
+
+Examples:
+
+- library location
+- server port
+- future cache location
+
+Configuration should never be hardcoded.
+
+---
+
+# Testing Strategy
+
+The backend should be tested at three levels.
+
+## Unit Tests
+
+Business rules.
+
+No filesystem.
+
+No HTTP.
+
+Fast execution.
+
+---
+
+## Integration Tests
+
+Filesystem adapters.
+
+HTTP routes.
+
+Package integration.
+
+---
+
+## End-to-End Tests
+
+Complete API behaviour.
+
+Real HTTP requests.
+
+Temporary sample libraries.
+
+---
+
+# Design Principles
+
+The backend should remain:
+
+- read-only
+- deterministic
+- modular
+- testable
+- framework-independent
+
+When in doubt, prefer the simplest solution that preserves these principles.
+
+---
+
+# Cursor Notes
+
+Before implementing backend changes:
+
+- Read AGENTS.md.
+- Read docs/00-vision.md.
+- Preserve the dependency direction.
+- Keep Fastify outside the domain.
+- Prefer extending existing packages.
+- Add tests before completing the task.
+- Keep commits focused and small.

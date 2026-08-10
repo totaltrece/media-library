@@ -1,9 +1,18 @@
 {
   "name": "media-library",
   "private": true,
-  "packageManager": "pnpm@10",
+  "packageManager": "pnpm@10.17.1",
   "scripts": {
-    "dev": "echo Configure workspaces",
-    "build": "echo build"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "search": "tsx tools/search.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "turbo": "^2.10.7",
+    "tsx": "^4.21.0",
+    "typescript": "^7.0.2"
   }
 }

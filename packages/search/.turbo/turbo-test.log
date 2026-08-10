@@ -1,0 +1,54 @@
+
+> @media-library/search@0.1.0 test C:\Users\Carlos\Documents\proyectos\media-library\packages\search
+> pnpm --filter @media-library/indexer build && tsc --project tsconfig.test.json && node --test dist-test/test/index.test.js
+
+
+> @media-library/indexer@0.1.0 build C:\Users\Carlos\Documents\proyectos\media-library\packages\indexer
+> tsc
+
+TAP version 13
+# Subtest: returns all videos when query tags are undefined
+ok 1 - returns all videos when query tags are undefined
+  ---
+  duration_ms: 1.1433
+  type: 'test'
+  ...
+# Subtest: returns all videos when query tags are empty
+ok 2 - returns all videos when query tags are empty
+  ---
+  duration_ms: 0.1843
+  type: 'test'
+  ...
+# Subtest: matches videos containing every requested tag
+ok 3 - matches videos containing every requested tag
+  ---
+  duration_ms: 1.8922
+  type: 'test'
+  ...
+# Subtest: matches tags without regard to case
+ok 4 - matches tags without regard to case
+  ---
+  duration_ms: 0.2315
+  type: 'test'
+  ...
+# Subtest: ignores duplicate query tags and preserves input order
+ok 5 - ignores duplicate query tags and preserves input order
+  ---
+  duration_ms: 0.3126
+  type: 'test'
+  ...
+# Subtest: returns no videos when any requested tag is absent
+ok 6 - returns no videos when any requested tag is absent
+  ---
+  duration_ms: 0.1479
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 137.3827
