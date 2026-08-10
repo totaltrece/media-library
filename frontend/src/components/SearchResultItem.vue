@@ -7,6 +7,7 @@
       @click="$emit('select-video')"
     >
       <img :alt="`Thumbnail for video tagged ${result.tags.join(', ')}`" :src="thumbnailUrl" />
+      <span class="result-card-date">{{ displayDate }}</span>
     </button>
     <div class="result-card-tags">
       <button
@@ -28,6 +29,7 @@ import { computed } from "vue";
 
 import { buildApiUrl } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
+import { formatVideoDateFromName } from "../utils/video-date.js";
 
 const props = defineProps<{
   result: SearchResultItem;
@@ -40,4 +42,5 @@ defineEmits<{
 }>();
 
 const thumbnailUrl = computed(() => buildApiUrl(props.result.thumbnail));
+const displayDate = computed(() => formatVideoDateFromName(props.result.name));
 </script>
