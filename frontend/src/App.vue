@@ -48,6 +48,7 @@
         :results="searchResults"
         :searched="hasSearched"
         :selected-video-id="selectedVideo?.id ?? null"
+        @select-tag="addTag"
         @select-video="selectVideo"
       />
     </div>

@@ -12,7 +12,8 @@
         :key="result.id"
         :result="result"
         :selected="result.id === selectedVideoId"
-        @select="$emit('select-video', result)"
+        @select-tag="$emit('select-tag', $event)"
+        @select-video="$emit('select-video', result)"
       />
     </div>
   </section>
@@ -32,6 +33,7 @@ const props = defineProps<{
 }>();
 
 defineEmits<{
+  "select-tag": [tag: string];
   "select-video": [result: SearchResult];
 }>();
 

@@ -1,15 +1,26 @@
 <template>
-  <button
-    class="result-card"
-    :class="{ selected: selected }"
-    type="button"
-    @click="$emit('select')"
-  >
-    <img :alt="`Thumbnail for video tagged ${result.tags.join(', ')}`" :src="thumbnailUrl" />
+  <article class="result-card" :class="{ selected: selected }">
+    <button
+      class="result-card-thumbnail"
+      type="button"
+      :aria-label="`Play video tagged ${result.tags.join(', ')}`"
+      @click="$emit('select-video')"
+    >
+      <img :alt="`Thumbnail for video tagged ${result.tags.join(', ')}`" :src="thumbnailUrl" />
+    </button>
     <div class="result-card-tags">
-      <span v-for="tag in result.tags" :key="tag" class="result-card-tag">{{ tag }}</span>
+      <button
+        v-for="tag in result.tags"
+        :key="tag"
+        class="result-card-tag"
+        type="button"
+        :aria-label="`Add ${tag} to search`"
+        @click="$emit('select-tag', tag)"
+      >
+        {{ tag }}
+      </button>
     </div>
-  </button>
+  </article>
 </template>
 
 <script setup lang="ts">
@@ -24,7 +35,8 @@ const props = defineProps<{
 }>();
 
 defineEmits<{
-  select: [];
+  "select-video": [];
+  "select-tag": [tag: string];
 }>();
 
 const thumbnailUrl = computed(() => buildApiUrl(props.result.thumbnail));
