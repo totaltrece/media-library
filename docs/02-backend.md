@@ -208,9 +208,9 @@ Runtime configuration should be externalized.
 
 Examples:
 
-- library location
-- server port
-- future cache location
+- library location (`LIBRARY_PATH`)
+- server port (`PORT`)
+- SQLite database path (`SQLITE_PATH`, optional until search reads from SQLite)
 
 Configuration should never be hardcoded.
 

@@ -10,7 +10,18 @@ function requireEnv(name: string): string {
     return value;
 }
 
+function optionalEnv(name: string): string | undefined {
+    const value = process.env[name];
+
+    if (value === undefined || value.length === 0) {
+        return undefined;
+    }
+
+    return value;
+}
+
 export const config = {
     libraryPath: requireEnv("LIBRARY_PATH"),
     port: Number(process.env.PORT ?? "3000"),
+    sqlitePath: optionalEnv("SQLITE_PATH"),
 };
