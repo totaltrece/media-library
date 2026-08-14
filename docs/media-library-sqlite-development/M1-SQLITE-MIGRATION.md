@@ -70,8 +70,8 @@ Campos:
 ### Persistencia
 
 El backend usa el módulo nativo `node:sqlite`. La ruta se configura con
-`SQLITE_PATH` y no está hardcodeada. La aplicación actual sigue arrancando sin
-esa variable; el store se abre explícitamente cuando se necesita.
+`SQLITE_PATH` y no está hardcodeada. El arranque y `pnpm import-library`
+requieren esa variable; no se inventa una ruta por defecto.
 
 Para recrear la base local, basta con borrar el fichero apuntado por
 `SQLITE_PATH` y volver a abrir el store.
@@ -110,13 +110,25 @@ Crear una operación reproducible que:
 7. Sea idempotente.
 8. No modifique los `.ts`.
 
+Ejecutar en local (no arranca el backend):
+
+```bash
+pnpm import-library
+```
+
+Requiere `LIBRARY_PATH` y `SQLITE_PATH` en `backend/.env`. El runtime de consulta
+lee los tags desde SQLite; los `.ts` de TagSpaces se conservan como backup y
+siguen usándose solo en la importación explícita.
+
 ## Búsqueda
 
 Conservar exactamente el comportamiento actual.
 
 Si se solicitan varios tags, el vídeo debe coincidir con todos los tags solicitados, como en los tests existentes.
 
-La fuente de los tags pasa a ser SQLite.
+La fuente de los tags pasa a ser SQLite. El package `search` no conoce SQLite:
+el composition root carga `LibraryStore.listVideosWithTags()`, lo adapta a
+`IndexedVideo[]` y sigue llamando a `searchVideos()`.
 
 ## Compatibilidad
 

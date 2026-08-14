@@ -7,7 +7,8 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "test": "turbo test",
-    "search": "tsx tools/search.ts"
+    "search": "tsx tools/search.ts",
+    "import-library": "pnpm --filter @media-library/backend import-library"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

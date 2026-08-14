@@ -210,7 +210,7 @@ Examples:
 
 - library location (`LIBRARY_PATH`)
 - server port (`PORT`)
-- SQLite database path (`SQLITE_PATH`, optional until search reads from SQLite)
+- SQLite database path (`SQLITE_PATH`, required at runtime and for `pnpm import-library`)
 
 Configuration should never be hardcoded.
 

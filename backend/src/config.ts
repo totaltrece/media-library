@@ -1,27 +1,36 @@
-import "dotenv/config";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { config as loadEnv } from "dotenv";
 
-function requireEnv(name: string): string {
-    const value = process.env[name];
+loadBackendEnv();
 
-    if (value === undefined || value.length === 0) {
-        throw new Error(`${name} environment variable is required.`);
-    }
+function loadBackendEnv(): void {
+  const moduleDirectory = dirname(fileURLToPath(import.meta.url));
+  const envPath = [join(moduleDirectory, "..", ".env"), join(moduleDirectory, "..", "..", ".env")].find(
+    (candidate) => existsSync(candidate),
+  );
 
-    return value;
+  if (envPath !== undefined) {
+    loadEnv({ path: envPath });
+    return;
+  }
+
+  loadEnv();
 }
 
-function optionalEnv(name: string): string | undefined {
-    const value = process.env[name];
+function requireEnv(name: string): string {
+  const value = process.env[name];
 
-    if (value === undefined || value.length === 0) {
-        return undefined;
-    }
+  if (value === undefined || value.length === 0) {
+    throw new Error(`${name} environment variable is required.`);
+  }
 
-    return value;
+  return value;
 }
 
 export const config = {
-    libraryPath: requireEnv("LIBRARY_PATH"),
-    port: Number(process.env.PORT ?? "3000"),
-    sqlitePath: optionalEnv("SQLITE_PATH"),
+  libraryPath: requireEnv("LIBRARY_PATH"),
+  port: Number(process.env.PORT ?? "3000"),
+  sqlitePath: requireEnv("SQLITE_PATH"),
 };
