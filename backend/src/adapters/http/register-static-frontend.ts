@@ -21,6 +21,10 @@ export async function registerStaticFrontend(
       });
     }
 
+    if (request.method === "GET" && (path === "/admin" || path.startsWith("/admin/"))) {
+      return reply.sendFile("index.html");
+    }
+
     return reply.status(404).send();
   });
 }

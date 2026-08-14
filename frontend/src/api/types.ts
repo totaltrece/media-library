@@ -28,3 +28,7 @@ export interface ApiErrorResponse {
 export interface RefreshLibraryResponse {
   count: number;
 }
+
+export interface VideoTagsResponse {
+  tags: string[];
+}

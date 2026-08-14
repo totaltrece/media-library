@@ -128,6 +128,27 @@ test("unknown non-API routes return 404", async () => {
   await app.close();
 });
 
+test("GET /admin and /admin/* serve the frontend index.html", async () => {
+  const { staticRoot } = await createStaticFixture();
+  const app = await createApp({
+    videoIndex: new InMemoryVideoIndex(testVideos),
+    libraryPath: testLibraryPath,
+    staticRoot,
+  });
+
+  for (const url of ["/admin", "/admin/videos", "/admin/videos/salsa/first.mp4"]) {
+    const response = await app.inject({
+      method: "GET",
+      url,
+    });
+
+    assert.strictEqual(response.statusCode, 200, `expected 200 for ${url}`);
+    assert.match(response.body, /Media Library/);
+  }
+
+  await app.close();
+});
+
 test("API routes remain available when static frontend is enabled", async () => {
   const { staticRoot } = await createStaticFixture();
   const app = await createApp({

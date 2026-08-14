@@ -3,13 +3,15 @@
     <h2>{{ heading }}</h2>
 
     <p v-if="results.length === 0" class="status-message info">
-      No videos match the selected tags.
+      {{ emptyMessage }}
     </p>
 
     <div v-else class="results-grid">
       <SearchResultItem
         v-for="result in results"
         :key="result.id"
+        :interactive-tags="interactiveTags"
+        :show-name="showName"
         :result="result"
         :selected="result.id === selectedVideoId"
         @select-tag="$emit('select-tag', $event)"
@@ -26,11 +28,21 @@ import type { SearchResultItem as SearchResult } from "../api/types.js";
 
 import SearchResultItem from "./SearchResultItem.vue";
 
-const props = defineProps<{
-  results: SearchResult[];
-  selectedVideoId: string | null;
-  searched: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    results: SearchResult[];
+    selectedVideoId: string | null;
+    searched: boolean;
+    emptyMessage?: string;
+    interactiveTags?: boolean;
+    showName?: boolean;
+  }>(),
+  {
+    emptyMessage: "No videos match the selected tags.",
+    interactiveTags: true,
+    showName: false,
+  },
+);
 
 defineEmits<{
   "select-tag": [tag: string];

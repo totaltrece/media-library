@@ -1,4 +1,10 @@
-import type { ApiErrorResponse, RefreshLibraryResponse, SearchResponse, TagsResponse } from "./types.js";
+import type {
+  ApiErrorResponse,
+  RefreshLibraryResponse,
+  SearchResponse,
+  TagsResponse,
+  VideoTagsResponse,
+} from "./types.js";
 
 const API_PREFIX = "/api";
 
@@ -66,4 +72,26 @@ export async function refreshLibrary(): Promise<RefreshLibraryResponse> {
   });
 
   return readJsonResponse<RefreshLibraryResponse>(response);
+}
+
+export function buildVideoTagsUrl(mediaId: string): string {
+  return buildApiUrl(`/videos/${mediaId}/tags`);
+}
+
+export async function fetchVideoTags(mediaId: string): Promise<VideoTagsResponse> {
+  const response = await fetch(buildVideoTagsUrl(mediaId));
+
+  return readJsonResponse<VideoTagsResponse>(response);
+}
+
+export async function updateVideoTags(mediaId: string, tags: string[]): Promise<VideoTagsResponse> {
+  const response = await fetch(buildVideoTagsUrl(mediaId), {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "PUT",
+    body: JSON.stringify({ tags }),
+  });
+
+  return readJsonResponse<VideoTagsResponse>(response);
 }
