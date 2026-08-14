@@ -37,9 +37,9 @@ Un vídeo nuevo se registra con sus metadatos básicos y sin tags. Los tags exis
 
 ## M3 — API de gestión de tags
 
-Exponer operaciones para obtener, crear, añadir y quitar tags.
+Exponer operaciones para obtener, añadir, quitar y reemplazar tags de un vídeo.
 
-**Regla:** si se añade un tag inexistente, se crea automáticamente sin pedir confirmación.
+**Regla:** si se añade un tag inexistente, se crea automáticamente sin pedir confirmación. El frontend de edición queda fuera de este milestone.
 
 ---
 

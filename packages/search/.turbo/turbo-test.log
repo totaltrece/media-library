@@ -10,37 +10,37 @@ TAP version 13
 # Subtest: returns all videos when query tags are undefined
 ok 1 - returns all videos when query tags are undefined
   ---
-  duration_ms: 1.6899
+  duration_ms: 2.5264
   type: 'test'
   ...
 # Subtest: returns all videos when query tags are empty
 ok 2 - returns all videos when query tags are empty
   ---
-  duration_ms: 0.3213
+  duration_ms: 0.3116
   type: 'test'
   ...
 # Subtest: matches videos containing every requested tag
 ok 3 - matches videos containing every requested tag
   ---
-  duration_ms: 2.0808
+  duration_ms: 2.4916
   type: 'test'
   ...
 # Subtest: matches tags without regard to case
 ok 4 - matches tags without regard to case
   ---
-  duration_ms: 0.2862
+  duration_ms: 0.2963
   type: 'test'
   ...
 # Subtest: ignores duplicate query tags and preserves input order
 ok 5 - ignores duplicate query tags and preserves input order
   ---
-  duration_ms: 0.4131
+  duration_ms: 0.3577
   type: 'test'
   ...
 # Subtest: returns no videos when any requested tag is absent
 ok 6 - returns no videos when any requested tag is absent
   ---
-  duration_ms: 0.2338
+  duration_ms: 0.1707
   type: 'test'
   ...
 1..6
@@ -51,4 +51,4 @@ ok 6 - returns no videos when any requested tag is absent
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 175.6986
+# duration_ms 160.1308

@@ -1,6 +1,6 @@
 
 > @media-library/backend@ test C:\Users\Carlos\Documents\proyectos\media-library\backend
-> pnpm --filter @media-library/indexer build && pnpm --filter @media-library/search build && tsc --project tsconfig.test.json && node --test dist-test/test/health.test.js dist-test/test/search.test.js dist-test/test/search-response.test.js dist-test/test/search-controller.test.js dist-test/test/resolve-media-id.test.js dist-test/test/thumbnail.test.js dist-test/test/parse-range-header.test.js dist-test/test/video.test.js dist-test/test/tags.test.js dist-test/test/static.test.js dist-test/test/refresh-library.test.js dist-test/test/library.test.js dist-test/test/sqlite-library-store.test.js dist-test/test/import-library.test.js dist-test/test/to-indexed-videos.test.js dist-test/test/sqlite-search.test.js dist-test/test/sync-new-videos.test.js
+> pnpm --filter @media-library/indexer build && pnpm --filter @media-library/search build && tsc --project tsconfig.test.json && node --test dist-test/test/health.test.js dist-test/test/search.test.js dist-test/test/search-response.test.js dist-test/test/search-controller.test.js dist-test/test/resolve-media-id.test.js dist-test/test/thumbnail.test.js dist-test/test/parse-range-header.test.js dist-test/test/video.test.js dist-test/test/tags.test.js dist-test/test/static.test.js dist-test/test/refresh-library.test.js dist-test/test/library.test.js dist-test/test/sqlite-library-store.test.js dist-test/test/import-library.test.js dist-test/test/to-indexed-videos.test.js dist-test/test/sqlite-search.test.js dist-test/test/sync-new-videos.test.js dist-test/test/video-tags-controller.test.js dist-test/test/video-tags.test.js
 
 
 > @media-library/indexer@0.1.0 build C:\Users\Carlos\Documents\proyectos\media-library\packages\indexer
@@ -14,555 +14,665 @@ TAP version 13
 # Subtest: GET /api/health returns ok status
 ok 1 - GET /api/health returns ok status
   ---
-  duration_ms: 251.9609
+  duration_ms: 293.4486
   type: 'test'
   ...
-# (node:26896) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (node:6980) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: uniquePreserveOrder keeps the first occurrence of each value
 ok 2 - uniquePreserveOrder keeps the first occurrence of each value
   ---
-  duration_ms: 6.9638
+  duration_ms: 5.267
   type: 'test'
   ...
 # Subtest: imports a video with several TagSpaces tag titles
 ok 3 - imports a video with several TagSpaces tag titles
   ---
-  duration_ms: 54.9692
+  duration_ms: 49.2945
   type: 'test'
   ...
 # Subtest: imports a video without TagSpaces metadata and leaves tags empty
 ok 4 - imports a video without TagSpaces metadata and leaves tags empty
   ---
-  duration_ms: 37.7966
+  duration_ms: 68.0015
   type: 'test'
   ...
 # Subtest: imports a video whose TagSpaces metadata has no tags
 ok 5 - imports a video whose TagSpaces metadata has no tags
   ---
-  duration_ms: 43.8838
+  duration_ms: 42.4053
   type: 'test'
   ...
 # Subtest: deduplicates TagSpaces titles while preserving first-seen order
 ok 6 - deduplicates TagSpaces titles while preserving first-seen order
   ---
-  duration_ms: 21.3098
+  duration_ms: 25.1399
   type: 'test'
   ...
 # Subtest: reuses existing tags instead of creating duplicates
 ok 7 - reuses existing tags instead of creating duplicates
   ---
-  duration_ms: 66.786
+  duration_ms: 170.1693
   type: 'test'
   ...
 # Subtest: running the import twice does not duplicate videos, tags, or relations
 ok 8 - running the import twice does not duplicate videos, tags, or relations
   ---
-  duration_ms: 32.9594
+  duration_ms: 38.2279
   type: 'test'
   ...
 # Subtest: reimporting replaces a video's tags with the current TagSpaces list
 ok 9 - reimporting replaces a video's tags with the current TagSpaces list
   ---
-  duration_ms: 53.5162
+  duration_ms: 41.0963
   type: 'test'
   ...
 # Subtest: a video import error does not leave partial tag relations
 ok 10 - a video import error does not leave partial tag relations
   ---
-  duration_ms: 22.4992
+  duration_ms: 28.5169
   type: 'test'
   ...
-# (node:27548) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (node:24108) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: POST /api/library/refresh inserts filesystem videos into an empty SQLite store
 ok 11 - POST /api/library/refresh inserts filesystem videos into an empty SQLite store
   ---
-  duration_ms: 304.7864
+  duration_ms: 346.045
   type: 'test'
   ...
 # Subtest: POST /api/library/refresh inserts new videos and keeps existing tags
 ok 12 - POST /api/library/refresh inserts new videos and keeps existing tags
   ---
-  duration_ms: 29.8806
+  duration_ms: 61.7538
   type: 'test'
   ...
 # Subtest: POST /api/library/refresh returns 500 and preserves the existing index on failure
 ok 13 - POST /api/library/refresh returns 500 and preserves the existing index on failure
   ---
-  duration_ms: 11.8973
+  duration_ms: 17.064
   type: 'test'
   ...
 # Subtest: parseRangeHeader returns full when Range header is absent
 ok 14 - parseRangeHeader returns full when Range header is absent
   ---
-  duration_ms: 4.4006
+  duration_ms: 4.6396
   type: 'test'
   ...
 # Subtest: parseRangeHeader parses a closed byte range
 ok 15 - parseRangeHeader parses a closed byte range
   ---
-  duration_ms: 0.5126
+  duration_ms: 0.5405
   type: 'test'
   ...
 # Subtest: parseRangeHeader parses an open-ended byte range
 ok 16 - parseRangeHeader parses an open-ended byte range
   ---
-  duration_ms: 1.7765
+  duration_ms: 1.8859
   type: 'test'
   ...
 # Subtest: parseRangeHeader parses a suffix byte range
 ok 17 - parseRangeHeader parses a suffix byte range
   ---
-  duration_ms: 0.5763
+  duration_ms: 0.5417
   type: 'test'
   ...
 # Subtest: parseRangeHeader returns unsatisfiable for invalid range syntax
 ok 18 - parseRangeHeader returns unsatisfiable for invalid range syntax
   ---
-  duration_ms: 0.538
+  duration_ms: 0.4801
   type: 'test'
   ...
 # Subtest: parseRangeHeader returns unsatisfiable when the range starts beyond the file
 ok 19 - parseRangeHeader returns unsatisfiable when the range starts beyond the file
   ---
-  duration_ms: 0.2628
+  duration_ms: 0.2912
   type: 'test'
   ...
-# (node:27576) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (node:6764) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: RefreshLibraryUseCase syncs new videos then reloads the SQLite snapshot
 ok 20 - RefreshLibraryUseCase syncs new videos then reloads the SQLite snapshot
   ---
-  duration_ms: 40.745
+  duration_ms: 47.6671
   type: 'test'
   ...
 # Subtest: RefreshLibraryUseCase leaves the existing index unchanged when discovery fails
 ok 21 - RefreshLibraryUseCase leaves the existing index unchanged when discovery fails
   ---
-  duration_ms: 2.1815
+  duration_ms: 2.8843
   type: 'test'
   ...
 # Subtest: resolveMediaPath maps a media id to a library-relative file path
 ok 22 - resolveMediaPath maps a media id to a library-relative file path
   ---
-  duration_ms: 3.3447
+  duration_ms: 2.7972
   type: 'test'
   ...
 # Subtest: resolveMediaPath accepts backslash separators in the media id
 ok 23 - resolveMediaPath accepts backslash separators in the media id
   ---
-  duration_ms: 0.4684
+  duration_ms: 0.5256
   type: 'test'
   ...
 # Subtest: resolveMediaPath rejects path traversal using parent segments
 ok 24 - resolveMediaPath rejects path traversal using parent segments
   ---
-  duration_ms: 0.7155
+  duration_ms: 0.5288
   type: 'test'
   ...
 # Subtest: resolveMediaPath rejects absolute media ids
 ok 25 - resolveMediaPath rejects absolute media ids
   ---
-  duration_ms: 0.3537
+  duration_ms: 0.3563
   type: 'test'
   ...
 # Subtest: resolveMediaPath rejects empty media ids
 ok 26 - resolveMediaPath rejects empty media ids
   ---
-  duration_ms: 0.7669
+  duration_ms: 0.5256
   type: 'test'
   ...
 # Subtest: resolveMediaPath never resolves outside the configured library root
 ok 27 - resolveMediaPath never resolves outside the configured library root
   ---
-  duration_ms: 0.4614
+  duration_ms: 0.3766
   type: 'test'
   ...
 # Subtest: parseTagQuery returns an empty array when tag is absent
 ok 28 - parseTagQuery returns an empty array when tag is absent
   ---
-  duration_ms: 2.7516
+  duration_ms: 3.9814
   type: 'test'
   ...
 # Subtest: parseTagQuery preserves a single tag exactly as received
 ok 29 - parseTagQuery preserves a single tag exactly as received
   ---
-  duration_ms: 0.6912
+  duration_ms: 0.6092
   type: 'test'
   ...
 # Subtest: parseTagQuery preserves repeated tag values exactly as received
 ok 30 - parseTagQuery preserves repeated tag values exactly as received
   ---
-  duration_ms: 0.5547
+  duration_ms: 0.3609
   type: 'test'
   ...
 # Subtest: toMediaId returns a library-relative path with forward slashes
 ok 31 - toMediaId returns a library-relative path with forward slashes
   ---
-  duration_ms: 4.626
+  duration_ms: 7.745
   type: 'test'
   ...
 # Subtest: toSearchResult maps indexed videos to the public search item shape
 ok 32 - toSearchResult maps indexed videos to the public search item shape
   ---
-  duration_ms: 2.022
+  duration_ms: 3.0532
   type: 'test'
   ...
 # Subtest: buildSearchResponse includes query, count, and mapped results
 ok 33 - buildSearchResponse includes query, count, and mapped results
   ---
-  duration_ms: 0.7497
+  duration_ms: 1.5298
   type: 'test'
   ...
 # Subtest: media URLs are derived from the media id
 ok 34 - media URLs are derived from the media id
   ---
-  duration_ms: 0.3686
+  duration_ms: 0.3178
   type: 'test'
   ...
 # Subtest: GET /search returns videos matching every requested tag
 ok 35 - GET /search returns videos matching every requested tag
   ---
-  duration_ms: 263.0573
+  duration_ms: 343.6681
   type: 'test'
   ...
 # Subtest: GET /search echoes requested tags exactly as received
 ok 36 - GET /search echoes requested tags exactly as received
   ---
-  duration_ms: 7.115
+  duration_ms: 11.7218
   type: 'test'
   ...
 # Subtest: GET /search without tags returns all indexed videos
 ok 37 - GET /search without tags returns all indexed videos
   ---
-  duration_ms: 9.8607
+  duration_ms: 11.4506
   type: 'test'
   ...
 # Subtest: GET /search returns an empty result when no videos match
 ok 38 - GET /search returns an empty result when no videos match
   ---
-  duration_ms: 6.6651
+  duration_ms: 13.4511
   type: 'test'
   ...
 # Subtest: GET /search never exposes filesystem paths in the response
 ok 39 - GET /search never exposes filesystem paths in the response
   ---
-  duration_ms: 6.9885
+  duration_ms: 10.1475
   type: 'test'
   ...
 # Subtest: GET /search builds thumbnail and video URLs from the media id
 ok 40 - GET /search builds thumbnail and video URLs from the media id
   ---
-  duration_ms: 10.9132
+  duration_ms: 11.0861
   type: 'test'
   ...
-# (node:26756) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (node:25120) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: openSqliteLibraryStore initializes the schema on a file database
 ok 41 - openSqliteLibraryStore initializes the schema on a file database
   ---
-  duration_ms: 86.5556
+  duration_ms: 118.6385
   type: 'test'
   ...
 # Subtest: schema migrations are idempotent
 ok 42 - schema migrations are idempotent
   ---
-  duration_ms: 1.736
+  duration_ms: 1.9064
   type: 'test'
   ...
 # Subtest: videos can be upserted without creating duplicates
 ok 43 - videos can be upserted without creating duplicates
   ---
-  duration_ms: 1.4749
+  duration_ms: 2.0798
   type: 'test'
   ...
 # Subtest: tags keep their original names and reject exact duplicates
 ok 44 - tags keep their original names and reject exact duplicates
   ---
-  duration_ms: 1.5457
+  duration_ms: 2.2707
   type: 'test'
   ...
 # Subtest: video tags preserve order and replace previous assignments
 ok 45 - video tags preserve order and replace previous assignments
   ---
-  duration_ms: 2.9875
+  duration_ms: 2.9873
   type: 'test'
   ...
 # Subtest: video ids are unique
 ok 46 - video ids are unique
   ---
-  duration_ms: 1.8962
+  duration_ms: 1.9427
   type: 'test'
   ...
 # Subtest: tag names are unique
 ok 47 - tag names are unique
   ---
-  duration_ms: 1.3453
+  duration_ms: 1.4116
   type: 'test'
   ...
 # Subtest: video_tags require an existing video and tag
 ok 48 - video_tags require an existing video and tag
   ---
-  duration_ms: 2.167
+  duration_ms: 1.7074
   type: 'test'
   ...
 # Subtest: video_tags reject duplicate video/tag pairs
 ok 49 - video_tags reject duplicate video/tag pairs
   ---
-  duration_ms: 2.0984
+  duration_ms: 2.418
   type: 'test'
   ...
 # Subtest: deleting a video removes its tag relations
 ok 50 - deleting a video removes its tag relations
   ---
-  duration_ms: 2.083
+  duration_ms: 2.2875
   type: 'test'
   ...
 # Subtest: empty video ids and tag names are rejected
 ok 51 - empty video ids and tag names are rejected
   ---
-  duration_ms: 1.5803
+  duration_ms: 1.5925
   type: 'test'
   ...
-# (node:27608) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# Subtest: addVideoTag appends a new tag without changing existing order
+ok 52 - addVideoTag appends a new tag without changing existing order
+  ---
+  duration_ms: 2.4263
+  type: 'test'
+  ...
+# Subtest: addVideoTag creates a catalog tag when it does not exist
+ok 53 - addVideoTag creates a catalog tag when it does not exist
+  ---
+  duration_ms: 1.5567
+  type: 'test'
+  ...
+# Subtest: removeVideoTag keeps remaining tags in order and leaves the catalog intact
+ok 54 - removeVideoTag keeps remaining tags in order and leaves the catalog intact
+  ---
+  duration_ms: 2.5726
+  type: 'test'
+  ...
+# Subtest: addVideoTag and setVideoTags reject missing videos
+ok 55 - addVideoTag and setVideoTags reject missing videos
+  ---
+  duration_ms: 1.9129
+  type: 'test'
+  ...
+# Subtest: setVideoTags rolls back when a later tag is invalid
+ok 56 - setVideoTags rolls back when a later tag is invalid
+  ---
+  duration_ms: 1.8705
+  type: 'test'
+  ...
+# (node:24080) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: the backend can start using a temporary SQLite database
-ok 52 - the backend can start using a temporary SQLite database
+ok 57 - the backend can start using a temporary SQLite database
   ---
-  duration_ms: 333.3889
+  duration_ms: 423.9309
   type: 'test'
   ...
 # Subtest: search returns tags from SQLite rather than TagSpaces sidecars
-ok 53 - search returns tags from SQLite rather than TagSpaces sidecars
+ok 58 - search returns tags from SQLite rather than TagSpaces sidecars
   ---
-  duration_ms: 59.006
+  duration_ms: 33.0885
   type: 'test'
   ...
 # Subtest: a video without a TagSpaces sidecar can still be returned from SQLite
-ok 54 - a video without a TagSpaces sidecar can still be returned from SQLite
+ok 59 - a video without a TagSpaces sidecar can still be returned from SQLite
   ---
-  duration_ms: 17.7901
+  duration_ms: 23.2855
   type: 'test'
   ...
 # Subtest: a video without tags does not break search
-ok 55 - a video without tags does not break search
+ok 60 - a video without tags does not break search
   ---
-  duration_ms: 40.3436
+  duration_ms: 35.1895
   type: 'test'
   ...
 # Subtest: searching several tags still requires every requested tag
-ok 56 - searching several tags still requires every requested tag
+ok 61 - searching several tags still requires every requested tag
   ---
-  duration_ms: 32.9661
+  duration_ms: 15.885
   type: 'test'
   ...
 # Subtest: SQLite-backed search preserves the previous result order
-ok 57 - SQLite-backed search preserves the previous result order
+ok 62 - SQLite-backed search preserves the previous result order
   ---
-  duration_ms: 59.8456
+  duration_ms: 55.9955
   type: 'test'
   ...
 # Subtest: SQLite-backed search keeps the existing search endpoint contract
-ok 58 - SQLite-backed search keeps the existing search endpoint contract
+ok 63 - SQLite-backed search keeps the existing search endpoint contract
   ---
-  duration_ms: 21.7915
+  duration_ms: 19.3308
   type: 'test'
   ...
 # Subtest: imported TagSpaces libraries produce the same search results from SQLite
-ok 59 - imported TagSpaces libraries produce the same search results from SQLite
+ok 64 - imported TagSpaces libraries produce the same search results from SQLite
   ---
-  duration_ms: 26.8079
+  duration_ms: 30.4553
   type: 'test'
   ...
 # Subtest: sample library search results match after importing into SQLite
-ok 60 - sample library search results match after importing into SQLite
+ok 65 - sample library search results match after importing into SQLite
   ---
-  duration_ms: 10.4082
+  duration_ms: 10.7686
   type: 'test'
   ...
 # Subtest: GET / serves the built frontend index.html
-ok 61 - GET / serves the built frontend index.html
+ok 66 - GET / serves the built frontend index.html
   ---
-  duration_ms: 278.2318
+  duration_ms: 377.4135
   type: 'test'
   ...
 # Subtest: GET /assets/* serves hashed frontend assets
-ok 62 - GET /assets/* serves hashed frontend assets
+ok 67 - GET /assets/* serves hashed frontend assets
   ---
-  duration_ms: 39.2233
+  duration_ms: 36.9029
   type: 'test'
   ...
 # Subtest: GET /assets/* serves assets from the built frontend dist
-ok 63 - GET /assets/* serves assets from the built frontend dist
+ok 68 - GET /assets/* serves assets from the built frontend dist
   ---
-  duration_ms: 39.1075
+  duration_ms: 29.5884
   type: 'test'
   ...
 # Subtest: unknown non-API routes return 404
-ok 64 - unknown non-API routes return 404
+ok 69 - unknown non-API routes return 404
   ---
-  duration_ms: 32.5687
+  duration_ms: 21.4359
   type: 'test'
   ...
 # Subtest: API routes remain available when static frontend is enabled
-ok 65 - API routes remain available when static frontend is enabled
+ok 70 - API routes remain available when static frontend is enabled
   ---
-  duration_ms: 45.2181
+  duration_ms: 36.9407
   type: 'test'
   ...
 # Subtest: unknown API routes return JSON 404 responses
-ok 66 - unknown API routes return JSON 404 responses
+ok 71 - unknown API routes return JSON 404 responses
   ---
-  duration_ms: 43.9587
+  duration_ms: 20.8054
   type: 'test'
   ...
-# (node:14612) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (node:22444) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: an empty SQLite store inserts every video discovered on the filesystem
-ok 67 - an empty SQLite store inserts every video discovered on the filesystem
+ok 72 - an empty SQLite store inserts every video discovered on the filesystem
   ---
-  duration_ms: 60.7442
+  duration_ms: 85.0379
   type: 'test'
   ...
 # Subtest: new filesystem videos are inserted without changing existing tags
-ok 68 - new filesystem videos are inserted without changing existing tags
+ok 73 - new filesystem videos are inserted without changing existing tags
   ---
-  duration_ms: 42.3377
+  duration_ms: 47.4576
   type: 'test'
   ...
 # Subtest: running the sync twice does not duplicate videos or change tags
-ok 69 - running the sync twice does not duplicate videos or change tags
+ok 74 - running the sync twice does not duplicate videos or change tags
   ---
-  duration_ms: 15.4548
+  duration_ms: 20.862
   type: 'test'
   ...
 # Subtest: a video without a TagSpaces sidecar is still inserted
-ok 70 - a video without a TagSpaces sidecar is still inserted
+ok 75 - a video without a TagSpaces sidecar is still inserted
   ---
-  duration_ms: 10.7651
+  duration_ms: 10.0966
   type: 'test'
   ...
 # Subtest: videos missing from the filesystem are not deleted from SQLite
-ok 71 - videos missing from the filesystem are not deleted from SQLite
+ok 76 - videos missing from the filesystem are not deleted from SQLite
   ---
-  duration_ms: 13.3696
+  duration_ms: 15.651
   type: 'test'
   ...
 # Subtest: existing TagSpaces sidecars are not used to assign tags during sync
-ok 72 - existing TagSpaces sidecars are not used to assign tags during sync
+ok 77 - existing TagSpaces sidecars are not used to assign tags during sync
   ---
-  duration_ms: 16.956
+  duration_ms: 21.535
   type: 'test'
   ...
 # Subtest: collectDistinctTags returns unique tags in alphabetical order
-ok 73 - collectDistinctTags returns unique tags in alphabetical order
+ok 78 - collectDistinctTags returns unique tags in alphabetical order
   ---
-  duration_ms: 23.8739
+  duration_ms: 28.6775
   type: 'test'
   ...
 # Subtest: GET /tags returns distinct tags from the in-memory index
-ok 74 - GET /tags returns distinct tags from the in-memory index
+ok 79 - GET /tags returns distinct tags from the in-memory index
   ---
-  duration_ms: 256.8136
+  duration_ms: 354.686
   type: 'test'
   ...
 # Subtest: GET /tags returns an empty list when the index has no videos
-ok 75 - GET /tags returns an empty list when the index has no videos
+ok 80 - GET /tags returns an empty list when the index has no videos
   ---
-  duration_ms: 11.7465
+  duration_ms: 17.4445
   type: 'test'
   ...
 # Subtest: GET /tags reads from the existing index without re-indexing
-ok 76 - GET /tags reads from the existing index without re-indexing
+ok 81 - GET /tags reads from the existing index without re-indexing
   ---
-  duration_ms: 15.8248
+  duration_ms: 11.6967
   type: 'test'
   ...
 # Subtest: GET /thumbnail/:id returns the TagSpaces thumbnail with image/jpeg
-ok 77 - GET /thumbnail/:id returns the TagSpaces thumbnail with image/jpeg
+ok 82 - GET /thumbnail/:id returns the TagSpaces thumbnail with image/jpeg
   ---
-  duration_ms: 297.4386
+  duration_ms: 374.6778
   type: 'test'
   ...
 # Subtest: GET /thumbnail/:id returns 404 when the video does not exist
-ok 78 - GET /thumbnail/:id returns 404 when the video does not exist
+ok 83 - GET /thumbnail/:id returns 404 when the video does not exist
   ---
-  duration_ms: 24.8192
+  duration_ms: 39.7214
   type: 'test'
   ...
 # Subtest: GET /thumbnail/:id returns 404 when the TagSpaces thumbnail is missing
-ok 79 - GET /thumbnail/:id returns 404 when the TagSpaces thumbnail is missing
+ok 84 - GET /thumbnail/:id returns 404 when the TagSpaces thumbnail is missing
   ---
-  duration_ms: 19.7225
+  duration_ms: 22.1529
   type: 'test'
   ...
 # Subtest: TagSpacesThumbnailStore rejects path traversal media ids
-ok 80 - TagSpacesThumbnailStore rejects path traversal media ids
+ok 85 - TagSpacesThumbnailStore rejects path traversal media ids
   ---
-  duration_ms: 9.3681
+  duration_ms: 8.5727
   type: 'test'
   ...
 # Subtest: toIndexedVideo derives videoPath from the media id and uses SQLite tags
-ok 81 - toIndexedVideo derives videoPath from the media id and uses SQLite tags
+ok 86 - toIndexedVideo derives videoPath from the media id and uses SQLite tags
   ---
-  duration_ms: 7.2133
+  duration_ms: 4.8768
   type: 'test'
   ...
 # Subtest: toIndexedVideo does not invent TagSpaces sidecar paths
-ok 82 - toIndexedVideo does not invent TagSpaces sidecar paths
+ok 87 - toIndexedVideo does not invent TagSpaces sidecar paths
   ---
-  duration_ms: 0.6396
+  duration_ms: 0.8668
   type: 'test'
   ...
 # Subtest: toIndexedVideo rejects invalid media ids
-ok 83 - toIndexedVideo rejects invalid media ids
+ok 88 - toIndexedVideo rejects invalid media ids
   ---
-  duration_ms: 1.2047
+  duration_ms: 1.2722
   type: 'test'
   ...
 # Subtest: toIndexedVideos preserves indexer path order
-ok 84 - toIndexedVideos preserves indexer path order
+ok 89 - toIndexedVideos preserves indexer path order
   ---
-  duration_ms: 31.9571
+  duration_ms: 27.2244
+  type: 'test'
+  ...
+# Subtest: parseVideoTagsCollectionPath extracts a media id that contains slashes
+ok 90 - parseVideoTagsCollectionPath extracts a media id that contains slashes
+  ---
+  duration_ms: 4.4971
+  type: 'test'
+  ...
+# Subtest: parseVideoTagsCollectionPath rejects paths that are not a tags collection
+ok 91 - parseVideoTagsCollectionPath rejects paths that are not a tags collection
+  ---
+  duration_ms: 0.4966
+  type: 'test'
+  ...
+# Subtest: parseVideoTagsItemPath decodes tag names with reserved characters
+ok 92 - parseVideoTagsItemPath decodes tag names with reserved characters
+  ---
+  duration_ms: 1.9252
+  type: 'test'
+  ...
+# (node:23768) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: GET /api/videos/:id/tags returns the video tags in stored order
+ok 93 - GET /api/videos/:id/tags returns the video tags in stored order
+  ---
+  duration_ms: 338.4113
+  type: 'test'
+  ...
+# Subtest: POST /api/videos/:id/tags appends an existing catalog tag
+ok 94 - POST /api/videos/:id/tags appends an existing catalog tag
+  ---
+  duration_ms: 29.14
+  type: 'test'
+  ...
+# Subtest: POST /api/videos/:id/tags creates a new catalog tag automatically
+ok 95 - POST /api/videos/:id/tags creates a new catalog tag automatically
+  ---
+  duration_ms: 38.9232
+  type: 'test'
+  ...
+# Subtest: POST /api/videos/:id/tags is idempotent and preserves order
+ok 96 - POST /api/videos/:id/tags is idempotent and preserves order
+  ---
+  duration_ms: 13.3769
+  type: 'test'
+  ...
+# Subtest: DELETE /api/videos/:id/tags/:tag removes a tag without deleting the catalog entry
+ok 97 - DELETE /api/videos/:id/tags/:tag removes a tag without deleting the catalog entry
+  ---
+  duration_ms: 12.3423
+  type: 'test'
+  ...
+# Subtest: DELETE /api/videos/:id/tags/:tag decodes reserved characters in the tag name
+ok 98 - DELETE /api/videos/:id/tags/:tag decodes reserved characters in the tag name
+  ---
+  duration_ms: 14.0005
+  type: 'test'
+  ...
+# Subtest: PUT /api/videos/:id/tags replaces the complete tag list
+ok 99 - PUT /api/videos/:id/tags replaces the complete tag list
+  ---
+  duration_ms: 9.4276
+  type: 'test'
+  ...
+# Subtest: video tag edits are visible immediately in search
+ok 100 - video tag edits are visible immediately in search
+  ---
+  duration_ms: 9.5484
+  type: 'test'
+  ...
+# Subtest: editing a missing video returns 404 and does not create it
+ok 101 - editing a missing video returns 404 and does not create it
+  ---
+  duration_ms: 9.9466
+  type: 'test'
+  ...
+# Subtest: refresh does not restore TagSpaces tags after a SQLite edit
+ok 102 - refresh does not restore TagSpaces tags after a SQLite edit
+  ---
+  duration_ms: 16.7993
   type: 'test'
   ...
 # Subtest: GET /video/:id returns the full video with the correct Content-Type
-ok 85 - GET /video/:id returns the full video with the correct Content-Type
+ok 103 - GET /video/:id returns the full video with the correct Content-Type
   ---
-  duration_ms: 304.3073
+  duration_ms: 395.2935
   type: 'test'
   ...
 # Subtest: GET /video/:id returns 206 Partial Content for valid Range requests
-ok 86 - GET /video/:id returns 206 Partial Content for valid Range requests
+ok 104 - GET /video/:id returns 206 Partial Content for valid Range requests
   ---
-  duration_ms: 22.1568
+  duration_ms: 18.3361
   type: 'test'
   ...
 # Subtest: GET /video/:id returns 404 when the video does not exist
-ok 87 - GET /video/:id returns 404 when the video does not exist
+ok 105 - GET /video/:id returns 404 when the video does not exist
   ---
-  duration_ms: 20.4329
+  duration_ms: 19.9874
   type: 'test'
   ...
 # Subtest: GET /video/:id returns 416 for invalid or unsatisfiable Range requests
-ok 88 - GET /video/:id returns 416 for invalid or unsatisfiable Range requests
+ok 106 - GET /video/:id returns 416 for invalid or unsatisfiable Range requests
   ---
-  duration_ms: 24.7618
+  duration_ms: 15.7976
   type: 'test'
   ...
 # Subtest: FilesystemVideoStore rejects path traversal media ids
-ok 89 - FilesystemVideoStore rejects path traversal media ids
+ok 107 - FilesystemVideoStore rejects path traversal media ids
   ---
-  duration_ms: 6.842
+  duration_ms: 5.2088
   type: 'test'
   ...
-1..89
-# tests 89
+1..107
+# tests 107
 # suites 0
-# pass 89
+# pass 107
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 1375.1334
+# duration_ms 1611.2528

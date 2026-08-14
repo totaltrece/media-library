@@ -106,6 +106,52 @@ export class SqliteLibraryStore implements LibraryStore {
     }
   }
 
+  addVideoTag(videoId: string, tagName: string): void {
+    const video = this.findVideo(videoId);
+
+    if (video === null) {
+      throw new Error(`Video not found: ${videoId}`);
+    }
+
+    const currentTags = this.getVideoTags(videoId);
+
+    if (currentTags.includes(tagName)) {
+      return;
+    }
+
+    this.database.exec("BEGIN");
+
+    try {
+      const tag = this.upsertTag(tagName);
+      const nextPosition = nextVideoTagPosition(this.database, videoId);
+
+      this.database
+        .prepare("INSERT INTO video_tags (video_id, tag_id, position) VALUES (?, ?, ?)")
+        .run(videoId, tag.id, nextPosition);
+
+      this.database.exec("COMMIT");
+    } catch (error: unknown) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  removeVideoTag(videoId: string, tagName: string): void {
+    const video = this.findVideo(videoId);
+
+    if (video === null) {
+      throw new Error(`Video not found: ${videoId}`);
+    }
+
+    const tag = this.findTagByName(tagName);
+
+    if (tag === null) {
+      return;
+    }
+
+    this.database.prepare("DELETE FROM video_tags WHERE video_id = ? AND tag_id = ?").run(videoId, tag.id);
+  }
+
   getVideoTags(videoId: string): string[] {
     const rows = this.database
       .prepare(
@@ -187,6 +233,18 @@ function requireNonEmpty(value: string, label: string): string {
   return value;
 }
 
+function nextVideoTagPosition(database: DatabaseSync, videoId: string): number {
+  const row = database
+    .prepare("SELECT MAX(position) AS position FROM video_tags WHERE video_id = ?")
+    .get(videoId);
+
+  if (!isPositionRow(row) || row.position === null) {
+    return 0;
+  }
+
+  return Number(row.position) + 1;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -205,6 +263,13 @@ function isTagRow(value: unknown): value is { id: number | bigint; name: string 
 
 function isNameRow(value: unknown): value is { name: string } {
   return isRecord(value) && typeof value.name === "string";
+}
+
+function isPositionRow(value: unknown): value is { position: number | bigint | null } {
+  return (
+    isRecord(value) &&
+    (value.position === null || typeof value.position === "number" || typeof value.position === "bigint")
+  );
 }
 
 function isVersionRow(value: unknown): value is { version: number | bigint } {

@@ -6,16 +6,16 @@ TAP version 13
 # Subtest: indexes real TagSpaces metadata and extracts only tag titles
 ok 1 - indexes real TagSpaces metadata and extracts only tag titles
   ---
-  duration_ms: 37.5972
+  duration_ms: 34.5764
   type: 'test'
   ...
 # Subtest: discovers video paths without reading TagSpaces metadata
 ok 2 - discovers video paths without reading TagSpaces metadata
   ---
-  duration_ms: 16.4662
+  duration_ms: 13.5308
   type: 'test'
   ...
-# Failed to read or parse metadata file at C:\\Users\\Carlos\\AppData\\Local\\Temp\\media-library-indexer-ckTHhW\\.ts\\invalid.mp4.json
+# Failed to read or parse metadata file at C:\\Users\\Carlos\\AppData\\Local\\Temp\\media-library-indexer-ZEgZGU\\.ts\\invalid.mp4.json
 # SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)
 #     at JSON.parse (<anonymous>)
 #     at extractTagTitles (file:///C:/Users/Carlos/Documents/proyectos/media-library/packages/indexer/dist-test/src/index.js:34:31)
@@ -27,7 +27,7 @@ ok 2 - discovers video paths without reading TagSpaces metadata
 # Subtest: continues indexing when metadata is missing or invalid
 ok 3 - continues indexing when metadata is missing or invalid
   ---
-  duration_ms: 15.2692
+  duration_ms: 11.0963
   type: 'test'
   ...
 1..3
@@ -38,4 +38,4 @@ ok 3 - continues indexing when metadata is missing or invalid
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 281.4047
+# duration_ms 220.3563

@@ -22,6 +22,8 @@ export interface LibraryStore {
   findTagByName(name: string): LibraryTag | null;
   listTags(): LibraryTag[];
   setVideoTags(videoId: string, tagNames: string[]): void;
+  addVideoTag(videoId: string, tagName: string): void;
+  removeVideoTag(videoId: string, tagName: string): void;
   getVideoTags(videoId: string): string[];
   listVideosWithTags(): LibraryVideoWithTags[];
 }

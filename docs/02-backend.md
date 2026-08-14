@@ -6,14 +6,13 @@ Version: 2.0
 
 # Purpose
 
-The backend is responsible for exposing the media library through a simple,
-read-only HTTP API.
+The backend is responsible for exposing the media library through an HTTP API.
 
-It coordinates indexing, searching and future application services while keeping
-the domain independent from infrastructure and frameworks.
+It coordinates indexing, searching and tag editing while keeping the domain
+independent from infrastructure and frameworks.
 
 The backend must never modify the original media library or any TagSpaces
-metadata.
+metadata. Tag edits are persisted only in SQLite.
 
 ---
 
@@ -24,14 +23,15 @@ The backend is responsible for:
 - serving the HTTP API
 - coordinating indexing
 - executing searches
+- editing video tags in SQLite
 - exposing application statistics
 - managing the application lifecycle
 
 The backend is not responsible for:
 
 - rendering the user interface
-- editing metadata
 - modifying media files
+- writing TagSpaces metadata
 - implementing business logic inside HTTP handlers
 
 ---

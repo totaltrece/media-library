@@ -211,3 +211,77 @@ test("empty video ids and tag names are rejected", () => {
     store.close();
   }
 });
+
+test("addVideoTag appends a new tag without changing existing order", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    store.upsertVideo("salsa/first.mp4");
+    store.setVideoTags("salsa/first.mp4", ["salsa", "isa", "jota"]);
+    store.addVideoTag("salsa/first.mp4", "bufanda");
+    store.addVideoTag("salsa/first.mp4", "bufanda");
+
+    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["salsa", "isa", "jota", "bufanda"]);
+  } finally {
+    store.close();
+  }
+});
+
+test("addVideoTag creates a catalog tag when it does not exist", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    store.upsertVideo("salsa/first.mp4");
+    store.addVideoTag("salsa/first.mp4", "bufanda");
+
+    assert.deepEqual(store.listTags().map((tag) => tag.name), ["bufanda"]);
+  } finally {
+    store.close();
+  }
+});
+
+test("removeVideoTag keeps remaining tags in order and leaves the catalog intact", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    store.upsertVideo("salsa/first.mp4");
+    store.setVideoTags("salsa/first.mp4", ["salsa", "isa", "jota", "bufanda"]);
+    store.removeVideoTag("salsa/first.mp4", "isa");
+    store.removeVideoTag("salsa/first.mp4", "missing");
+
+    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["salsa", "jota", "bufanda"]);
+    assert.deepEqual(
+      store.listTags().map((tag) => tag.name),
+      ["bufanda", "isa", "jota", "salsa"],
+    );
+  } finally {
+    store.close();
+  }
+});
+
+test("addVideoTag and setVideoTags reject missing videos", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    assert.throws(() => store.addVideoTag("missing.mp4", "salsa"), /Video not found: missing.mp4/);
+    assert.throws(() => store.removeVideoTag("missing.mp4", "salsa"), /Video not found: missing.mp4/);
+    assert.throws(() => store.setVideoTags("missing.mp4", ["salsa"]), /Video not found: missing.mp4/);
+  } finally {
+    store.close();
+  }
+});
+
+test("setVideoTags rolls back when a later tag is invalid", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    store.upsertVideo("salsa/first.mp4");
+    store.setVideoTags("salsa/first.mp4", ["salsa", "isa"]);
+
+    assert.throws(() => store.setVideoTags("salsa/first.mp4", ["jota", ""]), /Tag name must not be empty/);
+    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["salsa", "isa"]);
+    assert.equal(store.findTagByName("jota"), null);
+  } finally {
+    store.close();
+  }
+});

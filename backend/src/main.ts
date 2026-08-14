@@ -44,6 +44,7 @@ async function main(): Promise<void> {
     const app = await createApp({
       videoIndex,
       libraryPath,
+      libraryStore,
       refreshLibraryUseCase,
       staticRoot: existsSync(staticRoot) ? staticRoot : undefined,
     });
