@@ -180,12 +180,12 @@ foreach ($file in $files) {
     $destinationPath = Join-Path $Destination $relativePath
 
     $relativeDirectory = Split-Path -Parent $relativePath
-    $baseName = [System.IO.Path]::GetFileNameWithoutExtension($relativePath)
+    $videoFileName = [System.IO.Path]::GetFileName($relativePath)
 
     if ([string]::IsNullOrEmpty($relativeDirectory)) {
-        $thumbnailPath = Join-Path $thumbnailRoot "$baseName.jpg"
+        $thumbnailPath = Join-Path $thumbnailRoot "$videoFileName.jpg"
     } else {
-        $thumbnailPath = Join-Path (Join-Path $thumbnailRoot $relativeDirectory) "$baseName.jpg"
+        $thumbnailPath = Join-Path (Join-Path $thumbnailRoot $relativeDirectory) "$videoFileName.jpg"
     }
 
     Write-Host "[$index/$($files.Count)] $relativePath"
