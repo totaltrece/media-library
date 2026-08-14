@@ -11,7 +11,6 @@ import { searchVideos } from "@media-library/search";
 
 import { InMemoryVideoIndex } from "../src/adapters/in-memory-video-index.js";
 import { WorkspaceLibraryIndexer } from "../src/adapters/indexer/workspace-library-indexer.js";
-import { SqliteLibraryIndexer } from "../src/adapters/sqlite/sqlite-library-indexer.js";
 import { openSqliteLibraryStore } from "../src/adapters/sqlite/sqlite-library-store.js";
 import { ImportLibraryUseCase } from "../src/application/import-library.js";
 import { toMediaId } from "../src/application/media-id.js";
@@ -49,7 +48,6 @@ async function createAppFromStore(libraryStore: LibraryStore, libraryPath: strin
   return createApp({
     videoIndex: new InMemoryVideoIndex(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath)),
     libraryPath,
-    libraryIndexer: new SqliteLibraryIndexer(libraryStore, libraryPath),
   });
 }
 

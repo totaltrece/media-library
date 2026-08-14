@@ -11,11 +11,18 @@ export interface IndexedVideo {
 }
 
 /**
+ * Discovers video files below a library directory without reading TagSpaces sidecars.
+ */
+export async function discoverVideoPaths(libraryPath: string): Promise<string[]> {
+    return findVideoPaths(libraryPath);
+}
+
+/**
  * Indexes video files below a library directory without modifying the library.
  * TagSpaces sidecars are expected at <library>/.ts/<video-file-name>.<extension>.
  */
 export async function indexLibrary(libraryPath: string): Promise<IndexedVideo[]> {
-    const videoPaths = await findVideoPaths(libraryPath);
+    const videoPaths = await discoverVideoPaths(libraryPath);
 
     return Promise.all(
         videoPaths.map(async (videoPath) => {

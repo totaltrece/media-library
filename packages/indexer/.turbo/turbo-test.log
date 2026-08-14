@@ -6,30 +6,36 @@ TAP version 13
 # Subtest: indexes real TagSpaces metadata and extracts only tag titles
 ok 1 - indexes real TagSpaces metadata and extracts only tag titles
   ---
-  duration_ms: 25.1453
+  duration_ms: 37.5972
   type: 'test'
   ...
-# Failed to read or parse metadata file at C:\\Users\\Carlos\\AppData\\Local\\Temp\\media-library-indexer-5c6PMh\\.ts\\invalid.mp4.json
+# Subtest: discovers video paths without reading TagSpaces metadata
+ok 2 - discovers video paths without reading TagSpaces metadata
+  ---
+  duration_ms: 16.4662
+  type: 'test'
+  ...
+# Failed to read or parse metadata file at C:\\Users\\Carlos\\AppData\\Local\\Temp\\media-library-indexer-ckTHhW\\.ts\\invalid.mp4.json
 # SyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)
 #     at JSON.parse (<anonymous>)
-#     at extractTagTitles (file:///C:/Users/Carlos/Documents/proyectos/media-library/packages/indexer/dist-test/src/index.js:28:31)
-#     at async file:///C:/Users/Carlos/Documents/proyectos/media-library/packages/indexer/dist-test/src/index.js:17:19
+#     at extractTagTitles (file:///C:/Users/Carlos/Documents/proyectos/media-library/packages/indexer/dist-test/src/index.js:34:31)
+#     at async file:///C:/Users/Carlos/Documents/proyectos/media-library/packages/indexer/dist-test/src/index.js:23:19
 #     at async Promise.all (index 0)
-#     at async TestContext.<anonymous> (file:///C:/Users/Carlos/Documents/proyectos/media-library/packages/indexer/dist-test/test/index.test.js:50:31)
+#     at async TestContext.<anonymous> (file:///C:/Users/Carlos/Documents/proyectos/media-library/packages/indexer/dist-test/test/index.test.js:68:31)
 #     at async Test.run (node:internal/test_runner/test:1054:7)
 #     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
 # Subtest: continues indexing when metadata is missing or invalid
-ok 2 - continues indexing when metadata is missing or invalid
+ok 3 - continues indexing when metadata is missing or invalid
   ---
-  duration_ms: 18.581
+  duration_ms: 15.2692
   type: 'test'
   ...
-1..2
-# tests 2
+1..3
+# tests 3
 # suites 0
-# pass 2
+# pass 3
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 175.0655
+# duration_ms 281.4047

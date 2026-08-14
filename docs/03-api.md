@@ -127,9 +127,12 @@ Tags are unique and sorted alphabetically.
 POST /api/library/refresh
 ```
 
-Re-indexes the configured media library and replaces the in-memory video index.
+Re-indexes the configured media library by discovering new video files on
+`LIBRARY_PATH`, inserting any missing videos into SQLite without tags, and
+replacing the in-memory video index from SQLite.
 
-The endpoint does not modify video files or TagSpaces metadata. If indexing
+The endpoint does not read TagSpaces sidecars, modify existing tags, delete
+SQLite videos that are missing from disk, or change video files. If refresh
 fails, the existing in-memory index remains unchanged.
 
 Response

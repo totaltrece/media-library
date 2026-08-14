@@ -2,7 +2,7 @@ import Fastify from "fastify";
 
 import { GetTagsUseCase } from "./application/get-tags.js";
 import { GetThumbnailUseCase } from "./application/get-thumbnail.js";
-import { RefreshLibraryUseCase } from "./application/refresh-library.js";
+import type { RefreshLibraryUseCase } from "./application/refresh-library.js";
 import { SearchVideosUseCase } from "./application/search-videos.js";
 import { StreamVideoUseCase } from "./application/stream-video.js";
 import { FilesystemVideoStore } from "./adapters/filesystem/filesystem-video-store.js";
@@ -13,14 +13,13 @@ import { registerStaticFrontend } from "./adapters/http/register-static-frontend
 import { registerTagsRoutes } from "./adapters/http/tags-controller.js";
 import { registerThumbnailRoutes } from "./adapters/http/thumbnail-controller.js";
 import { registerVideoRoutes } from "./adapters/http/video-controller.js";
-import type { LibraryIndexer } from "./ports/library-indexer.js";
-import { isMutableVideoIndex, type VideoIndex } from "./ports/video-index.js";
+import type { VideoIndex } from "./ports/video-index.js";
 
 export interface AppDependencies {
   videoIndex: VideoIndex;
   libraryPath: string;
   staticRoot?: string;
-  libraryIndexer?: LibraryIndexer;
+  refreshLibraryUseCase?: RefreshLibraryUseCase;
 }
 
 export async function createApp(dependencies: AppDependencies) {
@@ -57,12 +56,9 @@ export async function createApp(dependencies: AppDependencies) {
       streamVideoUseCase,
     });
 
-    if (isMutableVideoIndex(dependencies.videoIndex) && dependencies.libraryIndexer !== undefined) {
+    if (dependencies.refreshLibraryUseCase !== undefined) {
       registerLibraryRoutes(api, {
-        refreshLibraryUseCase: new RefreshLibraryUseCase(
-          dependencies.libraryIndexer,
-          dependencies.videoIndex,
-        ),
+        refreshLibraryUseCase: dependencies.refreshLibraryUseCase,
       });
     }
   }, { prefix: "/api" });

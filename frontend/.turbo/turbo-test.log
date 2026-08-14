@@ -5,11 +5,11 @@
 
  RUN  v3.2.7 C:/Users/Carlos/Documents/proyectos/media-library/frontend
 
- ✓ test/video-date.test.ts (2 tests) 3ms
- ✓ test/api.test.ts (6 tests) 10ms
+ ✓ test/api.test.ts (6 tests) 16ms
+ ✓ test/video-date.test.ts (2 tests) 5ms
 
  Test Files  2 passed (2)
       Tests  8 passed (8)
-   Start at  20:54:17
-   Duration  14.41s (transform 123ms, setup 0ms, collect 215ms, tests 13ms, environment 25.81s, prepare 1.55s)
+   Start at  00:09:43
+   Duration  2.52s (transform 104ms, setup 0ms, collect 140ms, tests 21ms, environment 2.95s, prepare 684ms)
 

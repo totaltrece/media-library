@@ -29,9 +29,9 @@
 
 ## M2 — Indexación de nuevos vídeos
 
-Detectar vídeos publicados mediante `rsync` e incorporarlos automáticamente a SQLite.
+Detectar vídeos que aparecen en `LIBRARY_PATH` e incorporarlos a SQLite mediante `POST /api/library/refresh`.
 
-Un vídeo nuevo aparece con sus metadatos básicos y sin tags.
+Un vídeo nuevo se registra con sus metadatos básicos y sin tags. Los tags existentes no se modifican. El desarrollo y las pruebas de M2 se hacen en local; rsync y el despliegue remoto no forman parte de este milestone.
 
 ---
 
