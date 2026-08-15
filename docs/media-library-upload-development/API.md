@@ -142,7 +142,8 @@ Job activo:
 {
   "error": {
     "message": "A video processing job is already active."
-  }
+  },
+  "jobId": "..."
 }
 ```
 

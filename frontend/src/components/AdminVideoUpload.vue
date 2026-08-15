@@ -3,6 +3,10 @@
     <h2>{{ busy ? "Vídeo en proceso" : "Subir vídeo" }}</h2>
     <p v-if="!busy">El vídeo se procesará en el servidor y aparecerá en Sin tags cuando termine.</p>
 
+    <p v-if="checking && !busy" class="status-message info" data-testid="upload-checking">
+      Comprobando si hay una subida en curso...
+    </p>
+
     <input
       id="admin-upload-file"
       ref="fileInput"
@@ -10,7 +14,6 @@
       type="file"
       accept="video/*,.mp4,.m4v,.mov,.mkv,.webm,.ts"
       data-testid="upload-file-input"
-      :disabled="busy"
       @change="onFileChange"
     >
 
@@ -23,6 +26,7 @@
         class="secondary-button admin-upload-button"
         type="button"
         data-testid="upload-select"
+        :disabled="checking"
         @click="openFilePicker"
       >
         Seleccionar vídeo
@@ -31,15 +35,12 @@
         class="primary-button admin-upload-button"
         type="button"
         data-testid="upload-submit"
+        :disabled="checking"
         @click="submitUpload"
       >
         Subir vídeo
       </button>
     </div>
-
-    <p v-if="busy" class="status-message info" data-testid="upload-busy">
-      Hay un vídeo en proceso. Espera a que termine para subir otro.
-    </p>
 
     <ErrorMessage v-if="error" :message="error" />
     <p v-if="pollWarning" class="status-message info" data-testid="upload-poll-warning">
@@ -100,7 +101,8 @@ const selectedFile = ref<File | null>(null);
 const error = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
 const submitting = ref(false);
-const { job, pollWarning, start, reset, resumeActive } = useUploadJobPolling();
+const checking = ref(true);
+const { job, pollWarning, start, beginLocalUpload, reset, resumeActive } = useUploadJobPolling();
 
 const selectedFileName = computed(() => selectedFile.value?.name ?? "");
 const displayedFileName = computed(() => selectedFileName.value || job.value?.videoId || "");
@@ -108,7 +110,10 @@ const busy = computed(() => submitting.value || isUploadJobActive(job.value));
 const steps = computed(() => buildUploadSteps(job.value));
 
 onMounted(() => {
-  void resumeActive();
+  void (async () => {
+    await resumeActive();
+    checking.value = false;
+  })();
 });
 
 function openFilePicker(): void {
@@ -123,7 +128,7 @@ function onFileChange(event: Event): void {
 }
 
 async function submitUpload(): Promise<void> {
-  if (busy.value) {
+  if (submitting.value) {
     return;
   }
 
@@ -134,30 +139,53 @@ async function submitUpload(): Promise<void> {
 
   error.value = null;
   successMessage.value = null;
+
+  if (await resumeActive() || busy.value) {
+    return;
+  }
+
+  const file = selectedFile.value;
   submitting.value = true;
+  beginLocalUpload(file.name);
 
   try {
-    const accepted = await uploadVideo(selectedFile.value);
+    const accepted = await uploadVideo(file);
     start(accepted.jobId, {
       jobId: accepted.jobId,
       status: accepted.status,
       phase: "uploading",
-      videoId: selectedFile.value.name,
+      videoId: file.name,
       converted: null,
       progress: null,
       outputs: null,
     });
   } catch (uploadError: unknown) {
-    error.value = mapUploadError(uploadError);
-
-    if (uploadError instanceof ApiRequestError && uploadError.status === 409 && uploadError.jobId !== null) {
-      start(uploadError.jobId);
-    } else {
-      reset();
+    if (await recoverActiveJob(uploadError)) {
+      return;
     }
+
+    error.value = mapUploadError(uploadError);
+    reset();
   } finally {
     submitting.value = false;
   }
+}
+
+async function recoverActiveJob(uploadError: unknown): Promise<boolean> {
+  if (!(uploadError instanceof ApiRequestError) || uploadError.status !== 409) {
+    return false;
+  }
+
+  if (uploadError.message.includes("already exists")) {
+    return false;
+  }
+
+  if (uploadError.jobId !== null) {
+    start(uploadError.jobId);
+    return true;
+  }
+
+  return resumeActive();
 }
 
 function stepMarker(state: UploadStepState): string {

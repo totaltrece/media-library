@@ -4,6 +4,8 @@ import { ApiRequestError, fetchActiveUploadJob, fetchUploadJob } from "../api/cl
 import type { UploadJobView } from "../api/types.js";
 import { isUploadJobActive, pollingWarningMessage, UPLOAD_POLL_INTERVAL_MS } from "../utils/upload-job.js";
 
+const PENDING_JOB_ID = "pending";
+
 export function useUploadJobPolling() {
   const job = ref<UploadJobView | null>(null);
   const pollWarning = ref<string | null>(null);
@@ -11,9 +13,10 @@ export function useUploadJobPolling() {
   let timer: ReturnType<typeof setInterval> | null = null;
   let inFlight = false;
   let generation = 0;
+  let resumeInFlight: Promise<boolean> | null = null;
 
   async function pollOnce(expectedGeneration: number): Promise<void> {
-    if (expectedGeneration !== generation || jobId === null || inFlight) {
+    if (expectedGeneration !== generation || jobId === null || jobId === PENDING_JOB_ID || inFlight) {
       return;
     }
 
@@ -74,6 +77,23 @@ export function useUploadJobPolling() {
     }, UPLOAD_POLL_INTERVAL_MS);
   }
 
+  function beginLocalUpload(fileName: string): void {
+    stop();
+    inFlight = false;
+    generation += 1;
+    jobId = PENDING_JOB_ID;
+    job.value = {
+      jobId: PENDING_JOB_ID,
+      status: "uploading",
+      phase: "uploading",
+      videoId: fileName,
+      converted: null,
+      progress: null,
+      outputs: null,
+    };
+    pollWarning.value = null;
+  }
+
   function stop(): void {
     if (timer !== null) {
       clearInterval(timer);
@@ -90,24 +110,40 @@ export function useUploadJobPolling() {
     pollWarning.value = null;
   }
 
+  function hasActiveJob(): boolean {
+    return isUploadJobActive(job.value);
+  }
+
   async function resumeActive(): Promise<boolean> {
-    const expectedGeneration = generation;
+    if (resumeInFlight !== null) {
+      return resumeInFlight;
+    }
+
+    resumeInFlight = (async () => {
+      const expectedGeneration = generation;
+
+      try {
+        const active = await fetchActiveUploadJob();
+
+        if (expectedGeneration !== generation) {
+          return hasActiveJob();
+        }
+
+        if (active === null || !isUploadJobActive(active)) {
+          return false;
+        }
+
+        start(active.jobId, active);
+        return true;
+      } catch {
+        return hasActiveJob();
+      }
+    })();
 
     try {
-      const active = await fetchActiveUploadJob();
-
-      if (expectedGeneration !== generation) {
-        return false;
-      }
-
-      if (active === null || !isUploadJobActive(active)) {
-        return false;
-      }
-
-      start(active.jobId, active);
-      return true;
-    } catch {
-      return false;
+      return await resumeInFlight;
+    } finally {
+      resumeInFlight = null;
     }
   }
 
@@ -120,6 +156,7 @@ export function useUploadJobPolling() {
     job,
     pollWarning,
     start,
+    beginLocalUpload,
     stop,
     reset,
     resumeActive,

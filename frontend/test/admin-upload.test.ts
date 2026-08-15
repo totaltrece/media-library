@@ -114,9 +114,10 @@ describe("admin video upload", () => {
   });
 
   it("asks for a file before uploading", async () => {
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn(async () => noActiveUpload());
     vi.stubGlobal("fetch", fetchMock);
     const wrapper = mount(AdminVideoUpload);
+    await flushPromises();
 
     await wrapper.get('[data-testid="upload-submit"]').trigger("click");
     await flushPromises();
@@ -166,7 +167,6 @@ describe("admin video upload", () => {
     expect(postCall?.[1]?.headers).toBeUndefined();
     expect((postCall?.[1]?.body as FormData).get("video")).toBe(file);
     expect(wrapper.emitted("completed")).toBeUndefined();
-    expect(wrapper.text()).toContain("Hay un vídeo en proceso");
     expect(wrapper.text()).toContain("Vídeo en proceso");
     expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="upload-submit"]').exists()).toBe(false);
@@ -372,8 +372,133 @@ describe("admin video upload", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Ya hay un vídeo en proceso.");
     expect(wrapper.get('[data-step="processing"]').classes()).toContain("is-current");
+    expect(wrapper.text()).toContain("Vídeo en proceso");
+    expect(wrapper.text()).not.toContain("Ya hay un vídeo en proceso.");
+  });
+
+  it("shows the uploading steps before the POST finishes", async () => {
+    let releasePost: (() => void) | undefined;
+    const postGate = new Promise<void>((resolve) => {
+      releasePost = resolve;
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/admin/uploads/active") {
+        return noActiveUpload();
+      }
+
+      if (url === "/api/admin/uploads" && init?.method === "POST") {
+        await postGate;
+        return jsonResponse({ jobId: "job-1", status: "uploading" }, true, 202);
+      }
+
+      if (url === "/api/admin/uploads/job-1") {
+        return jsonResponse(jobView({ status: "uploading", phase: "uploading" }));
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const wrapper = mount(AdminVideoUpload);
+    await chooseFile(wrapper, "clip.mp4");
+    await wrapper.get('[data-testid="upload-submit"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Vídeo en proceso");
+    expect(wrapper.get('[data-step="uploading"]').classes()).toContain("is-current");
+    expect(wrapper.find('[data-testid="upload-submit"]').exists()).toBe(false);
+    expect(
+      fetchMock.mock.calls.filter(([url, init]) => String(url) === "/api/admin/uploads" && init?.method === "POST"),
+    ).toHaveLength(1);
+
+    releasePost?.();
+    await flushPromises();
+    await flushPromises();
+    expect(wrapper.get('[data-step="uploading"]').classes()).toContain("is-current");
+  });
+
+  it("attaches to the active job when a 409 has no jobId", async () => {
+    let activeCalls = 0;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/admin/uploads/active") {
+        activeCalls += 1;
+        if (activeCalls === 1) {
+          return noActiveUpload();
+        }
+
+        return jsonResponse(jobView({ jobId: "job-active", status: "processing", phase: "processing" }));
+      }
+
+      if (url === "/api/admin/uploads" && init?.method === "POST") {
+        return jsonResponse({ error: { message: "A video processing job is already active." } }, false, 409);
+      }
+
+      if (url === "/api/admin/uploads/job-active") {
+        return jsonResponse(jobView({ jobId: "job-active", status: "processing", phase: "processing" }));
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const wrapper = mount(AdminVideoUpload);
+    await chooseFile(wrapper);
+    await wrapper.get('[data-testid="upload-submit"]').trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(wrapper.get('[data-step="processing"]').classes()).toContain("is-current");
+    expect(wrapper.text()).toContain("Vídeo en proceso");
+    expect(wrapper.text()).not.toContain("Ya hay un vídeo en proceso.");
+  });
+
+  it("does not start a second POST when an active job is found first", async () => {
+    let releaseActive: (() => void) | undefined;
+    const activeGate = new Promise<void>((resolve) => {
+      releaseActive = resolve;
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/admin/uploads/active") {
+        await activeGate;
+        return jsonResponse(jobView({ status: "processing", phase: "processing", progress: 18 }));
+      }
+
+      if (url === "/api/admin/uploads" && init?.method === "POST") {
+        return jsonResponse({ jobId: "job-new", status: "uploading" }, true, 202);
+      }
+
+      if (url === "/api/admin/uploads/job-1") {
+        return jsonResponse(jobView({ status: "processing", phase: "processing", progress: 18 }));
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const wrapper = mount(AdminVideoUpload);
+    await chooseFile(wrapper);
+    await wrapper.get('[data-testid="upload-submit"]').trigger("click");
+    await flushPromises();
+
+    expect(
+      fetchMock.mock.calls.some(([url, init]) => String(url) === "/api/admin/uploads" && init?.method === "POST"),
+    ).toBe(false);
+
+    releaseActive?.();
+    await flushPromises();
+    await flushPromises();
+
+    expect(wrapper.get('[data-step="processing"]').classes()).toContain("is-current");
+    expect(
+      fetchMock.mock.calls.some(([url, init]) => String(url) === "/api/admin/uploads" && init?.method === "POST"),
+    ).toBe(false);
   });
 
   it("does not mark the job failed when status polling returns 404", async () => {

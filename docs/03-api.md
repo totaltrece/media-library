@@ -354,7 +354,8 @@ GET /api/admin/uploads/:jobId
 
 Returns the job status. Unknown jobs return **404 Not Found**.
 
-A second upload while a job is active returns **409 Conflict**.
+A second upload while a job is active returns **409 Conflict** with the
+active `jobId`.
 A video whose id already exists in SQLite or on disk returns **409 Conflict**.
 A file larger than `UPLOAD_MAX_BYTES` returns **413 Payload Too Large**.
 A missing or invalid file returns **400 Bad Request**.
