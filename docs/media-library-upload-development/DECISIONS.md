@@ -24,9 +24,47 @@ El MVP crea vídeos sin tags. Después se puede reutilizar el catálogo y los ca
 ## Local primero
 El desarrollo y las pruebas deben hacerse primero en local. El despliegue remoto debería cambiar principalmente paths, FFmpeg y límites de recursos, no la arquitectura.
 
-## VideoProcessor como port, FFmpeg como adapter posterior
-M1 define `VideoProcessor` sin adapter. M2 lo implementará invocando ejecutables
-con `execFile`/`spawn`, usando `FFMPEG_PATH` y `FFPROBE_PATH`.
+## VideoProcessor como port, FFmpeg como adapter
+M1 definió `VideoProcessor`. M2 lo implementa en `FfmpegVideoProcessor`
+invocando `ffmpeg` y `ffprobe` con `spawn` (sin `shell`). Las rutas salen de
+`FFMPEG_PATH` y `FFPROBE_PATH`.
+
+## Parámetros de conversión tomados del script PowerShell
+`tools/convert-hevc-with-thumbnails-and-sync.ps1` es la referencia de flags ya
+probados. No forma parte del backend: Node no lo copia ni lo ejecuta.
+
+Conversión:
+
+- `-map 0:v:0 -map 0:a?`
+- `-c:v libx264 -crf 20 -preset medium`
+- `-c:a aac -b:a 128k`
+- `-map_metadata 0`
+- `-movflags +faststart`
+
+Thumbnail (del vídeo convertido, como el script):
+
+- `-ss` al `positionRatio` de la duración (0.5 = 50%)
+- `-frames:v 1`
+- `-vf scale=281:500:force_original_aspect_ratio=increase,crop=281:500`
+- `-q:v 2`
+
+El script no añade flags de rotación; el adapter tampoco. FFmpeg aplica su
+autorotate por defecto al reencodificar.
+
+FFmpeg 9 rechaza el JPEG del script (`Non full-range YUV is non-standard`).
+El adapter añade `-strict unofficial` para que el encoder mjpeg acepte el YUV
+de rango limitado y conserve el recorte 281×500. `-pix_fmt yuvj420p` redondearía
+el ancho impar a 280. No cambia seek, calidad ni el filtro de escala/recorte.
+
+`ffprobe` usa JSON (`-print_format json`) en lugar del texto del script, para
+no depender del idioma de la salida.
+
+`VideoProcessor.convert` siempre convierte. La decisión de cuándo hacerlo
+(solo HEVC) sigue siendo lógica de negocio para M4. El CLI de M2 omite la
+conversión si el codec no es `hevc`, salvo `--convert`.
+
+El layout TagSpaces `.ts/<filename>.jpg` se aplaza a M5. M2 escribe
+`thumbnail.jpg` en el workspace temporal.
 
 ## VideoStore y ThumbnailStore siguen siendo de lectura
 No se amplían para escribir temporales ni archivos nuevos. El workspace de un

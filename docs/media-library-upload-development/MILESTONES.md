@@ -13,7 +13,9 @@ Puertos, estados, configuración y límites definidos en el backend.
 Sin upload HTTP, sin adapter FFmpeg y sin cambios en el flujo actual.
 
 ## M2 — Procesador multiplataforma
-Integrar FFmpeg/FFprobe mediante procesos del sistema, sin scripts shell específicos de Linux/Windows.
+Implementado: adapter FFmpeg/FFprobe mediante `spawn` (sin shell), workspace
+temporal de filesystem y CLI `ffmpeg-test` para pruebas locales.
+Sin upload HTTP, sin jobs reales y sin cambios en el flujo actual.
 
 ## M3 — Upload local
 Recibir un único vídeo y almacenarlo temporalmente.

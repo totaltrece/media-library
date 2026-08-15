@@ -122,6 +122,8 @@ Examples:
 - TagSpaces filesystem reader
 - Search adapter
 - HTTP controllers
+- FFmpeg video processor
+- Filesystem processing workspace
 - Future persistence adapters
 
 Adapters may depend on external libraries.

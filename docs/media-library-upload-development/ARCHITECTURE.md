@@ -34,9 +34,14 @@ interface VideoProcessor {
 Los nombres en código viven en `backend/src/ports/video-processor.ts`.
 Las rutas son de filesystem, no media ids del catálogo.
 
+El adapter es `FfmpegVideoProcessor`. Invoca los binarios configurados con
+`child_process.spawn` y argumentos separados. No usa bash, PowerShell, WSL ni
+pipelines de shell.
+
 `VideoStore` y `ThumbnailStore` siguen siendo acceso de solo lectura a la
 biblioteca. El workspace temporal de un job es un port aparte:
-`ProcessingWorkspace`.
+`ProcessingWorkspace`, implementado por `FilesystemProcessingWorkspace` bajo
+`UPLOAD_TEMP_PATH`.
 
 ## Compatibilidad
 
@@ -49,7 +54,31 @@ FFMPEG_PATH=ffmpeg
 FFPROBE_PATH=ffprobe
 ```
 
-En Windows puede ser una ruta a `ffmpeg.exe`; en Ubuntu normalmente bastará `ffmpeg` si está en PATH.
+En Windows puede ser una ruta a `ffmpeg.exe`; en Ubuntu normalmente bastará `ffmpeg` si está en PATH:
+
+```env
+# Windows
+FFMPEG_PATH=C:\ffmpeg\bin\ffmpeg.exe
+FFPROBE_PATH=C:\ffmpeg\bin\ffprobe.exe
+
+# Ubuntu
+FFMPEG_PATH=ffmpeg
+FFPROBE_PATH=ffprobe
+```
+
+FFmpeg es una dependencia externa del sistema. El mismo código Node funciona en
+ambos entornos si los binarios están disponibles.
+
+## Prueba manual de M2
+
+Sin upload HTTP. Desde la raíz del monorepo:
+
+```bash
+pnpm --filter @media-library/backend ffmpeg-test -- "<ruta-al-video>"
+```
+
+Opciones: `--convert` (fuerza la conversión), `--skip-convert`, `--keep`
+(deja el workspace temporal). El archivo original no se modifica.
 
 ## Estados
 

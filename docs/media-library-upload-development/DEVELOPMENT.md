@@ -28,6 +28,29 @@ y no:
 
 La única diferencia entre entornos debería ser configuración de ejecutables y paths.
 
+## Prueba manual de M2
+
+Requiere FFmpeg y FFprobe en PATH, o `FFMPEG_PATH` / `FFPROBE_PATH` en `.env`.
+
+Windows:
+
+```powershell
+pnpm --filter @media-library/backend ffmpeg-test -- "C:\ruta\al\video.mp4"
+pnpm --filter @media-library/backend ffmpeg-test -- "C:\ruta\al\video.mp4" --keep
+pnpm --filter @media-library/backend ffmpeg-test -- "C:\ruta\al\h264.mp4" --convert
+```
+
+Linux:
+
+```bash
+pnpm --filter @media-library/backend ffmpeg-test -- /ruta/al/video.mp4
+pnpm --filter @media-library/backend ffmpeg-test -- /ruta/al/video.mp4 --keep
+pnpm --filter @media-library/backend ffmpeg-test -- /ruta/al/h264.mp4 --convert
+```
+
+El original no se modifica. `--keep` deja `converted.mp4` y `thumbnail.jpg` en
+el directorio del job bajo `UPLOAD_TEMP_PATH`.
+
 ## Prueba local
 
 1. upload;

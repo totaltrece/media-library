@@ -18,7 +18,7 @@ export interface ThumbnailGenerationOptions {
 
 /**
  * Converts and inspects video files. Paths are filesystem locations, not media ids.
- * The FFmpeg adapter is introduced in a later milestone.
+ * Implemented by the FFmpeg adapter; callers decide when to convert.
  */
 export interface VideoProcessor {
   probe(inputPath: string): Promise<VideoProbeResult>;
