@@ -26,8 +26,10 @@
             {{ tag }}
           </button>
         </li>
-        <li v-if="filteredSuggestions.length === 0">
-          <button disabled type="button">No matching tags</button>
+        <li v-if="canCreateNewTag">
+          <button data-testid="add-new-tag" type="button" @click="addTag(query)">
+            Añadir nuevo tag
+          </button>
         </li>
       </ul>
     </div>
@@ -64,6 +66,16 @@ const filteredSuggestions = computed(() => {
 
     return tag.toLowerCase().includes(normalizedQuery);
   });
+});
+
+const canCreateNewTag = computed(() => {
+  const name = query.value.trim();
+
+  if (name.length === 0 || props.tags.includes(name)) {
+    return false;
+  }
+
+  return !props.availableTags.some((tag) => tag.toLowerCase() === name.toLowerCase());
 });
 
 function openSuggestions(): void {

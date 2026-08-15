@@ -427,6 +427,27 @@ describe("tag editor", () => {
 
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "nuevo-tag"]);
   });
+
+  it("offers to add a new tag instead of showing no matches", async () => {
+    const wrapper = mount(TagEditor, {
+      props: {
+        tags: ["salsa"],
+        availableTags: ["salsa", "bufanda"],
+      },
+    });
+
+    const input = wrapper.get("#admin-tag-input");
+    await input.setValue("estela");
+    await input.trigger("focus");
+    await nextTick();
+
+    expect(wrapper.text()).toContain("Añadir nuevo tag");
+    expect(wrapper.text()).not.toContain("No matching tags");
+
+    await wrapper.get('[data-testid="add-new-tag"]').trigger("click");
+
+    expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "estela"]);
+  });
 });
 
 describe("admin video editor", () => {
