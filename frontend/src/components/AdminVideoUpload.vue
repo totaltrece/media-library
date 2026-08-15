@@ -1,7 +1,7 @@
 <template>
   <section class="admin-upload" aria-label="Subir vídeo">
-    <h2>Subir vídeo</h2>
-    <p>El vídeo se procesará en el servidor y aparecerá en Sin tags cuando termine.</p>
+    <h2>{{ busy ? "Vídeo en proceso" : "Subir vídeo" }}</h2>
+    <p v-if="!busy">El vídeo se procesará en el servidor y aparecerá en Sin tags cuando termine.</p>
 
     <input
       id="admin-upload-file"
@@ -14,16 +14,15 @@
       @change="onFileChange"
     >
 
-    <p v-if="selectedFileName" class="admin-upload-filename" data-testid="upload-file-name">
-      {{ selectedFileName }}
+    <p v-if="displayedFileName" class="admin-upload-filename" data-testid="upload-file-name">
+      {{ displayedFileName }}
     </p>
 
-    <div class="admin-upload-actions">
+    <div v-if="!busy" class="admin-upload-actions">
       <button
         class="secondary-button admin-upload-button"
         type="button"
         data-testid="upload-select"
-        :disabled="busy"
         @click="openFilePicker"
       >
         Seleccionar vídeo
@@ -32,7 +31,6 @@
         class="primary-button admin-upload-button"
         type="button"
         data-testid="upload-submit"
-        :disabled="busy"
         @click="submitUpload"
       >
         Subir vídeo
@@ -59,14 +57,27 @@
         :data-step="step.id"
       >
         <span class="admin-upload-step-marker" aria-hidden="true">{{ stepMarker(step.state) }}</span>
-        <span>{{ step.label }}</span>
+        <span class="admin-upload-step-body">
+          <span>{{ uploadStepLabel(step, job) }}</span>
+          <span
+            v-if="step.id === 'processing' && showsConversionProgress(job)"
+            class="admin-upload-progress"
+            data-testid="upload-progress-bar"
+            role="progressbar"
+            :aria-valuenow="job.progress ?? 0"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
+            <span class="admin-upload-progress-fill" :style="{ width: `${job.progress ?? 0}%` }" />
+          </span>
+        </span>
       </li>
     </ol>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 import { ApiRequestError, uploadVideo } from "../api/client.js";
 import { useUploadJobPolling } from "../composables/use-upload-job-polling.js";
@@ -74,6 +85,8 @@ import {
   buildUploadSteps,
   isUploadJobActive,
   mapUploadError,
+  showsConversionProgress,
+  uploadStepLabel,
 } from "../utils/upload-job.js";
 import type { UploadStepState } from "../utils/upload-job.js";
 import ErrorMessage from "./ErrorMessage.vue";
@@ -87,11 +100,16 @@ const selectedFile = ref<File | null>(null);
 const error = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
 const submitting = ref(false);
-const { job, pollWarning, start, reset } = useUploadJobPolling();
+const { job, pollWarning, start, reset, resumeActive } = useUploadJobPolling();
 
 const selectedFileName = computed(() => selectedFile.value?.name ?? "");
+const displayedFileName = computed(() => selectedFileName.value || job.value?.videoId || "");
 const busy = computed(() => submitting.value || isUploadJobActive(job.value));
 const steps = computed(() => buildUploadSteps(job.value));
+
+onMounted(() => {
+  void resumeActive();
+});
 
 function openFilePicker(): void {
   fileInput.value?.click();
@@ -124,8 +142,9 @@ async function submitUpload(): Promise<void> {
       jobId: accepted.jobId,
       status: accepted.status,
       phase: "uploading",
-      videoId: null,
+      videoId: selectedFile.value.name,
       converted: null,
+      progress: null,
       outputs: null,
     });
   } catch (uploadError: unknown) {
@@ -255,6 +274,28 @@ watch(
 .admin-upload-step-marker {
   flex: 0 0 1.25rem;
   text-align: center;
+}
+
+.admin-upload-step-body {
+  display: grid;
+  flex: 1;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.admin-upload-progress {
+  background: #e8eaed;
+  border-radius: 999px;
+  display: block;
+  height: 0.4rem;
+  overflow: hidden;
+}
+
+.admin-upload-progress-fill {
+  background: #1a73e8;
+  display: block;
+  height: 100%;
+  min-width: 0;
 }
 
 @media (max-width: 599px) {

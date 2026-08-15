@@ -1,4 +1,5 @@
 import type { ProcessingJob, ProcessingJobPhase, ProcessingJobStatus } from "../ports/processing-job-store.js";
+import { clampConversionProgress } from "./conversion-progress.js";
 import { processingJobPhase } from "./processing-job.js";
 
 export interface UploadJobOutputs {
@@ -13,6 +14,7 @@ export interface UploadJobView {
   phase: ProcessingJobPhase;
   videoId: string | null;
   converted: boolean | null;
+  progress: number | null;
   outputs: UploadJobOutputs | null;
 }
 
@@ -26,6 +28,7 @@ export function toUploadJobView(job: ProcessingJob): UploadJobView {
     phase: processingJobPhase(job.state),
     videoId,
     converted: job.converted,
+    progress: job.progress === null ? null : clampConversionProgress(job.progress),
     outputs: showOutputs
       ? {
           source: "source",

@@ -7,7 +7,7 @@ import { createProcessingJob, transitionProcessingJob } from "../src/application
 import { InMemoryProcessingJobStore } from "../src/adapters/in-memory-processing-job-store.js";
 import { buildProcessingJobPaths } from "../src/application/processing-job-paths.js";
 import type { ProcessingJobPaths, ProcessingWorkspace } from "../src/ports/processing-workspace.js";
-import type { VideoProbeResult, VideoProcessor } from "../src/ports/video-processor.js";
+import type { VideoConvertOptions, VideoProbeResult, VideoProcessor } from "../src/ports/video-processor.js";
 
 const originalPath = "/library/clip.mp4";
 const tempRoot = "/tmp/upload-temp";
@@ -33,6 +33,7 @@ test("HEVC jobs convert, thumbnail the converted file, and keep the workspace", 
   assert.deepEqual(processor.convertCalls, [{ input: paths.sourcePath, output: paths.convertedPath }]);
   assert.deepEqual(processor.thumbnailCalls, [{ input: paths.convertedPath, output: paths.thumbnailPath }]);
   assert.equal(result.converted, true);
+  assert.equal(result.job.progress, 100);
   assert.equal(result.outputVideoPath, paths.convertedPath);
   assert.equal(result.thumbnailPath, paths.thumbnailPath);
   assert.equal(result.workspaceDirectory, paths.directory);
@@ -65,6 +66,7 @@ test("H.264 jobs skip convert and thumbnail the staged source", async () => {
   assert.deepEqual(processor.convertCalls, []);
   assert.deepEqual(processor.thumbnailCalls, [{ input: paths.sourcePath, output: paths.thumbnailPath }]);
   assert.equal(result.converted, false);
+  assert.equal(result.job.progress, null);
   assert.equal(result.outputVideoPath, paths.sourcePath);
   assert.deepEqual(workspace.discarded, []);
   assert.equal(processor.touched(originalPath), false);
@@ -247,8 +249,10 @@ class FakeVideoProcessor implements VideoProcessor {
     return this.probeResult;
   }
 
-  async convert(inputPath: string, outputPath: string): Promise<void> {
+  async convert(inputPath: string, outputPath: string, options?: VideoConvertOptions): Promise<void> {
     this.convertCalls.push({ input: inputPath, output: outputPath });
+    options?.onProgress?.(47);
+    options?.onProgress?.(150);
     if (this.failAt === "convert") {
       throw new Error("convert failed");
     }

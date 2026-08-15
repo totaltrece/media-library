@@ -104,12 +104,16 @@ to find videos by tags, filter untagged items, and edit tags through
 `/admin/videos` shares the same header as `/`, `/admin/videos/upload`, and
 `/admin/tags`: **View**, **Upload video**, **Admin videos**, **Admin tags**,
 and refresh library (`POST /api/library/refresh`). The current section is
-highlighted. Upload lives at `/admin/videos/upload`: it posts
-`POST /api/admin/uploads` (multipart field `video`) and polls
-`GET /api/admin/uploads/:jobId` until `completed` or `failed`. After a
+highlighted. Upload lives at `/admin/videos/upload`: it loads
+`GET /api/admin/uploads/active` on enter. If a job is `uploading` or
+`processing`, it shows the progress zone and polls
+`GET /api/admin/uploads/:jobId`. Otherwise it shows the upload picker.
+`POST /api/admin/uploads` uses multipart field `video`. During HEVC
+conversion the processing step shows `progress` (0–100). `/admin/videos` and
+the consumer screen at `/` do not include this upload zone. After a
 successful upload, **View in Sin tags** returns to the catalog with the new
-video visible. A completed upload is listed through `GET /api/search`; the
-upload page does not call `POST /api/library/refresh`.
+video visible through `GET /api/search`; the upload page does not call
+`POST /api/library/refresh`.
 
 The tag catalog at `/admin/tags` is managed through `GET /api/admin/tags`,
 `PUT /api/admin/tags/:id`, and `DELETE /api/admin/tags/:id`.

@@ -24,6 +24,7 @@ test("createProcessingJob starts idle and rejects an empty name", () => {
     createdAt: "2026-08-15T10:00:00.000Z",
     state: { status: "idle" },
     converted: null,
+    progress: null,
   });
   assert.equal(isActiveProcessingJob(job), false);
   assert.equal(isTerminalProcessingJob(job), false);

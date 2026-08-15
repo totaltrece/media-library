@@ -49,6 +49,29 @@ export async function registerUploadsRoutes(
     return handleUpload(request, reply, options);
   });
 
+  app.get("/admin/uploads/active", async (_request, reply) => {
+    const job = options.getUploadJobUseCase.executeActive();
+
+    if (job === null) {
+      return reply.status(404).send({
+        error: {
+          message: "No active upload job.",
+        },
+      });
+    }
+
+    if (job.status === "failed") {
+      return reply.status(200).send({
+        ...job,
+        error: {
+          message: PUBLIC_PROCESSING_FAILED_MESSAGE,
+        },
+      });
+    }
+
+    return job;
+  });
+
   app.get("/admin/uploads/:jobId", async (request, reply) => {
     const jobId = (request.params as { jobId?: string }).jobId?.trim() ?? "";
 

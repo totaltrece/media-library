@@ -90,6 +90,26 @@ export function buildUploadSteps(job: Pick<UploadJobView, "status" | "phase"> | 
   });
 }
 
+export function conversionProgressLabel(job: Pick<UploadJobView, "phase" | "progress"> | null): string | null {
+  if (job?.phase !== "processing" || typeof job.progress !== "number") {
+    return null;
+  }
+
+  return `${STEP_LABELS.processing} · ${job.progress}%`;
+}
+
+export function uploadStepLabel(step: UploadStep, job: Pick<UploadJobView, "phase" | "progress"> | null): string {
+  if (step.id === "processing" && step.state === "current") {
+    return conversionProgressLabel(job) ?? step.label;
+  }
+
+  return step.label;
+}
+
+export function showsConversionProgress(job: Pick<UploadJobView, "phase" | "progress"> | null): boolean {
+  return conversionProgressLabel(job) !== null;
+}
+
 export function mapUploadError(error: unknown): string {
   if (error instanceof ApiRequestError) {
     if (error.status === 413) {

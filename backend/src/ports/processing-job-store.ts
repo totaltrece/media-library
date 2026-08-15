@@ -37,6 +37,10 @@ export interface ProcessingJob {
    * Whether HEVC conversion ran. `null` until processing has decided.
    */
   converted: boolean | null;
+  /**
+   * Conversion percent 0–100 while FFmpeg is converting. `null` when not applicable.
+   */
+  progress: number | null;
 }
 
 export interface ProcessingJobStore {

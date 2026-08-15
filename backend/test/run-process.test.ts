@@ -25,6 +25,28 @@ test("runProcess passes arguments with spaces without a shell", async () => {
   }
 });
 
+test("runProcess forwards stdout chunks while the process is running", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "media-library-run-process-stdout-"));
+  const scriptPath = join(directory, "write-progress.js");
+  const chunks: string[] = [];
+
+  try {
+    await writeFile(
+      scriptPath,
+      "process.stdout.write('out_time_us=1000000\\n'); process.stdout.write('out_time_us=2000000\\n');",
+    );
+
+    const result = await runProcess(process.execPath, [scriptPath], {
+      onStdout: (chunk) => chunks.push(chunk),
+    });
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(chunks.join(""), "out_time_us=1000000\nout_time_us=2000000\n");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("runProcess reports a missing executable", async () => {
   await assert.rejects(
     () => runProcess("media-library-missing-ffmpeg-binary", ["-version"]),

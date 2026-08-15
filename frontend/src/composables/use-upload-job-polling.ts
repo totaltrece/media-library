@@ -1,8 +1,8 @@
 import { onUnmounted, ref } from "vue";
 
-import { ApiRequestError, fetchUploadJob } from "../api/client.js";
+import { ApiRequestError, fetchActiveUploadJob, fetchUploadJob } from "../api/client.js";
 import type { UploadJobView } from "../api/types.js";
-import { pollingWarningMessage, UPLOAD_POLL_INTERVAL_MS } from "../utils/upload-job.js";
+import { isUploadJobActive, pollingWarningMessage, UPLOAD_POLL_INTERVAL_MS } from "../utils/upload-job.js";
 
 export function useUploadJobPolling() {
   const job = ref<UploadJobView | null>(null);
@@ -64,6 +64,7 @@ export function useUploadJobPolling() {
       phase: "uploading",
       videoId: null,
       converted: null,
+      progress: null,
       outputs: null,
     };
     pollWarning.value = null;
@@ -89,6 +90,27 @@ export function useUploadJobPolling() {
     pollWarning.value = null;
   }
 
+  async function resumeActive(): Promise<boolean> {
+    const expectedGeneration = generation;
+
+    try {
+      const active = await fetchActiveUploadJob();
+
+      if (expectedGeneration !== generation) {
+        return false;
+      }
+
+      if (active === null || !isUploadJobActive(active)) {
+        return false;
+      }
+
+      start(active.jobId, active);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   onUnmounted(() => {
     stop();
     generation += 1;
@@ -100,5 +122,6 @@ export function useUploadJobPolling() {
     start,
     stop,
     reset,
+    resumeActive,
   };
 }

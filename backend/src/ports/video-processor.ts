@@ -22,10 +22,15 @@ export interface ThumbnailGenerationOptions {
  */
 export interface VideoProcessor {
   probe(inputPath: string): Promise<VideoProbeResult>;
-  convert(inputPath: string, outputPath: string): Promise<void>;
+  convert(inputPath: string, outputPath: string, options?: VideoConvertOptions): Promise<void>;
   generateThumbnail(
     inputPath: string,
     outputPath: string,
     options?: Partial<ThumbnailGenerationOptions>,
   ): Promise<void>;
+}
+
+export interface VideoConvertOptions {
+  durationSeconds?: number;
+  onProgress?: (percent: number) => void;
 }

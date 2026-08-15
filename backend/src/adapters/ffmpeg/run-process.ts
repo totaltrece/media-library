@@ -6,13 +6,25 @@ export interface ProcessResult {
   exitCode: number;
 }
 
-export type RunProcess = (executable: string, args: readonly string[]) => Promise<ProcessResult>;
+export interface RunProcessOptions {
+  onStdout?: (chunk: string) => void;
+}
+
+export type RunProcess = (
+  executable: string,
+  args: readonly string[],
+  options?: RunProcessOptions,
+) => Promise<ProcessResult>;
 
 /**
  * Runs an executable with discrete arguments. Never uses a shell, so Windows and
  * Linux paths with spaces stay a single argument.
  */
-export function runProcess(executable: string, args: readonly string[]): Promise<ProcessResult> {
+export function runProcess(
+  executable: string,
+  args: readonly string[],
+  options?: RunProcessOptions,
+): Promise<ProcessResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(executable, [...args], {
       shell: false,
@@ -25,6 +37,7 @@ export function runProcess(executable: string, args: readonly string[]): Promise
 
     child.stdout.on("data", (chunk: Buffer) => {
       stdoutChunks.push(chunk);
+      options?.onStdout?.(chunk.toString("utf8"));
     });
     child.stderr.on("data", (chunk: Buffer) => {
       stderrChunks.push(chunk);

@@ -21,6 +21,8 @@ export function buildFfmpegConvertArgs(inputPath: string, outputPath: string): s
     "-hide_banner",
     "-loglevel",
     "error",
+    "-progress",
+    "pipe:1",
     "-i",
     inputPath,
     "-map",

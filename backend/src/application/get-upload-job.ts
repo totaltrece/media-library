@@ -13,4 +13,14 @@ export class GetUploadJobUseCase {
 
     return toUploadJobView(job);
   }
+
+  executeActive(): UploadJobView | null {
+    const job = this.jobs.findActive();
+
+    if (job === null) {
+      return null;
+    }
+
+    return toUploadJobView(job);
+  }
 }

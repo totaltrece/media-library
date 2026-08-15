@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildApiUrl, buildSearchUrl, buildUploadJobUrl } from "../src/api/client.js";
+import { buildApiUrl, buildSearchUrl, buildActiveUploadJobUrl, buildUploadJobUrl } from "../src/api/client.js";
 
 describe("buildApiUrl", () => {
   it("prefixes relative API paths with /api", () => {
@@ -179,6 +179,43 @@ describe("admin uploads API", () => {
       phase: "generating_thumbnail",
     });
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads/job-1");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("loads the active upload job or null when none exists", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: { message: "No active upload job." } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          jobId: "job-1",
+          status: "processing",
+          phase: "processing",
+          videoId: "clip.mp4",
+          converted: true,
+          progress: 47,
+          outputs: null,
+        }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { fetchActiveUploadJob } = await import("../src/api/client.js");
+
+    expect(buildActiveUploadJobUrl()).toBe("/api/admin/uploads/active");
+    await expect(fetchActiveUploadJob()).resolves.toBeNull();
+    await expect(fetchActiveUploadJob()).resolves.toMatchObject({
+      jobId: "job-1",
+      progress: 47,
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/admin/uploads/active");
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/admin/uploads/active");
 
     vi.unstubAllGlobals();
   });

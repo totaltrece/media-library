@@ -21,7 +21,7 @@ import { PUBLIC_PROCESSING_FAILED_MESSAGE } from "../src/application/to-upload-j
 import { PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE } from "../src/application/video-already-exists-error.js";
 import type { LibraryMediaInstaller } from "../src/ports/library-media-installer.js";
 import type { LibraryStore } from "../src/ports/library-store.js";
-import type { ProcessingJob } from "../src/ports/processing-job-store.js";
+import type { ProcessingJob, ProcessingPhase } from "../src/ports/processing-job-store.js";
 import type { VideoProbeResult, VideoProcessor } from "../src/ports/video-processor.js";
 
 const VIDEO_BYTES = Buffer.from("fake-video-bytes");
@@ -308,6 +308,125 @@ test("GET /api/admin/uploads/:jobId returns 404 for an unknown job", async () =>
   });
 });
 
+test("GET /api/admin/uploads/active returns 404 when no job is active", async () => {
+  await withUploadApp({ codec: "h264" }, async (context) => {
+    const response = await context.app.inject({
+      method: "GET",
+      url: "/api/admin/uploads/active",
+    });
+
+    assert.equal(response.statusCode, 404);
+    assert.equal(response.json().error.message, "No active upload job.");
+  });
+});
+
+test("GET /api/admin/uploads/active returns uploading, processing, and installing jobs", async () => {
+  await withUploadApp({ codec: "h264" }, async (context) => {
+    seedJob(context.jobs, { id: "uploading-job", originalName: "one.mp4", status: "uploading" });
+    const uploading = await context.app.inject({ method: "GET", url: "/api/admin/uploads/active" });
+    assert.equal(uploading.statusCode, 200);
+    assert.equal(uploading.json().jobId, "uploading-job");
+    assert.equal(uploading.json().status, "uploading");
+    assert.equal(uploading.json().phase, "uploading");
+    assert.equal(uploading.json().videoId, "one.mp4");
+    assert.equal(uploading.json().progress, null);
+  });
+
+  await withUploadApp({ codec: "h264" }, async (context) => {
+    seedJob(context.jobs, {
+      id: "processing-job",
+      originalName: "two.mp4",
+      status: "processing",
+      phase: "processing",
+      converted: true,
+      progress: 47,
+    });
+    const processing = await context.app.inject({ method: "GET", url: "/api/admin/uploads/active" });
+    assert.equal(processing.statusCode, 200);
+    assert.equal(processing.json().jobId, "processing-job");
+    assert.equal(processing.json().status, "processing");
+    assert.equal(processing.json().phase, "processing");
+    assert.equal(processing.json().progress, 47);
+    const byId = await context.app.inject({ method: "GET", url: "/api/admin/uploads/processing-job" });
+    assert.equal(byId.json().progress, 47);
+  });
+
+  await withUploadApp({ codec: "h264" }, async (context) => {
+    seedJob(context.jobs, {
+      id: "installing-job",
+      originalName: "three.mp4",
+      status: "processing",
+      phase: "installing",
+      converted: true,
+      progress: 100,
+    });
+    const installing = await context.app.inject({ method: "GET", url: "/api/admin/uploads/active" });
+    assert.equal(installing.statusCode, 200);
+    assert.equal(installing.json().jobId, "installing-job");
+    assert.equal(installing.json().phase, "installing");
+    assert.equal(installing.json().progress, 100);
+  });
+});
+
+test("GET /api/admin/uploads/active ignores completed and failed jobs", async () => {
+  await withUploadApp({ codec: "h264" }, async (context) => {
+    seedJob(context.jobs, { id: "done", originalName: "done.mp4", status: "completed", converted: false });
+    const completed = await context.app.inject({ method: "GET", url: "/api/admin/uploads/active" });
+    assert.equal(completed.statusCode, 404);
+  });
+
+  await withUploadApp({ codec: "h264" }, async (context) => {
+    seedJob(context.jobs, { id: "failed", originalName: "failed.mp4", status: "failed" });
+    const failed = await context.app.inject({ method: "GET", url: "/api/admin/uploads/active" });
+    assert.equal(failed.statusCode, 404);
+  });
+});
+
+test("upload job status endpoints expose conversion progress including clamped values", async () => {
+  await withUploadApp({ codec: "hevc" }, async (context) => {
+    seedJob(context.jobs, {
+      id: "progress-0",
+      originalName: "clip.mp4",
+      status: "processing",
+      phase: "processing",
+      converted: true,
+      progress: 0,
+    });
+    const zero = await context.app.inject({ method: "GET", url: "/api/admin/uploads/progress-0" });
+    assert.equal(zero.json().progress, 0);
+
+    context.jobs.update({
+      ...context.jobs.findById("progress-0")!,
+      progress: 150,
+    });
+    const clamped = await context.app.inject({ method: "GET", url: "/api/admin/uploads/progress-0" });
+    assert.equal(clamped.json().progress, 100);
+    const active = await context.app.inject({ method: "GET", url: "/api/admin/uploads/active" });
+    assert.equal(active.json().progress, 100);
+    assert.equal(active.json().jobId, "progress-0");
+  });
+});
+
+test("H.264 jobs do not expose conversion progress", async () => {
+  await withUploadApp({ codec: "h264" }, async (context) => {
+    seedJob(context.jobs, {
+      id: "h264-job",
+      originalName: "h264.mp4",
+      status: "processing",
+      phase: "processing",
+      converted: false,
+      progress: null,
+    });
+
+    const status = await context.app.inject({ method: "GET", url: "/api/admin/uploads/h264-job" });
+    const active = await context.app.inject({ method: "GET", url: "/api/admin/uploads/active" });
+    assert.equal(status.json().converted, false);
+    assert.equal(status.json().progress, null);
+    assert.equal(active.statusCode, 200);
+    assert.equal(active.json().progress, null);
+  });
+});
+
 test("failed processing is visible on GET without exposing internal paths", async () => {
   await withUploadApp({ codec: "hevc", failAt: "probe" }, async (context) => {
     const response = await context.app.inject({
@@ -559,6 +678,72 @@ async function waitForTerminalJob(jobs: InMemoryProcessingJobStore, jobId: strin
   }
 
   throw new Error(`Timed out waiting for job ${jobId} to finish`);
+}
+
+function seedJob(
+  jobs: InMemoryProcessingJobStore,
+  options: {
+    id: string;
+    originalName: string;
+    status: "uploading" | "processing" | "completed" | "failed";
+    phase?: ProcessingPhase;
+    progress?: number | null;
+    converted?: boolean | null;
+  },
+): ProcessingJob {
+  let job = createProcessingJob({ originalName: options.originalName, id: options.id });
+  jobs.create(job);
+  job = transitionProcessingJob(job, { status: "uploading" });
+
+  if (options.status !== "uploading") {
+    job = transitionProcessingJob(job, { status: "processing", phase: "processing" });
+  }
+
+  if (options.status === "processing" && options.phase !== undefined && options.phase !== "processing") {
+    if (options.phase === "generating_thumbnail" || options.phase === "finalizing" || options.phase === "installing") {
+      job = transitionProcessingJob(job, { status: "processing", phase: "generating_thumbnail" });
+    }
+
+    if (options.phase === "finalizing" || options.phase === "installing") {
+      job = transitionProcessingJob(job, { status: "processing", phase: "finalizing" });
+    }
+
+    if (options.phase === "installing") {
+      job = transitionProcessingJob(job, { status: "processing", phase: "installing" });
+    }
+  }
+
+  if (options.status === "completed") {
+    if (job.state.status === "uploading") {
+      job = transitionProcessingJob(job, { status: "processing", phase: "processing" });
+    }
+
+    if (job.state.status === "processing" && job.state.phase === "processing") {
+      job = transitionProcessingJob(job, { status: "processing", phase: "generating_thumbnail" });
+    }
+
+    if (job.state.status === "processing" && job.state.phase === "generating_thumbnail") {
+      job = transitionProcessingJob(job, { status: "processing", phase: "finalizing" });
+    }
+
+    if (job.state.status === "processing" && job.state.phase === "finalizing") {
+      job = transitionProcessingJob(job, { status: "processing", phase: "installing" });
+    }
+
+    job = transitionProcessingJob(job, { status: "completed", videoId: options.originalName });
+  }
+
+  if (options.status === "failed") {
+    job = transitionProcessingJob(job, { status: "failed", error: "failed" });
+  }
+
+  job = {
+    ...job,
+    converted: options.converted ?? null,
+    progress: options.progress ?? null,
+  };
+  jobs.update(job);
+  return job;
 }
 
 function relationCount(libraryStore: LibraryStore): number {

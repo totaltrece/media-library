@@ -6,9 +6,11 @@ M6.1 hace el upload HTTP asíncrono: `POST` acepta el fichero y responde `202`.
 El pipeline de M5 continúa en background. `GET` consulta el estado.
 Los jobs siguen en memoria; no hay persistencia ni reanudación tras un reinicio.
 
-La UI de administración (M6.2) envía el multipart sin `Content-Type` manual
-(el navegador añade el boundary) y hace polling del `GET` hasta un estado
-terminal. No hay endpoint de progreso porcentual.
+La UI de administración consulta `GET /api/admin/uploads/active` al entrar
+en `/admin/videos/upload`, envía el multipart sin `Content-Type` manual (el navegador
+añade el boundary) y hace polling del `GET` hasta un estado terminal.
+Durante la conversión HEVC, `progress` es un porcentaje 0–100 derivado de
+FFmpeg `-progress`. No hay WebSockets ni SSE.
 
 ## Upload
 
@@ -52,9 +54,10 @@ Mientras procesa:
 {
   "jobId": "...",
   "status": "processing",
-  "phase": "generating_thumbnail",
+  "phase": "processing",
   "videoId": "PXL_20260813_214135367.TS.mp4",
   "converted": true,
+  "progress": 47,
   "outputs": {
     "source": "source",
     "converted": "converted.mp4",
@@ -62,6 +65,10 @@ Mientras procesa:
   }
 }
 ```
+
+`progress` es `null` cuando no hay conversión (H.264) o aún no aplica.
+Durante FFmpeg está entre `0` y `100`. Al terminar la conversión queda `100`.
+No se exponen rutas internas ni salida de FFmpeg.
 
 Al completar:
 
@@ -72,6 +79,7 @@ Al completar:
   "phase": "completed",
   "videoId": "PXL_20260813_214135367.TS.mp4",
   "converted": true,
+  "progress": 100,
   "outputs": {
     "source": "source",
     "converted": "converted.mp4",
@@ -89,6 +97,7 @@ Al fallar (`200` con `status: "failed"`):
   "phase": "failed",
   "videoId": "PXL_20260813_214135367.TS.mp4",
   "converted": null,
+  "progress": null,
   "outputs": null,
   "error": {
     "message": "Video processing failed."
@@ -101,6 +110,20 @@ thumbnail, finaliza o instala, `status` es `processing` y `phase` distingue
 el paso (`installing` durante la copia a la biblioteca).
 
 Job inexistente: `404`. No se exponen trazas ni rutas internas.
+
+## Job activo
+
+```http
+GET /api/admin/uploads/active
+```
+
+Devuelve el mismo cuerpo que `GET /api/admin/uploads/:jobId` si hay un job
+con `status` `uploading` o `processing` (incluida la fase `installing`).
+Si no hay ninguno, responde `404` (`No active upload job.`).
+Los jobs `completed` y `failed` no cuentan como activos.
+
+Este endpoint está registrado antes de `/:jobId` para que `active` no se
+interprete como un id.
 
 ## Errores de POST
 

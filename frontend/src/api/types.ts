@@ -73,6 +73,7 @@ export interface UploadJobView {
   phase: UploadJobPhase;
   videoId: string | null;
   converted: boolean | null;
+  progress: number | null;
   outputs: UploadJobOutputs | null;
   error?: {
     message: string;

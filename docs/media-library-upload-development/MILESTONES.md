@@ -42,16 +42,16 @@ reanudación.
 
 ## M6.2 — UI de subida y seguimiento
 Implementado: página `/admin/videos/upload`, enlazada desde la cabecera
-compartida (**Upload video**). `POST` multipart, polling de
-`GET /api/admin/uploads/:jobId`, fases visibles, un solo upload activo y
+compartida (**Upload video**). `POST` multipart, `GET /api/admin/uploads/active`
+al entrar, polling de `GET /api/admin/uploads/:jobId`, fases visibles,
+porcentaje real de FFmpeg durante la conversión, un solo upload activo y
 vuelta al catálogo en Sin tags. Cabecera compartida con View / Upload video /
-Admin videos / Admin tags y refresh. Sin cola, sin porcentaje de FFmpeg y sin
+Admin videos / Admin tags y refresh. Sin cola, sin persistencia de jobs y sin
 captura de cámara.
 
 ## M6 — UI de estado
-La presentación de fases y errores está en M6.2. Recargar la página no
-restaura un job en curso: el estado sigue en memoria y el `409` activo no
-incluye `jobId` por defecto.
+La presentación de fases, recuperación del job activo y progreso de FFmpeg
+están en M6.2. Un reinicio de Node sigue perdiendo jobs en memoria.
 
 ## M7 — MVP remoto
 Instalar/configurar FFmpeg en Ubuntu, desplegar el mismo backend y probar desde móvil/PC.

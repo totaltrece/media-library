@@ -45,9 +45,14 @@ function jobView(partial: Partial<UploadJobView>): UploadJobView {
     phase: "uploading",
     videoId: "clip.mp4",
     converted: null,
+    progress: null,
     outputs: null,
     ...partial,
   };
+}
+
+function noActiveUpload(): Response {
+  return jsonResponse({ error: { message: "No active upload job." } }, false, 404);
 }
 
 function selectFile(wrapper: ReturnType<typeof mount>, name = "clip.mp4"): File {
@@ -91,6 +96,7 @@ describe("admin video upload", () => {
     vi.useFakeTimers({
       toFake: ["setInterval", "clearInterval"],
     });
+    vi.stubGlobal("fetch", vi.fn(async () => noActiveUpload()));
   });
 
   afterEach(() => {
@@ -115,20 +121,24 @@ describe("admin video upload", () => {
     await wrapper.get('[data-testid="upload-submit"]').trigger("click");
     await flushPromises();
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/admin/uploads", expect.anything());
     expect(wrapper.text()).toContain("Selecciona un vídeo primero.");
   });
 
   it("posts multipart without a manual content-type and polls job status", async () => {
     const states: UploadJobView[] = [
       jobView({ status: "uploading", phase: "uploading" }),
-      jobView({ status: "processing", phase: "processing" }),
-      jobView({ status: "processing", phase: "generating_thumbnail" }),
-      jobView({ status: "processing", phase: "installing" }),
-      jobView({ status: "completed", phase: "completed", converted: true }),
+      jobView({ status: "processing", phase: "processing", converted: true, progress: 47 }),
+      jobView({ status: "processing", phase: "generating_thumbnail", converted: true, progress: 100 }),
+      jobView({ status: "processing", phase: "installing", converted: true, progress: 100 }),
+      jobView({ status: "completed", phase: "completed", converted: true, progress: 100 }),
     ];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+
+      if (url === "/api/admin/uploads/active") {
+        return noActiveUpload();
+      }
 
       if (url === "/api/admin/uploads" && init?.method === "POST") {
         return jsonResponse({ jobId: "job-1", status: "uploading" }, true, 202);
@@ -152,22 +162,29 @@ describe("admin video upload", () => {
       method: "POST",
       body: expect.any(FormData),
     });
-    const postInit = fetchMock.mock.calls[0]?.[1];
-    expect(postInit?.headers).toBeUndefined();
-    expect((postInit?.body as FormData).get("video")).toBe(file);
+    const postCall = fetchMock.mock.calls.find(([url, init]) => String(url) === "/api/admin/uploads" && init?.method === "POST");
+    expect(postCall?.[1]?.headers).toBeUndefined();
+    expect((postCall?.[1]?.body as FormData).get("video")).toBe(file);
     expect(wrapper.emitted("completed")).toBeUndefined();
     expect(wrapper.text()).toContain("Hay un vídeo en proceso");
-    expect(wrapper.get('[data-testid="upload-select"]').attributes("disabled")).toBeDefined();
-    expect(wrapper.get('[data-testid="upload-submit"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.text()).toContain("Vídeo en proceso");
+    expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="upload-submit"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="upload-file-name"]').text()).toBe("clip.mp4");
     expect(wrapper.get('[data-step="uploading"]').classes()).toContain("is-current");
 
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
     await flushPromises();
     expect(wrapper.get('[data-step="processing"]').classes()).toContain("is-current");
+    expect(wrapper.get('[data-step="processing"]').text()).toContain("Procesando vídeo · 47%");
+    expect(wrapper.find('[data-testid="upload-progress-bar"]').exists()).toBe(true);
 
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
     await flushPromises();
     expect(wrapper.get('[data-step="generating_thumbnail"]').classes()).toContain("is-current");
+    expect(wrapper.get('[data-step="generating_thumbnail"]').text()).toContain("Generando thumbnail");
+    expect(wrapper.get('[data-step="processing"]').text()).not.toContain("%");
+    expect(wrapper.find('[data-testid="upload-progress-bar"]').exists()).toBe(false);
 
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
     await flushPromises();
@@ -188,6 +205,10 @@ describe("admin video upload", () => {
   it("stops polling and shows a safe message when the job fails", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+
+      if (url === "/api/admin/uploads/active") {
+        return noActiveUpload();
+      }
 
       if (url === "/api/admin/uploads" && init?.method === "POST") {
         return jsonResponse({ jobId: "job-1", status: "uploading" }, true, 202);
@@ -221,6 +242,10 @@ describe("admin video upload", () => {
 
   it("clears the polling timer on unmount", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/admin/uploads/active") {
+        return noActiveUpload();
+      }
+
       if (String(input) === "/api/admin/uploads" && init?.method === "POST") {
         return jsonResponse({ jobId: "job-1", status: "uploading" }, true, 202);
       }
@@ -246,6 +271,10 @@ describe("admin video upload", () => {
   it("keeps polling after a temporary status request failure", async () => {
     let polls = 0;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/admin/uploads/active") {
+        return noActiveUpload();
+      }
+
       if (String(input) === "/api/admin/uploads" && init?.method === "POST") {
         return jsonResponse({ jobId: "job-1", status: "uploading" }, true, 202);
       }
@@ -275,10 +304,26 @@ describe("admin video upload", () => {
   });
 
   it("shows mapped errors for 409, 413, and network failures", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse({ error: { message: "A video processing job is already active." } }, false, 409))
-      .mockResolvedValueOnce(jsonResponse({ error: { message: "The uploaded video exceeds the size limit." } }, false, 413))
-      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const postResponses = [
+      jsonResponse({ error: { message: "A video processing job is already active." } }, false, 409),
+      jsonResponse({ error: { message: "The uploaded video exceeds the size limit." } }, false, 413),
+    ];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/admin/uploads/active") {
+        return noActiveUpload();
+      }
+
+      if (String(input) === "/api/admin/uploads" && init?.method === "POST") {
+        const next = postResponses.shift();
+        if (next !== undefined) {
+          return next;
+        }
+
+        throw new TypeError("Failed to fetch");
+      }
+
+      return noActiveUpload();
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const wrapper = mount(AdminVideoUpload);
@@ -298,6 +343,10 @@ describe("admin video upload", () => {
 
   it("recovers the current job when a 409 response includes a jobId", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/admin/uploads/active") {
+        return noActiveUpload();
+      }
+
       if (String(input) === "/api/admin/uploads" && init?.method === "POST") {
         return jsonResponse(
           {
@@ -329,6 +378,10 @@ describe("admin video upload", () => {
 
   it("does not mark the job failed when status polling returns 404", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/admin/uploads/active") {
+        return noActiveUpload();
+      }
+
       if (String(input) === "/api/admin/uploads" && init?.method === "POST") {
         return jsonResponse({ jobId: "job-1", status: "uploading" }, true, 202);
       }
@@ -356,9 +409,21 @@ describe("admin video upload", () => {
   });
 
   it("maps 400 and 500 upload responses to safe messages", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse({ error: { message: "A video file is required." } }, false, 400))
-      .mockResolvedValueOnce(jsonResponse({ error: { message: "Video processing failed." } }, false, 500));
+    const postResponses = [
+      jsonResponse({ error: { message: "A video file is required." } }, false, 400),
+      jsonResponse({ error: { message: "Video processing failed." } }, false, 500),
+    ];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/admin/uploads/active") {
+        return noActiveUpload();
+      }
+
+      if (String(input) === "/api/admin/uploads" && init?.method === "POST") {
+        return postResponses.shift() ?? noActiveUpload();
+      }
+
+      return noActiveUpload();
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const wrapper = mount(AdminVideoUpload);
@@ -384,6 +449,10 @@ describe("admin video upload", () => {
     let catalog = [...catalogVideos];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+
+      if (url === "/api/admin/uploads/active") {
+        return noActiveUpload();
+      }
 
       if (url === "/api/tags") {
         return jsonResponse({ count: 1, tags: ["salsa"] });
@@ -440,6 +509,130 @@ describe("admin video upload", () => {
     expect(wrapper.text()).toContain("clip.mp4");
     expect(wrapper.get('[data-testid="filter-untagged"]').classes()).toContain("active");
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
+  });
+
+  it("resumes an active upload when entering /admin/videos/upload", async () => {
+    const states: UploadJobView[] = [
+      jobView({
+        status: "processing",
+        phase: "processing",
+        videoId: "PXL_20260813_214135367.TS.mp4",
+        converted: true,
+        progress: 47,
+      }),
+      jobView({
+        status: "processing",
+        phase: "generating_thumbnail",
+        videoId: "PXL_20260813_214135367.TS.mp4",
+        converted: true,
+        progress: 100,
+      }),
+      jobView({
+        status: "processing",
+        phase: "installing",
+        videoId: "PXL_20260813_214135367.TS.mp4",
+        converted: true,
+        progress: 100,
+      }),
+      jobView({
+        status: "completed",
+        phase: "completed",
+        videoId: "PXL_20260813_214135367.TS.mp4",
+        converted: true,
+        progress: 100,
+      }),
+    ];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === "/api/admin/uploads/active") {
+        return jsonResponse(states[0]);
+      }
+
+      if (url === "/api/admin/uploads/job-1") {
+        return jsonResponse(states.shift() ?? jobView({ status: "completed", phase: "completed" }));
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createUploadRouter();
+    const Root = defineComponent({
+      template: "<router-view />",
+    });
+    await router.push("/admin/videos/upload");
+    await router.isReady();
+    const wrapper = mount(Root, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads/active");
+    expect(wrapper.text()).toContain("Vídeo en proceso");
+    expect(wrapper.get('[data-testid="upload-file-name"]').text()).toBe("PXL_20260813_214135367.TS.mp4");
+    expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
+    expect(wrapper.get('[data-step="processing"]').classes()).toContain("is-current");
+    expect(wrapper.get('[data-step="processing"]').text()).toContain("47%");
+    expect(wrapper.find('[data-testid="upload-progress-bar"]').exists()).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
+    await flushPromises();
+    expect(wrapper.get('[data-step="generating_thumbnail"]').classes()).toContain("is-current");
+    expect(wrapper.get('[data-step="generating_thumbnail"]').text()).toContain("Generando thumbnail");
+    expect(wrapper.find('[data-testid="upload-progress-bar"]').exists()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
+    await flushPromises();
+    expect(wrapper.get('[data-step="installing"]').classes()).toContain("is-current");
+
+    await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
+    await flushPromises();
+    expect(wrapper.get('[data-testid="upload-success"]').text()).toBe("Vídeo añadido correctamente");
+    expect(wrapper.find('[data-testid="upload-view-untagged"]').exists()).toBe(true);
+
+    const pollCallsBefore = fetchMock.mock.calls.filter(([url]) => String(url) === "/api/admin/uploads/job-1").length;
+    await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS * 3);
+    await flushPromises();
+    const pollCallsAfter = fetchMock.mock.calls.filter(([url]) => String(url) === "/api/admin/uploads/job-1").length;
+    expect(pollCallsAfter).toBe(pollCallsBefore);
+  });
+
+  it("stops polling a recovered job when it fails", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === "/api/admin/uploads/active") {
+        return jsonResponse(jobView({ status: "processing", phase: "processing", progress: 12 }));
+      }
+
+      if (url === "/api/admin/uploads/job-1") {
+        return jsonResponse(jobView({ status: "failed", phase: "failed" }));
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createUploadRouter();
+    const Root = defineComponent({
+      template: "<router-view />",
+    });
+    await router.push("/admin/videos/upload");
+    await router.isReady();
+    const wrapper = mount(Root, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("No se ha podido procesar el vídeo.");
+    const pollCallsBefore = fetchMock.mock.calls.filter(([url]) => String(url) === "/api/admin/uploads/job-1").length;
+    await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS * 2);
+    await flushPromises();
+    const pollCallsAfter = fetchMock.mock.calls.filter(([url]) => String(url) === "/api/admin/uploads/job-1").length;
+    expect(pollCallsAfter).toBe(pollCallsBefore);
   });
 
   it("does not add the upload zone to the consumer view", async () => {

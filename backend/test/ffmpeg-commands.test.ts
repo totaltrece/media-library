@@ -53,6 +53,8 @@ test("convert args match the PowerShell HEVC to H.264 flags", () => {
     "-hide_banner",
     "-loglevel",
     "error",
+    "-progress",
+    "pipe:1",
     "-i",
     "in.mp4",
     "-map",

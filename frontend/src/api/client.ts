@@ -147,6 +147,10 @@ export function buildUploadJobUrl(jobId: string): string {
   return buildApiUrl(`/admin/uploads/${jobId}`);
 }
 
+export function buildActiveUploadJobUrl(): string {
+  return buildApiUrl("/admin/uploads/active");
+}
+
 export async function uploadVideo(file: File): Promise<UploadAcceptedResponse> {
   const body = new FormData();
   body.append("video", file);
@@ -161,6 +165,16 @@ export async function uploadVideo(file: File): Promise<UploadAcceptedResponse> {
 
 export async function fetchUploadJob(jobId: string): Promise<UploadJobView> {
   const response = await fetch(buildUploadJobUrl(jobId));
+
+  return readJsonResponse<UploadJobView>(response);
+}
+
+export async function fetchActiveUploadJob(): Promise<UploadJobView | null> {
+  const response = await fetch(buildActiveUploadJobUrl());
+
+  if (response.status === 404) {
+    return null;
+  }
 
   return readJsonResponse<UploadJobView>(response);
 }

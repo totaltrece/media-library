@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiRequestError } from "../src/api/client.js";
-import { buildUploadSteps, isUploadJobActive, mapUploadError } from "../src/utils/upload-job.js";
+import { buildUploadSteps, conversionProgressLabel, isUploadJobActive, mapUploadError, uploadStepLabel } from "../src/utils/upload-job.js";
 import type { UploadJobView } from "../src/api/types.js";
 
 function job(partial: Partial<UploadJobView>): UploadJobView {
@@ -11,6 +11,7 @@ function job(partial: Partial<UploadJobView>): UploadJobView {
     phase: "uploading",
     videoId: "clip.mp4",
     converted: null,
+    progress: null,
     outputs: null,
     ...partial,
   };
@@ -44,6 +45,22 @@ describe("upload job presentation", () => {
     expect(buildUploadSteps(job({ status: "completed", phase: "completed" })).every((step) => step.state === "done")).toBe(
       true,
     );
+  });
+
+  it("shows conversion percent only while the processing step is current", () => {
+    const converting = job({ status: "processing", phase: "processing", progress: 47 });
+    const processingStep = buildUploadSteps(converting).find((step) => step.id === "processing");
+    expect(processingStep).toBeDefined();
+    expect(uploadStepLabel(processingStep!, converting)).toBe("Procesando vídeo · 47%");
+    expect(conversionProgressLabel(converting)).toBe("Procesando vídeo · 47%");
+
+    const thumbnail = job({ status: "processing", phase: "generating_thumbnail", progress: 100 });
+    const thumbnailProcessing = buildUploadSteps(thumbnail).find((step) => step.id === "processing");
+    expect(uploadStepLabel(thumbnailProcessing!, thumbnail)).toBe("Procesando vídeo");
+    expect(conversionProgressLabel(thumbnail)).toBeNull();
+
+    const skipped = job({ status: "processing", phase: "processing", progress: null });
+    expect(conversionProgressLabel(skipped)).toBeNull();
   });
 
   it("maps API errors to safe user messages", () => {

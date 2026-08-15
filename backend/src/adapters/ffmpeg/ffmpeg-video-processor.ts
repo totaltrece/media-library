@@ -1,13 +1,20 @@
 import { mkdir, rename, rm, stat } from "node:fs/promises";
 import { dirname } from "node:path";
 
+import { conversionProgressPercent } from "../../application/conversion-progress.js";
 import { resolveThumbnailGenerationOptions } from "../../application/thumbnail-generation-options.js";
-import type { ThumbnailGenerationOptions, VideoProbeResult, VideoProcessor } from "../../ports/video-processor.js";
+import type {
+  ThumbnailGenerationOptions,
+  VideoConvertOptions,
+  VideoProbeResult,
+  VideoProcessor,
+} from "../../ports/video-processor.js";
 import {
   buildFfmpegConvertArgs,
   buildFfmpegThumbnailArgs,
   buildFfprobeArgs,
 } from "./ffmpeg-commands.js";
+import { parseFfmpegOutTimeSeconds } from "./parse-ffmpeg-progress.js";
 import { parseFfprobeJson } from "./parse-ffprobe-json.js";
 import { runProcess as spawnProcess, type ProcessResult, type RunProcess } from "./run-process.js";
 
@@ -71,16 +78,17 @@ export class FfmpegVideoProcessor implements VideoProcessor {
     return parseFfprobeJson(result.stdout);
   }
 
-  async convert(inputPath: string, outputPath: string): Promise<void> {
+  async convert(inputPath: string, outputPath: string, options?: VideoConvertOptions): Promise<void> {
     await mkdir(dirname(outputPath), { recursive: true });
 
     const temporaryOutput = `${outputPath}.converting.mp4`;
     await rm(temporaryOutput, { force: true });
 
     const args = buildFfmpegConvertArgs(inputPath, temporaryOutput);
+    const onStdout = createConvertProgressHandler(options);
 
     try {
-      const result = await this.runProcess(this.ffmpegPath, args);
+      const result = await this.runProcess(this.ffmpegPath, args, onStdout === undefined ? undefined : { onStdout });
 
       if (result.exitCode !== 0) {
         throw new FfmpegProcessError({
@@ -153,6 +161,38 @@ async function pathExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function createConvertProgressHandler(options?: VideoConvertOptions): ((chunk: string) => void) | undefined {
+  const onProgress = options?.onProgress;
+  const durationSeconds = options?.durationSeconds;
+
+  if (onProgress === undefined || durationSeconds === undefined) {
+    return undefined;
+  }
+
+  let leftover = "";
+
+  return (chunk: string) => {
+    leftover += chunk;
+    const lines = leftover.split(/\r\n|\n|\r/);
+    leftover = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (line.trim() === "progress=end") {
+        onProgress(100);
+        continue;
+      }
+
+      const outTimeSeconds = parseFfmpegOutTimeSeconds(line);
+
+      if (outTimeSeconds === null) {
+        continue;
+      }
+
+      onProgress(conversionProgressPercent(outTimeSeconds, durationSeconds));
+    }
+  };
 }
 
 function truncate(value: string, limit: number): string {

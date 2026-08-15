@@ -2,6 +2,7 @@ import type { ProcessingJobStore } from "../ports/processing-job-store.js";
 import type { ProcessingJobPaths, ProcessingWorkspace } from "../ports/processing-workspace.js";
 import type { VideoProbeResult, VideoProcessor } from "../ports/video-processor.js";
 import { ActiveProcessingJobError } from "./active-processing-job-error.js";
+import { clampConversionProgress } from "./conversion-progress.js";
 import { needsH264Conversion } from "./needs-h264-conversion.js";
 import {
   createProcessingJob,
@@ -147,7 +148,14 @@ export class ProcessVideoJobUseCase {
 
       if (converted) {
         options?.onProgress?.({ step: "processing", outcome: "converting" });
-        await this.processor.convert(paths.sourcePath, paths.convertedPath);
+        job = this.saveProgress(job, 0);
+        await this.processor.convert(paths.sourcePath, paths.convertedPath, {
+          durationSeconds: probe.durationSeconds,
+          onProgress: (percent) => {
+            job = this.saveProgress(job, percent);
+          },
+        });
+        job = this.saveProgress(job, 100);
       } else {
         options?.onProgress?.({ step: "processing", outcome: "skipped" });
       }
@@ -215,6 +223,15 @@ export class ProcessVideoJobUseCase {
   private save(job: ProcessingJob): ProcessingJob {
     this.jobs.update(job);
     return job;
+  }
+
+  private saveProgress(job: ProcessingJob, percent: number): ProcessingJob {
+    const current = this.jobs.findById(job.id) ?? job;
+
+    return this.save({
+      ...current,
+      progress: clampConversionProgress(percent),
+    });
   }
 
   private markFailed(job: ProcessingJob, error: string): ProcessingJob {

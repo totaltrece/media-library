@@ -79,8 +79,41 @@ test("FfmpegVideoProcessor.convert writes only the output path and keeps command
 
     assert.equal(calls[0]?.executable, String.raw`C:\ffmpeg\bin\ffmpeg.exe`);
     assert.equal(calls[0]?.args[calls[0].args.indexOf("-i") + 1], inputPath);
+    assert.equal(calls[0]?.args[calls[0].args.indexOf("-progress") + 1], "pipe:1");
     assert.equal(await readFile(outputPath, "utf8"), "converted");
     assert.equal(await readFile(inputPath, "utf8"), "source");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("FfmpegVideoProcessor.convert reports clamped progress from FFmpeg -progress output", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "media-library-ffmpeg-progress-"));
+  const inputPath = join(directory, "source.mp4");
+  const outputPath = join(directory, "converted.mp4");
+  const percents: number[] = [];
+
+  try {
+    await writeFile(inputPath, "source");
+    const processor = new FfmpegVideoProcessor({
+      ffmpegPath: "ffmpeg",
+      ffprobePath: "ffprobe",
+      runProcess: async (_executable, args, options) => {
+        const temporaryOutput = args.at(-1);
+        options?.onStdout?.("frame=1\nout_time_us=0\n");
+        options?.onStdout?.("out_time_us=4700000\n");
+        options?.onStdout?.("out_time_us=15000000\nprogress=end\n");
+        await writeFile(temporaryOutput ?? "", "converted");
+        return { stdout: "", stderr: "", exitCode: 0 };
+      },
+    });
+
+    await processor.convert(inputPath, outputPath, {
+      durationSeconds: 10,
+      onProgress: (percent) => percents.push(percent),
+    });
+
+    assert.deepEqual(percents, [0, 47, 100, 100]);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

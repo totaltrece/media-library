@@ -22,7 +22,7 @@ Catálogo de vídeos/tags. Un vídeo nuevo solo se registra cuando todo el proce
 ```ts
 interface VideoProcessor {
   probe(inputPath: string): Promise<VideoProbeResult>;
-  convert(inputPath: string, outputPath: string): Promise<void>;
+  convert(inputPath: string, outputPath: string, options?: VideoConvertOptions): Promise<void>;
   generateThumbnail(
     inputPath: string,
     outputPath: string,
@@ -119,7 +119,9 @@ El workspace queda en `UPLOAD_TEMP_PATH/<jobId>/` (`source`, `converted.mp4`,
 crea el job, escribe el fichero en `sourcePath` y responde `202` con `jobId`.
 `BackgroundUploadJobRunner` ejecuta `CompleteUploadUseCase` en background
 (pipeline M3 + instalación M5). `GET /api/admin/uploads/:jobId` consulta el
-estado.
+estado. `GET /api/admin/uploads/active` devuelve el job activo (`uploading` o
+`processing`) o `404`. Durante `convert()`, FFmpeg usa `-progress pipe:1` y el
+job guarda `progress` (0–100) en memoria.
 
 Los jobs siguen en `InMemoryProcessingJobStore`. Si Node se reinicia con un
 job activo, ese job se pierde; no se reanuda. No hay cola.
@@ -128,20 +130,22 @@ job activo, ese job se pierde; no se reanuda. No hay cola.
 
 La administración comparte cabecera entre `/` (**View**),
 `/admin/videos/upload` (**Upload video**), `/admin/videos` (**Admin videos**)
-y `/admin/tags` (**Admin tags**), más el refresh de biblioteca. El navegador
-envía `POST /api/admin/uploads` como
-multipart (campo `video`, sin `Content-Type` manual) y, tras el `202`, consulta
-`GET /api/admin/uploads/:jobId` cada segundo hasta `completed` o `failed`.
+y `/admin/tags` (**Admin tags**), más el refresh de biblioteca.
 
-La UI muestra las fases (`uploading`, `processing`, `generating_thumbnail`,
-`installing`, `completed`) usando `status` y `phase`. `finalizing` se presenta
-como instalación. No hay porcentaje de FFmpeg. Un job activo deshabilita un
-segundo upload. Un `409` se traduce a un mensaje claro; si el cuerpo incluye
-`jobId`, se retoma el seguimiento. Un error de red en el polling no marca el
-job como `failed`: se avisa y se reintenta.
+`/admin/videos/upload` es la página que recupera y muestra el upload activo. Al
+entrar consulta `GET /api/admin/uploads/active`. Si hay un job activo,
+muestra las fases y continúa el polling de `GET /api/admin/uploads/:jobId`
+cada segundo (mismo composable que un upload iniciado en esa sesión). Si no
+hay job activo, muestra el selector de subida. Un job activo oculta el
+selector. `/admin/videos` y `/` no muestran esta zona.
+
+Durante la conversión HEVC, la fase **Procesando vídeo** muestra el
+porcentaje real (`progress`) y una barra corta. Al pasar a
+`generating_thumbnail` e `installing` el porcentaje desaparece. Un H.264
+sin conversión no muestra progreso de FFmpeg.
 
 Al completar, **View in Sin tags** vuelve a `/admin/videos?untagged=1`. El
-catálogo se carga con `GET /api/search` y `GET /api/tags` (no
+catálogo recarga `GET /api/search` y `GET /api/tags` (no
 `POST /api/library/refresh`). El icono de refresh de biblioteca está en la
 cabecera compartida de todas las páginas.
 
