@@ -136,7 +136,7 @@ test("GET /admin and /admin/* serve the frontend index.html", async () => {
     staticRoot,
   });
 
-  for (const url of ["/admin", "/admin/videos", "/admin/tags", "/admin/videos/salsa/first.mp4"]) {
+  for (const url of ["/admin", "/admin/videos", "/admin/videos/upload", "/admin/tags", "/admin/videos/salsa/first.mp4"]) {
     const response = await app.inject({
       method: "GET",
       url,

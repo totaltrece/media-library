@@ -1,19 +1,10 @@
 <template>
   <div class="app-shell">
-    <header class="app-header">
-      <div class="app-header-row">
-        <div>
-          <h1>Video tags</h1>
-          <p>Find a video and edit its tags.</p>
-        </div>
-        <div class="search-actions">
-          <AdminNav />
-          <RouterLink class="secondary-button" to="/">Back to library</RouterLink>
-        </div>
-      </div>
-    </header>
-
-    <AdminVideoUpload @completed="onUploadCompleted" />
+    <AppHeader
+      title="Video tags"
+      subtitle="Find a video and edit its tags."
+      @refreshed="onLibraryRefreshed"
+    />
 
     <div class="admin-filter-row" role="group" aria-label="Video filters">
       <button
@@ -76,8 +67,7 @@ import { useRoute, useRouter } from "vue-router";
 
 import { fetchTags, searchVideos } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
-import AdminNav from "../components/AdminNav.vue";
-import AdminVideoUpload from "../components/AdminVideoUpload.vue";
+import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 import SearchResults from "../components/SearchResults.vue";
@@ -109,15 +99,19 @@ const emptyMessage = computed(() =>
 
 onMounted(async () => {
   try {
-    const [searchResponse, tagsResponse] = await Promise.all([searchVideos([]), fetchTags()]);
-    catalogVideos.value = searchResponse.results;
-    availableTags.value = tagsResponse.tags;
+    await loadCatalog();
   } catch (loadError: unknown) {
     error.value = loadError instanceof Error ? loadError.message : "Unable to load videos.";
   } finally {
     loadingCatalog.value = false;
   }
 });
+
+async function loadCatalog(): Promise<void> {
+  const [searchResponse, tagsResponse] = await Promise.all([searchVideos([]), fetchTags()]);
+  catalogVideos.value = searchResponse.results;
+  availableTags.value = tagsResponse.tags;
+}
 
 function resetSearch(): void {
   selectedTags.value = [];
@@ -195,6 +189,17 @@ function parseRouteTags(value: unknown): string[] {
 }
 
 watch(
+  () => route.query.untagged,
+  (value) => {
+    if (value === "1") {
+      resetSearch();
+      untaggedOnly.value = true;
+    }
+  },
+  { immediate: true },
+);
+
+watch(
   () => route.query.tag,
   async () => {
     const tags = parseRouteTags(route.query.tag);
@@ -213,14 +218,14 @@ function openVideo(result: SearchResultItem): void {
   void router.push({ name: "admin-video-edit", params: { id: result.id } });
 }
 
-async function onUploadCompleted(): Promise<void> {
+async function onLibraryRefreshed(): Promise<void> {
   try {
-    const [searchResponse, tagsResponse] = await Promise.all([searchVideos([]), fetchTags()]);
-    catalogVideos.value = searchResponse.results;
-    availableTags.value = tagsResponse.tags;
-    resetSearch();
-    untaggedOnly.value = true;
+    await loadCatalog();
     error.value = null;
+
+    if (hasSearched.value && selectedTags.value.length > 0) {
+      await runSearch();
+    }
   } catch (loadError: unknown) {
     error.value = loadError instanceof Error ? loadError.message : "Unable to load videos.";
   }

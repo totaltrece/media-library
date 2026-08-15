@@ -1,17 +1,10 @@
 <template>
   <div class="app-shell">
-    <header class="app-header">
-      <div class="app-header-row">
-        <div>
-          <h1>{{ video?.name ?? "Edit tags" }}</h1>
-          <p>Edit tags for this video. Changes are saved to the library.</p>
-        </div>
-        <div class="search-actions">
-          <AdminNav />
-          <RouterLink class="secondary-button" to="/admin/videos">Back to videos</RouterLink>
-        </div>
-      </div>
-    </header>
+    <AppHeader
+      :title="video?.name ?? 'Edit tags'"
+      subtitle="Edit tags for this video. Changes are saved to the library."
+      @refreshed="loadVideo"
+    />
 
     <LoadingIndicator v-if="loading" message="Loading video..." />
     <ErrorMessage v-else-if="error" :message="error" />
@@ -61,7 +54,7 @@ import { computed, ref, watch } from "vue";
 
 import { fetchTags, fetchVideoTags, searchVideos, updateVideoTags } from "../api/client.js";
 import type { SearchResultItem as VideoResult } from "../api/types.js";
-import AdminNav from "../components/AdminNav.vue";
+import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 import SearchResultItem from "../components/SearchResultItem.vue";
@@ -107,37 +100,41 @@ const previewResult = computed(() => {
 watch(
   () => props.id,
   async () => {
-    loading.value = true;
-    error.value = null;
-    saveError.value = null;
-    saveMessage.value = null;
-    showPlayer.value = false;
-
-    try {
-      const [searchResponse, videoTags, catalog] = await Promise.all([
-        searchVideos([]),
-        fetchVideoTags(props.id),
-        fetchTags(),
-      ]);
-
-      video.value = searchResponse.results.find((result) => result.id === props.id) ?? {
-        id: props.id,
-        name: props.id.split("/").at(-1) ?? props.id,
-        thumbnail: `/api/thumbnail/${props.id}`,
-        video: `/api/video/${props.id}`,
-        tags: videoTags.tags,
-      };
-      savedTags.value = [...videoTags.tags];
-      draftTags.value = [...videoTags.tags];
-      availableTags.value = catalog.tags;
-    } catch (loadError: unknown) {
-      error.value = loadError instanceof Error ? loadError.message : "Unable to load video tags.";
-    } finally {
-      loading.value = false;
-    }
+    await loadVideo();
   },
   { immediate: true },
 );
+
+async function loadVideo(): Promise<void> {
+  loading.value = true;
+  error.value = null;
+  saveError.value = null;
+  saveMessage.value = null;
+  showPlayer.value = false;
+
+  try {
+    const [searchResponse, videoTags, catalog] = await Promise.all([
+      searchVideos([]),
+      fetchVideoTags(props.id),
+      fetchTags(),
+    ]);
+
+    video.value = searchResponse.results.find((result) => result.id === props.id) ?? {
+      id: props.id,
+      name: props.id.split("/").at(-1) ?? props.id,
+      thumbnail: `/api/thumbnail/${props.id}`,
+      video: `/api/video/${props.id}`,
+      tags: videoTags.tags,
+    };
+    savedTags.value = [...videoTags.tags];
+    draftTags.value = [...videoTags.tags];
+    availableTags.value = catalog.tags;
+  } catch (loadError: unknown) {
+    error.value = loadError instanceof Error ? loadError.message : "Unable to load video tags.";
+  } finally {
+    loading.value = false;
+  }
+}
 
 async function saveTags(): Promise<void> {
   saving.value = true;

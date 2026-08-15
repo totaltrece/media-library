@@ -1,6 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick } from "vue";
+import { defineComponent, nextTick } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
 
 import type { SearchResultItem, UploadJobView } from "../src/api/types.js";
@@ -8,6 +8,7 @@ import AdminVideoUpload from "../src/components/AdminVideoUpload.vue";
 import TagSearch from "../src/components/TagSearch.vue";
 import AdminTagsView from "../src/views/AdminTagsView.vue";
 import AdminVideoEditView from "../src/views/AdminVideoEditView.vue";
+import AdminVideoUploadView from "../src/views/AdminVideoUploadView.vue";
 import AdminVideosView from "../src/views/AdminVideosView.vue";
 import HomeView from "../src/views/HomeView.vue";
 import { UPLOAD_POLL_INTERVAL_MS } from "../src/utils/upload-job.js";
@@ -64,6 +65,24 @@ async function chooseFile(wrapper: ReturnType<typeof mount>, name = "clip.mp4"):
   await wrapper.get('[data-testid="upload-file-input"]').trigger("change");
   await nextTick();
   return file;
+}
+
+function createUploadRouter() {
+  return createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: "/", name: "home", component: HomeView },
+      { path: "/admin/videos", name: "admin-videos", component: AdminVideosView },
+      { path: "/admin/videos/upload", name: "admin-video-upload", component: AdminVideoUploadView },
+      { path: "/admin/tags", name: "admin-tags", component: AdminTagsView },
+      {
+        path: "/admin/videos/:id(.*)",
+        name: "admin-video-edit",
+        component: AdminVideoEditView,
+        props: true,
+      },
+    ],
+  });
 }
 
 describe("admin video upload", () => {
@@ -354,7 +373,7 @@ describe("admin video upload", () => {
     expect(wrapper.text()).toContain("No se ha podido procesar el vídeo.");
   });
 
-  it("refreshes the catalog into Sin tags after a completed upload", async () => {
+  it("opens the upload page from admin videos and shows the new video under Sin tags", async () => {
     const uploaded: SearchResultItem = {
       id: "clip.mp4",
       name: "clip.mp4",
@@ -387,34 +406,36 @@ describe("admin video upload", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [
-        { path: "/", name: "home", component: HomeView },
-        { path: "/admin/videos", name: "admin-videos", component: AdminVideosView },
-        { path: "/admin/tags", name: "admin-tags", component: AdminTagsView },
-        {
-          path: "/admin/videos/:id(.*)",
-          name: "admin-video-edit",
-          component: AdminVideoEditView,
-          props: true,
-        },
-      ],
+    const router = createUploadRouter();
+    const Root = defineComponent({
+      template: "<router-view />",
     });
     await router.push("/admin/videos");
     await router.isReady();
-    const wrapper = mount(AdminVideosView, {
+    const wrapper = mount(Root, {
       global: { plugins: [router] },
     });
     await flushPromises();
 
     expect(wrapper.text()).toContain("Sin tags (1)");
+    expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
+
+    await wrapper.get('[data-testid="upload-new-video"]').trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.name).toBe("admin-video-upload");
+    expect(wrapper.get('[data-testid="upload-new-video"]').classes()).toContain("active");
+    expect(wrapper.get('[data-testid="nav-videos"]').classes()).not.toContain("active");
+
     await chooseFile(wrapper, "clip.mp4");
     await wrapper.get('[data-testid="upload-submit"]').trigger("click");
     await flushPromises();
     await flushPromises();
 
     expect(wrapper.text()).toContain("Vídeo añadido correctamente");
+    await wrapper.get('[data-testid="upload-view-untagged"]').trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("admin-videos");
     expect(wrapper.text()).toContain("Sin tags (2)");
     expect(wrapper.text()).toContain("clip.mp4");
     expect(wrapper.get('[data-testid="filter-untagged"]').classes()).toContain("active");
@@ -425,14 +446,7 @@ describe("admin video upload", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ count: 1, tags: ["salsa"] }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [
-        { path: "/", name: "home", component: HomeView },
-        { path: "/admin/videos", name: "admin-videos", component: AdminVideosView },
-        { path: "/admin/tags", name: "admin-tags", component: AdminTagsView },
-      ],
-    });
+    const router = createUploadRouter();
     await router.push("/");
     await router.isReady();
     const wrapper = mount(HomeView, {
@@ -441,6 +455,9 @@ describe("admin video upload", () => {
     await flushPromises();
 
     expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="upload-new-video"]').text()).toBe("Upload video");
+    expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
     expect(wrapper.text()).not.toContain("Seleccionar vídeo");
     expect(wrapper.text()).not.toContain("Subir vídeo");
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);

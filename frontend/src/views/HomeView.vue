@@ -1,30 +1,10 @@
 <template>
   <div class="app-shell">
-    <header class="app-header">
-      <div class="app-header-row">
-        <div>
-          <h1>Media Library</h1>
-          <p>Search your tagged videos and watch them from any browser.</p>
-        </div>
-        <div class="search-actions">
-          <AdminNav />
-          <button
-            class="refresh-button"
-            type="button"
-            aria-label="Refresh library"
-            title="Refresh library"
-            :aria-busy="refreshing"
-            :disabled="refreshing"
-            @click="refreshLibrary"
-          >
-            <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
-              <path d="M21 12a9 9 0 1 1-3.16-6.85" />
-              <path d="M21 3v6h-6" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </header>
+    <AppHeader
+      title="Media Library"
+      subtitle="Search your tagged videos and watch them from any browser."
+      @refreshed="onLibraryRefreshed"
+    />
 
     <TagSearch
       :available-tags="availableTags"
@@ -39,8 +19,6 @@
     <LoadingIndicator v-if="loadingTags" message="Loading tags..." />
 
     <ErrorMessage v-else-if="tagsError" :message="tagsError" />
-
-    <ErrorMessage v-if="refreshError" :message="refreshError" />
 
     <p v-else-if="availableTags.length === 0" class="status-message info">
       No tags are available in the indexed library.
@@ -72,9 +50,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 
-import { fetchTags, refreshLibrary as refreshLibraryIndex, searchVideos } from "../api/client.js";
+import { fetchTags, searchVideos } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
-import AdminNav from "../components/AdminNav.vue";
+import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 import SearchResults from "../components/SearchResults.vue";
@@ -88,12 +66,10 @@ const selectedVideo = ref<SearchResultItem | null>(null);
 
 const loadingTags = ref(true);
 const loadingSearch = ref(false);
-const refreshing = ref(false);
 const hasSearched = ref(false);
 
 const tagsError = ref<string | null>(null);
 const searchError = ref<string | null>(null);
-const refreshError = ref<string | null>(null);
 
 onMounted(async () => {
   try {
@@ -154,17 +130,8 @@ function closeVideo(): void {
   selectedVideo.value = null;
 }
 
-async function refreshLibrary(): Promise<void> {
-  if (refreshing.value) {
-    return;
-  }
-
-  refreshing.value = true;
-  refreshError.value = null;
-
+async function onLibraryRefreshed(): Promise<void> {
   try {
-    await refreshLibraryIndex();
-
     const response = await fetchTags();
     availableTags.value = response.tags;
     tagsError.value = null;
@@ -173,10 +140,7 @@ async function refreshLibrary(): Promise<void> {
       await runSearch();
     }
   } catch (error: unknown) {
-    refreshError.value =
-      error instanceof Error ? error.message : "Unable to refresh the media library.";
-  } finally {
-    refreshing.value = false;
+    tagsError.value = error instanceof Error ? error.message : "Unable to load tags.";
   }
 }
 </script>

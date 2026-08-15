@@ -126,9 +126,11 @@ job activo, ese job se pierde; no se reanuda. No hay cola.
 
 ## UI de subida (M6.2)
 
-La administración en `/admin/videos` incluye una zona de upload encima del
-catálogo. El navegador envía `POST /api/admin/uploads` como multipart (campo
-`video`, sin `Content-Type` manual) y, tras el `202`, consulta
+La administración comparte cabecera entre `/` (**View**),
+`/admin/videos/upload` (**Upload video**), `/admin/videos` (**Admin videos**)
+y `/admin/tags` (**Admin tags**), más el refresh de biblioteca. El navegador
+envía `POST /api/admin/uploads` como
+multipart (campo `video`, sin `Content-Type` manual) y, tras el `202`, consulta
 `GET /api/admin/uploads/:jobId` cada segundo hasta `completed` o `failed`.
 
 La UI muestra las fases (`uploading`, `processing`, `generating_thumbnail`,
@@ -138,9 +140,10 @@ segundo upload. Un `409` se traduce a un mensaje claro; si el cuerpo incluye
 `jobId`, se retoma el seguimiento. Un error de red en el polling no marca el
 job como `failed`: se avisa y se reintenta.
 
-Al completar, el frontend recarga el catálogo con `GET /api/search` y
-`GET /api/tags` (no `POST /api/library/refresh`) y muestra el vídeo en
-Sin tags. La vista de consumo `/` no cambia.
+Al completar, **View in Sin tags** vuelve a `/admin/videos?untagged=1`. El
+catálogo se carga con `GET /api/search` y `GET /api/tags` (no
+`POST /api/library/refresh`). El icono de refresh de biblioteca está en la
+cabecera compartida de todas las páginas.
 
 Ubicaciones definitivas tras `completed`:
 

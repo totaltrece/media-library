@@ -8,6 +8,7 @@ import TagEditor from "../src/components/TagEditor.vue";
 import TagSearch from "../src/components/TagSearch.vue";
 import AdminTagsView from "../src/views/AdminTagsView.vue";
 import AdminVideoEditView from "../src/views/AdminVideoEditView.vue";
+import AdminVideoUploadView from "../src/views/AdminVideoUploadView.vue";
 import AdminVideosView from "../src/views/AdminVideosView.vue";
 import HomeView from "../src/views/HomeView.vue";
 
@@ -114,6 +115,7 @@ function createTestRouter(initialPath = "/admin/videos"): Router {
     routes: [
       { path: "/", name: "home", component: HomeView },
       { path: "/admin/videos", name: "admin-videos", component: AdminVideosView },
+      { path: "/admin/videos/upload", name: "admin-video-upload", component: AdminVideoUploadView },
       { path: "/admin/tags", name: "admin-tags", component: AdminTagsView },
       {
         path: "/admin/videos/:id(.*)",
@@ -157,6 +159,47 @@ describe("admin video list", () => {
     expect(wrapper.text()).toContain("zenit-practice.mp4");
     expect(wrapper.text()).toContain("20260715.mp4");
     expect(wrapper.text()).toContain("first.mp4");
+  });
+
+  it("links to the upload page instead of embedding the upload zone", async () => {
+    vi.stubGlobal("fetch", createCatalogFetchMock());
+
+    const router = createTestRouter();
+    await router.push("/admin/videos");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideosView, router);
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="upload-new-video"]').text()).toBe("Upload video");
+    expect(wrapper.get('[data-testid="nav-videos"]').classes()).toContain("active");
+    expect(wrapper.find('[data-testid="upload-file-input"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
+  });
+
+  it("refreshes the library from the admin video catalog", async () => {
+    const catalogFetch = createCatalogFetchMock();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/library/refresh" && init?.method === "POST") {
+        return jsonResponse({ count: catalogVideos.length });
+      }
+
+      return catalogFetch(input, init);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    await router.push("/admin/videos");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideosView, router);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="Refresh library"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/library/refresh", { method: "POST" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/search");
+    expect(fetchMock).toHaveBeenCalledWith("/api/tags");
+    expect(wrapper.text()).toContain("4 results");
   });
 
   it("searches by tag through the same /api/search mechanism as the consumer view", async () => {
@@ -577,6 +620,8 @@ describe("admin video editor", () => {
 
     expect(wrapper.text()).toContain("first.mp4");
     expect(wrapper.find("#admin-tag-input").exists()).toBe(true);
+    expect(wrapper.get('[data-testid="nav-videos"]').classes()).toContain("active");
+    expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
 
     await wrapper.get('button[aria-label="Remove isa"]').trigger("click");
     await wrapper.get("#admin-tag-input").setValue("bufanda");
@@ -724,6 +769,9 @@ describe("consumer search view", () => {
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
     expect(wrapper.find(".search-results").exists()).toBe(false);
     expect(wrapper.text()).toContain("Search your tagged videos and watch them from any browser.");
+    expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
+    expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
   });
 
   it("still adds a clicked result tag to search without running a new query until Search", async () => {

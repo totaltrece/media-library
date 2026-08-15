@@ -58,8 +58,7 @@ The initial screen contains:
 - search box
 - active tag filters
 - search button (optional)
-- refresh library icon (discovers new videos on disk and reloads the SQLite index)
-- links to `/admin/videos` and `/admin/tags`
+- shared header: View, Upload video, Admin videos, Admin tags, and refresh library
 - search results
 
 Searching should feel immediate and responsive.
@@ -96,17 +95,21 @@ The frontend never downloads or copies media files.
 
 ## Admin video tags
 
-Additional screens live at `/admin/videos`, `/admin/videos/:id`, and `/admin/tags`.
+Additional screens live at `/admin/videos`, `/admin/videos/upload`, `/admin/videos/:id`, and `/admin/tags`.
 
 They reuse the existing `TagSearch` component and `GET /api/search?tag=...`
 to find videos by tags, filter untagged items, and edit tags through
 `GET /api/videos/:id/tags`, `GET /api/tags`, and `PUT /api/videos/:id/tags`.
 
-`/admin/videos` also has an upload zone at the top of the catalog. It posts
+`/admin/videos` shares the same header as `/`, `/admin/videos/upload`, and
+`/admin/tags`: **View**, **Upload video**, **Admin videos**, **Admin tags**,
+and refresh library (`POST /api/library/refresh`). The current section is
+highlighted. Upload lives at `/admin/videos/upload`: it posts
 `POST /api/admin/uploads` (multipart field `video`) and polls
-`GET /api/admin/uploads/:jobId` until `completed` or `failed`. A completed
-upload refreshes the catalog with `GET /api/search` and `GET /api/tags` and
-shows the new video under Sin tags.
+`GET /api/admin/uploads/:jobId` until `completed` or `failed`. After a
+successful upload, **View in Sin tags** returns to the catalog with the new
+video visible. A completed upload is listed through `GET /api/search`; the
+upload page does not call `POST /api/library/refresh`.
 
 The tag catalog at `/admin/tags` is managed through `GET /api/admin/tags`,
 `PUT /api/admin/tags/:id`, and `DELETE /api/admin/tags/:id`.

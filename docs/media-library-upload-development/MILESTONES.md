@@ -41,10 +41,12 @@ Jobs en memoria; un reinicio pierde jobs activos. Sin cola y sin
 reanudación.
 
 ## M6.2 — UI de subida y seguimiento
-Implementado: zona de upload en `/admin/videos` (encima del catálogo).
-`POST` multipart, polling de `GET /api/admin/uploads/:jobId`, fases visibles,
-un solo upload activo y refresh del catálogo con `GET /api/search`.
-Sin cola, sin porcentaje de FFmpeg, sin captura de cámara y sin cambios en `/`.
+Implementado: página `/admin/videos/upload`, enlazada desde la cabecera
+compartida (**Upload video**). `POST` multipart, polling de
+`GET /api/admin/uploads/:jobId`, fases visibles, un solo upload activo y
+vuelta al catálogo en Sin tags. Cabecera compartida con View / Upload video /
+Admin videos / Admin tags y refresh. Sin cola, sin porcentaje de FFmpeg y sin
+captura de cámara.
 
 ## M6 — UI de estado
 La presentación de fases y errores está en M6.2. Recargar la página no
