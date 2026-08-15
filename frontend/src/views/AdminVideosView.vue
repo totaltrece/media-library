@@ -31,12 +31,10 @@
 
     <TagSearch
       :available-tags="availableTags"
-      :searching="loadingSearch"
       :selected-tags="selectedTags"
       @add-tag="addTag"
       @clear-tags="clearTags"
       @remove-tag="removeTag"
-      @search="runSearch"
     />
 
     <LoadingIndicator v-if="loadingCatalog && !hasSearched" message="Loading videos..." />
@@ -86,6 +84,7 @@ const loadingCatalog = ref(true);
 const loadingSearch = ref(false);
 const error = ref<string | null>(null);
 const searchError = ref<string | null>(null);
+let searchGeneration = 0;
 
 const untaggedCount = computed(() => countUntaggedVideos(catalogVideos.value));
 
@@ -114,10 +113,12 @@ async function loadCatalog(): Promise<void> {
 }
 
 function resetSearch(): void {
+  searchGeneration += 1;
   selectedTags.value = [];
   searchResults.value = [];
   hasSearched.value = false;
   searchError.value = null;
+  loadingSearch.value = false;
 }
 
 function showAllVideos(): void {
@@ -130,24 +131,31 @@ function showUntaggedVideos(): void {
 }
 
 function addTag(tag: string): void {
-  if (!selectedTags.value.includes(tag)) {
-    selectedTags.value = [...selectedTags.value, tag];
+  if (selectedTags.value.includes(tag)) {
+    return;
   }
+
+  selectedTags.value = [...selectedTags.value, tag];
+  void runSearch();
 }
 
 function selectResultTag(tag: string): void {
   addTag(tag);
-  void runSearch();
 }
 
 function removeTag(tag: string): void {
   selectedTags.value = selectedTags.value.filter((selectedTag) => selectedTag !== tag);
 
   if (selectedTags.value.length === 0) {
+    searchGeneration += 1;
     searchResults.value = [];
     hasSearched.value = false;
     searchError.value = null;
+    loadingSearch.value = false;
+    return;
   }
+
+  void runSearch();
 }
 
 function clearTags(): void {
@@ -159,20 +167,32 @@ async function runSearch(): Promise<void> {
     return;
   }
 
+  const generation = ++searchGeneration;
   untaggedOnly.value = false;
   loadingSearch.value = true;
   searchError.value = null;
 
   try {
     const response = await searchVideos(selectedTags.value);
+
+    if (generation !== searchGeneration) {
+      return;
+    }
+
     searchResults.value = response.results;
     hasSearched.value = true;
   } catch (searchLoadError: unknown) {
+    if (generation !== searchGeneration) {
+      return;
+    }
+
     searchResults.value = [];
     hasSearched.value = true;
     searchError.value = searchLoadError instanceof Error ? searchLoadError.message : "Unable to search videos.";
   } finally {
-    loadingSearch.value = false;
+    if (generation === searchGeneration) {
+      loadingSearch.value = false;
+    }
   }
 }
 

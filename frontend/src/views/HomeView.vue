@@ -8,12 +8,10 @@
 
     <TagSearch
       :available-tags="availableTags"
-      :searching="loadingSearch"
       :selected-tags="selectedTags"
       @add-tag="addTag"
       @clear-tags="clearTags"
       @remove-tag="removeTag"
-      @search="runSearch"
     />
 
     <LoadingIndicator v-if="loadingTags" message="Loading tags..." />
@@ -70,6 +68,7 @@ const hasSearched = ref(false);
 
 const tagsError = ref<string | null>(null);
 const searchError = ref<string | null>(null);
+let searchGeneration = 0;
 
 onMounted(async () => {
   try {
@@ -83,42 +82,71 @@ onMounted(async () => {
 });
 
 function addTag(tag: string): void {
-  if (!selectedTags.value.includes(tag)) {
-    selectedTags.value = [...selectedTags.value, tag];
+  if (selectedTags.value.includes(tag)) {
+    return;
   }
+
+  selectedTags.value = [...selectedTags.value, tag];
+  void runSearch();
 }
 
 function removeTag(tag: string): void {
   selectedTags.value = selectedTags.value.filter((selectedTag) => selectedTag !== tag);
+
+  if (selectedTags.value.length === 0) {
+    clearSearchResults();
+    return;
+  }
+
+  void runSearch();
 }
 
-function clearTags(): void {
-  selectedTags.value = [];
+function clearSearchResults(): void {
+  searchGeneration += 1;
   searchResults.value = [];
   selectedVideo.value = null;
   hasSearched.value = false;
   searchError.value = null;
+  loadingSearch.value = false;
+}
+
+function clearTags(): void {
+  selectedTags.value = [];
+  clearSearchResults();
 }
 
 async function runSearch(): Promise<void> {
   if (selectedTags.value.length === 0) {
+    clearSearchResults();
     return;
   }
 
+  const generation = ++searchGeneration;
   loadingSearch.value = true;
   searchError.value = null;
   selectedVideo.value = null;
 
   try {
     const response = await searchVideos(selectedTags.value);
+
+    if (generation !== searchGeneration) {
+      return;
+    }
+
     searchResults.value = response.results;
     hasSearched.value = true;
   } catch (error: unknown) {
+    if (generation !== searchGeneration) {
+      return;
+    }
+
     searchResults.value = [];
     hasSearched.value = true;
     searchError.value = error instanceof Error ? error.message : "Unable to search videos.";
   } finally {
-    loadingSearch.value = false;
+    if (generation === searchGeneration) {
+      loadingSearch.value = false;
+    }
   }
 }
 

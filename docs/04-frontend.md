@@ -55,9 +55,8 @@ The frontend never accesses the filesystem.
 
 The initial screen contains:
 
-- search box
-- active tag filters
-- search button (optional)
+- compact tag search box with selected tags inside the field
+- results update as soon as a tag is added or removed
 - shared header: View, Upload video, Admin videos, Admin tags, and refresh library
 - search results
 

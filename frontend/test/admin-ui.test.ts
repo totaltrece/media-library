@@ -106,6 +106,7 @@ async function addSearchTags(wrapper: VueWrapper, tags: string[]): Promise<void>
     const suggestion = wrapper.findAll(".tag-suggestions button").find((button) => button.text() === tag);
     expect(suggestion, `missing suggestion for ${tag}`).toBeDefined();
     await suggestion!.trigger("click");
+    await flushPromises();
   }
 }
 
@@ -220,7 +221,6 @@ describe("admin video list", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["zenit"]);
-    await wrapper.get(".tag-search .primary-button").trigger("click");
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=zenit");
@@ -248,7 +248,6 @@ describe("admin video list", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["salsa", "jota"]);
-    await wrapper.get(".tag-search .primary-button").trigger("click");
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
@@ -271,7 +270,6 @@ describe("admin video list", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["zenit"]);
-    await wrapper.get(".tag-search .primary-button").trigger("click");
     await flushPromises();
     await wrapper.get('button[aria-label="Play video tagged zenit"]').trigger("click");
     await flushPromises();
@@ -432,6 +430,22 @@ describe("tag editor", () => {
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "estela"]);
   });
 
+  it("keeps selected chips inside the compact tag input and marks new tags", () => {
+    const wrapper = mount(TagEditor, {
+      props: {
+        tags: ["salsa", "nuevo-tag"],
+        availableTags: ["salsa", "bufanda"],
+      },
+    });
+
+    const chips = wrapper.findAll(".tag-input-wrapper .tag-chip");
+    expect(chips).toHaveLength(2);
+    expect(chips[0]!.classes()).not.toContain("is-new");
+    expect(chips[1]!.classes()).toContain("is-new");
+    expect(chips[1]!.text()).toContain("nuevo-tag");
+    expect(wrapper.find(".tag-combobox").exists()).toBe(true);
+  });
+
   it("suggests existing tags and ignores duplicates", async () => {
     const wrapper = mount(TagEditor, {
       props: {
@@ -471,6 +485,27 @@ describe("tag editor", () => {
     await input.trigger("keydown", { key: "Enter" });
 
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "nuevo-tag"]);
+  });
+
+  it("keeps the suggestion list open after adding a tag while the input stays focused", async () => {
+    const wrapper = mount(TagEditor, {
+      props: {
+        tags: ["salsa"],
+        availableTags: ["salsa", "bufanda"],
+      },
+    });
+
+    const input = wrapper.get("#admin-tag-input");
+    await input.setValue("estela");
+    await input.trigger("focus");
+    await nextTick();
+
+    await wrapper.get('[data-testid="add-new-tag"]').trigger("click");
+    await wrapper.setProps({ tags: ["salsa", "estela"] } as never);
+    await nextTick();
+
+    expect(wrapper.find(".tag-suggestions").exists()).toBe(true);
+    expect(wrapper.find(".tag-suggestions").text()).toContain("bufanda");
   });
 
   it("offers to add a new tag instead of showing no matches", async () => {
@@ -524,7 +559,6 @@ describe("tag search", () => {
       props: {
         availableTags: ["salsa", "bufanda", "bachata"],
         selectedTags: [],
-        searching: false,
       },
     });
 
@@ -547,7 +581,6 @@ describe("tag search", () => {
       props: {
         availableTags: ["salsa", "bufanda", "bachata"],
         selectedTags: [],
-        searching: false,
       },
     });
 
@@ -565,7 +598,6 @@ describe("tag search", () => {
       props: {
         availableTags: ["salsa"],
         selectedTags: [],
-        searching: false,
       },
     });
 
@@ -580,6 +612,20 @@ describe("tag search", () => {
     await input.trigger("keydown", { key: "Enter" });
 
     expect(wrapper.emitted("add-tag")).toBeUndefined();
+  });
+
+  it("shows selected search chips inside the tag input", async () => {
+    const wrapper = mount(TagSearch, {
+      props: {
+        availableTags: ["salsa", "bufanda", "bachata"],
+        selectedTags: ["salsa"],
+      },
+    });
+
+    expect(wrapper.find(".tag-input-wrapper .tag-chip").text()).toContain("salsa");
+    expect(wrapper.find(".tag-combobox").exists()).toBe(true);
+    expect(wrapper.find(".tag-search .primary-button").exists()).toBe(false);
+    expect(wrapper.text()).toContain("Clear tags");
   });
 });
 
@@ -774,7 +820,7 @@ describe("consumer search view", () => {
     expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
   });
 
-  it("still adds a clicked result tag to search without running a new query until Search", async () => {
+  it("searches as soon as a result tag is added", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       const url = String(input);
 
@@ -785,6 +831,14 @@ describe("consumer search view", () => {
       if (url === "/api/search?tag=salsa") {
         return jsonResponse({
           query: { tags: ["salsa"] },
+          count: 1,
+          results: catalogVideos.filter((video) => video.id === "salsa-jota.mp4"),
+        });
+      }
+
+      if (url === "/api/search?tag=salsa&tag=jota") {
+        return jsonResponse({
+          query: { tags: ["salsa", "jota"] },
           count: 1,
           results: catalogVideos.filter((video) => video.id === "salsa-jota.mp4"),
         });
@@ -801,15 +855,17 @@ describe("consumer search view", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["salsa"]);
-    await wrapper.get(".tag-search .primary-button").trigger("click");
     await flushPromises();
 
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa");
+    expect(wrapper.find(".tag-search .primary-button").exists()).toBe(false);
+
     await wrapper.get('button[aria-label="Add jota to search"]').trigger("click");
-    await nextTick();
+    await flushPromises();
 
     expect(wrapper.get(".selected-tags").text()).toContain("salsa");
     expect(wrapper.get(".selected-tags").text()).toContain("jota");
-    expect(fetchMock).not.toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
     expect(
       fetchMock.mock.calls.some(([, init]) => init?.method === "PUT" || init?.method === "POST"),
     ).toBe(false);

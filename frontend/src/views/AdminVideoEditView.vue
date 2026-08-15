@@ -10,34 +10,38 @@
     <ErrorMessage v-else-if="error" :message="error" />
 
     <template v-else-if="video">
-      <div class="admin-video-preview">
-        <SearchResultItem
-          :interactive-tags="false"
-          :show-name="true"
-          :result="previewResult"
-          :selected="false"
-          @select-video="showPlayer = true"
-        />
+      <div class="admin-video-edit">
+        <div class="admin-video-preview">
+          <SearchResultItem
+            :interactive-tags="false"
+            :show-name="true"
+            :result="previewResult"
+            :selected="false"
+            @select-video="showPlayer = true"
+          />
+        </div>
+
+        <div class="admin-video-tags">
+          <TagEditor v-model:tags="draftTags" :available-tags="availableTags" />
+
+          <div class="search-actions">
+            <button
+              class="primary-button"
+              data-testid="save-tags"
+              type="button"
+              :disabled="saving || !isDirty"
+              @click="saveTags"
+            >
+              {{ saving ? "Saving..." : "Guardar cambios" }}
+            </button>
+          </div>
+
+          <p v-if="saveMessage" class="status-message info" role="status">
+            {{ saveMessage }}
+          </p>
+          <ErrorMessage v-if="saveError" :message="saveError" />
+        </div>
       </div>
-
-      <TagEditor v-model:tags="draftTags" :available-tags="availableTags" />
-
-      <div class="search-actions">
-        <button
-          class="primary-button"
-          data-testid="save-tags"
-          type="button"
-          :disabled="saving || !isDirty"
-          @click="saveTags"
-        >
-          {{ saving ? "Saving..." : "Guardar cambios" }}
-        </button>
-      </div>
-
-      <p v-if="saveMessage" class="status-message info" role="status">
-        {{ saveMessage }}
-      </p>
-      <ErrorMessage v-if="saveError" :message="saveError" />
     </template>
 
     <VideoPlayer
@@ -160,8 +164,25 @@ function uniqueTags(tags: string[]): string[] {
 </script>
 
 <style scoped>
+.admin-video-edit {
+  align-items: start;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+}
+
 .admin-video-preview {
-  margin-bottom: 1.5rem;
   max-width: 220px;
+}
+
+.admin-video-tags {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (max-width: 599px) {
+  .admin-video-edit {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>
