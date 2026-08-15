@@ -51,12 +51,12 @@ describe("upload job presentation", () => {
     const converting = job({ status: "processing", phase: "processing", progress: 47 });
     const processingStep = buildUploadSteps(converting).find((step) => step.id === "processing");
     expect(processingStep).toBeDefined();
-    expect(uploadStepLabel(processingStep!, converting)).toBe("Procesando vídeo · 47%");
-    expect(conversionProgressLabel(converting)).toBe("Procesando vídeo · 47%");
+    expect(uploadStepLabel(processingStep!, converting)).toBe("Processing video · 47%");
+    expect(conversionProgressLabel(converting)).toBe("Processing video · 47%");
 
     const thumbnail = job({ status: "processing", phase: "generating_thumbnail", progress: 100 });
     const thumbnailProcessing = buildUploadSteps(thumbnail).find((step) => step.id === "processing");
-    expect(uploadStepLabel(thumbnailProcessing!, thumbnail)).toBe("Procesando vídeo");
+    expect(uploadStepLabel(thumbnailProcessing!, thumbnail)).toBe("Processing video");
     expect(conversionProgressLabel(thumbnail)).toBeNull();
 
     const skipped = job({ status: "processing", phase: "processing", progress: null });
@@ -65,22 +65,22 @@ describe("upload job presentation", () => {
 
   it("maps API errors to safe user messages", () => {
     expect(mapUploadError(new ApiRequestError("A video processing job is already active.", 409))).toBe(
-      "Ya hay un vídeo en proceso.",
+      "A video is already being processed.",
     );
     expect(mapUploadError(new ApiRequestError("A video with this name already exists.", 409))).toBe(
-      "Ya existe un vídeo con este nombre.",
+      "A video with this name already exists.",
     );
     expect(mapUploadError(new ApiRequestError("The uploaded video exceeds the size limit.", 413))).toBe(
-      "El vídeo supera el tamaño máximo permitido.",
+      "The video exceeds the maximum allowed size.",
     );
     expect(mapUploadError(new ApiRequestError("Invalid video file.", 400))).toBe(
-      "El vídeo seleccionado no es válido.",
+      "The selected video is not valid.",
     );
     expect(mapUploadError(new ApiRequestError("Video processing failed.", 500))).toBe(
-      "No se ha podido procesar el vídeo.",
+      "The video could not be processed.",
     );
     expect(mapUploadError(new TypeError("Failed to fetch"))).toBe(
-      "No se ha podido enviar el vídeo. Comprueba la conexión.",
+      "The video could not be uploaded. Check your connection.",
     );
   });
 });

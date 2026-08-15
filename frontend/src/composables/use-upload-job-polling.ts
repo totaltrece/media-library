@@ -2,7 +2,7 @@ import { onUnmounted, ref } from "vue";
 
 import { ApiRequestError, fetchActiveUploadJob, fetchUploadJob } from "../api/client.js";
 import type { UploadJobView } from "../api/types.js";
-import { isUploadJobActive, pollingWarningMessage, UPLOAD_POLL_INTERVAL_MS } from "../utils/upload-job.js";
+import { isUploadJobActive, mapUploadError, pollingWarningMessage, UPLOAD_POLL_INTERVAL_MS } from "../utils/upload-job.js";
 
 const PENDING_JOB_ID = "pending";
 
@@ -42,7 +42,7 @@ export function useUploadJobPolling() {
       }
 
       if (error instanceof ApiRequestError && error.status === 404) {
-        pollWarning.value = "No se ha encontrado el estado de la subida.";
+        pollWarning.value = mapUploadError(error);
         job.value = null;
         stop();
       } else {

@@ -73,7 +73,7 @@ describe("admin tag catalog", () => {
       "(84)",
       "(127)",
     ]);
-    expect(wrapper.get('a[aria-label="Ver vídeos con jota"]').attributes("href")).toBe(
+    expect(wrapper.get('a[aria-label="View videos tagged jota"]').attributes("href")).toBe(
       "/admin/videos?tag=jota",
     );
   });
@@ -107,20 +107,20 @@ describe("admin tag catalog", () => {
     await flushPromises();
 
     const jota = wrapper.findAll(".admin-tag-item").find((item) => item.text().includes("jota (84)"))!;
-    await jota.get('button[aria-label="Editar jota"]').trigger("click");
+    await jota.get('button[aria-label="Edit jota"]').trigger("click");
     await nextTick();
 
     expect(wrapper.find("#rename-tag-2").exists()).toBe(true);
 
     await wrapper.get("#rename-tag-2").setValue("jota-nueva");
-    await jota.findAll("button").find((button) => button.text() === "Cancelar")!.trigger("click");
+    await jota.findAll("button").find((button) => button.text() === "Cancel")!.trigger("click");
     await nextTick();
 
     expect(wrapper.find("#rename-tag-2").exists()).toBe(false);
     expect(wrapper.text()).toContain("jota (84)");
 
     const jotaAgain = wrapper.findAll(".admin-tag-item").find((item) => item.text().includes("jota (84)"))!;
-    await jotaAgain.get('button[aria-label="Editar jota"]').trigger("click");
+    await jotaAgain.get('button[aria-label="Edit jota"]').trigger("click");
     await wrapper.get("#rename-tag-2").setValue("jota-nueva");
     await wrapper.get('[data-testid="save-tag"]').trigger("click");
     await flushPromises();
@@ -159,7 +159,7 @@ describe("admin tag catalog", () => {
     await flushPromises();
 
     const jota = wrapper.findAll(".admin-tag-item").find((item) => item.text().includes("jota (84)"))!;
-    await jota.get('button[aria-label="Editar jota"]').trigger("click");
+    await jota.get('button[aria-label="Edit jota"]').trigger("click");
     await wrapper.get("#rename-tag-2").setValue("salsa");
     await wrapper.get('[data-testid="save-tag"]').trigger("click");
     await flushPromises();
@@ -195,21 +195,21 @@ describe("admin tag catalog", () => {
     await flushPromises();
 
     const jota = wrapper.findAll(".admin-tag-item").find((item) => item.text().includes("jota (84)"))!;
-    await jota.get('button[aria-label="Eliminar jota"]').trigger("click");
+    await jota.get('button[aria-label="Delete jota"]').trigger("click");
     await nextTick();
 
     expect(wrapper.find(".admin-tag-confirm-modal").exists()).toBe(true);
     expect(jota.find(".admin-tag-confirm-modal").exists()).toBe(false);
-    expect(wrapper.text()).toContain('¿Eliminar el tag "jota"?');
-    expect(wrapper.text()).toContain("Se eliminará también su relación con todos los vídeos que lo utilizan.");
+    expect(wrapper.text()).toContain('Delete the tag "jota"?');
+    expect(wrapper.text()).toContain("This will also remove it from every video that uses it.");
 
     await wrapper.get('[data-testid="cancel-delete-tag"]').trigger("click");
     await nextTick();
-    expect(wrapper.text()).not.toContain('¿Eliminar el tag "jota"?');
+    expect(wrapper.text()).not.toContain('Delete the tag "jota"?');
     expect(wrapper.text()).toContain("jota (84)");
 
     const jotaAgain = wrapper.findAll(".admin-tag-item").find((item) => item.text().includes("jota (84)"))!;
-    await jotaAgain.get('button[aria-label="Eliminar jota"]').trigger("click");
+    await jotaAgain.get('button[aria-label="Delete jota"]').trigger("click");
     await wrapper.get('[data-testid="confirm-delete-tag"]').trigger("click");
     await flushPromises();
 
@@ -476,7 +476,7 @@ describe("admin tag catalog", () => {
     });
     await flushPromises();
 
-    await wrapper.get('a[aria-label="Ver vídeos con jota"]').trigger("click");
+    await wrapper.get('a[aria-label="View videos tagged jota"]').trigger("click");
     await flushPromises();
 
     expect(router.currentRoute.value.name).toBe("admin-videos");
@@ -491,6 +491,7 @@ describe("admin tag catalog", () => {
 
     expect(router.currentRoute.value.name).toBe("admin-video-edit");
     expect(router.currentRoute.value.params).toEqual({ id: "jota.mp4" });
-    expect(wrapper.text()).toContain("Edit tags for this video");
+    expect(wrapper.get("h1").text()).toBe("Edit video");
+    expect(wrapper.text()).toContain('Edit tags for "jota.mp4"');
   });
 });

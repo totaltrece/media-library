@@ -155,7 +155,7 @@ describe("admin video list", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/search");
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
     expect(wrapper.text()).toContain("4 results");
-    expect(wrapper.text()).toContain("Sin tags (1)");
+    expect(wrapper.text()).toContain("Untagged (1)");
     expect(wrapper.text()).toContain("20260801_new.mp4");
     expect(wrapper.text()).toContain("zenit-practice.mp4");
     expect(wrapper.text()).toContain("20260715.mp4");
@@ -296,7 +296,7 @@ describe("admin video list", () => {
     expect(wrapper.text()).not.toContain("20260715.mp4");
   });
 
-  it("clears selected tags when switching to Sin tags and shows the untagged catalog", async () => {
+  it("clears selected tags when switching to Untagged and shows the untagged catalog", async () => {
     const zenitVideo = catalogVideos.find((video) => video.id === "tagged-zenit.mp4")!;
     const fetchMock = createCatalogFetchMock((url) => {
       if (url === "/api/search?tag=zenit") {
@@ -521,7 +521,7 @@ describe("tag editor", () => {
     await input.trigger("focus");
     await nextTick();
 
-    expect(wrapper.text()).toContain("Añadir nuevo tag");
+    expect(wrapper.text()).toContain("Add new tag");
     expect(wrapper.text()).not.toContain("No matching tags");
 
     await wrapper.get('[data-testid="add-new-tag"]').trigger("click");
@@ -607,7 +607,7 @@ describe("tag search", () => {
     await nextTick();
 
     expect(wrapper.text()).toContain("No matching tags");
-    expect(wrapper.text()).not.toContain("Añadir nuevo tag");
+    expect(wrapper.text()).not.toContain("Add new tag");
 
     await input.trigger("keydown", { key: "Enter" });
 
@@ -665,6 +665,8 @@ describe("admin video editor", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("first.mp4");
+    expect(wrapper.get("h1").text()).toBe("Edit video");
+    expect(wrapper.text()).toContain('Edit tags for "first.mp4"');
     expect(wrapper.find("#admin-tag-input").exists()).toBe(true);
     expect(wrapper.get('[data-testid="nav-videos"]').classes()).toContain("active");
     expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
@@ -765,16 +767,16 @@ describe("admin video editor", () => {
       },
     });
     await flushPromises();
-    expect(wrapper.get('[data-testid="delete-video"]').text()).toBe("Eliminar vídeo");
+    expect(wrapper.get('[data-testid="delete-video"]').text()).toBe("Delete video");
     expect(wrapper.find(".admin-video-confirm-modal").exists()).toBe(false);
 
     await wrapper.get('[data-testid="delete-video"]').trigger("click");
     await nextTick();
 
     expect(wrapper.find(".admin-video-confirm-modal").exists()).toBe(true);
-    expect(wrapper.text()).toContain("¿Eliminar vídeo?");
+    expect(wrapper.text()).toContain("Delete video?");
     expect(wrapper.text()).toContain(
-      "Esta acción eliminará el vídeo y su thumbnail de la biblioteca y todas sus relaciones con etiquetas. Esta acción no se puede deshacer.",
+      "This will delete the video and its thumbnail from the library, and all of its tag relations. This cannot be undone.",
     );
 
     await wrapper.get('[data-testid="cancel-delete-video"]').trigger("click");
@@ -793,7 +795,7 @@ describe("admin video editor", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/videos/salsa/first.mp4", { method: "DELETE" });
     expect(router.currentRoute.value.name).toBe("admin-videos");
     expect(fetchMock).toHaveBeenCalledWith("/api/search");
-    expect(wrapper.text()).toContain("Sin tags (1)");
+    expect(wrapper.text()).toContain("Untagged (1)");
     expect(wrapper.text()).not.toContain("first.mp4");
   });
 
@@ -837,7 +839,7 @@ describe("admin video editor", () => {
     await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
     await nextTick();
 
-    expect(wrapper.get('[data-testid="confirm-delete-video"]').text()).toBe("Eliminando...");
+    expect(wrapper.get('[data-testid="confirm-delete-video"]').text()).toBe("Deleting...");
     expect(
       fetchMock.mock.calls.filter(([, init]) => init?.method === "DELETE"),
     ).toHaveLength(1);
@@ -933,7 +935,7 @@ describe("admin video editor", () => {
     await flushPromises();
 
     expect(router.currentRoute.value.name).toBe("admin-videos");
-    expect(wrapper.text()).toContain("Sin tags (1)");
+    expect(wrapper.text()).toContain("Untagged (1)");
     expect(wrapper.text()).not.toContain("first.mp4");
   });
 });
@@ -943,7 +945,7 @@ describe("admin untagged flow", () => {
     vi.unstubAllGlobals();
   });
 
-  it("removes a video from Sin tags after a tag is saved", async () => {
+  it("removes a video from Untagged after a tag is saved", async () => {
     let untaggedTags: string[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -1003,7 +1005,7 @@ describe("admin untagged flow", () => {
     await wrapper.get('[data-testid="filter-untagged"]').trigger("click");
     await nextTick();
 
-    expect(wrapper.text()).toContain("Sin tags (0)");
+    expect(wrapper.text()).toContain("Untagged (0)");
     expect(wrapper.text()).not.toContain("20260801_new.mp4");
   });
 });

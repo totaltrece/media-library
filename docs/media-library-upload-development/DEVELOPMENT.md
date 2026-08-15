@@ -110,7 +110,7 @@ Comprobar:
 5. `http://localhost:3000/api/video/PXL_20260813_214135367.TS.mp4`
 6. `http://localhost:3000/api/thumbnail/PXL_20260813_214135367.TS.mp4`
 7. `http://localhost:3000/api/search` incluye el vídeo con `tags: []`
-8. `http://localhost:3000/admin/videos` → Sin tags
+8. `http://localhost:3000/admin/videos` → Untagged
 9. SQLite: `videos` +1, `tags` y `video_tags` sin cambio
 10. Refresh library: el vídeo sigue una sola vez y sin tags
 11. repetir el mismo upload → HTTP `409` y ficheros intactos
@@ -123,15 +123,15 @@ Si se reinicia Node durante un job, el estado en memoria se pierde.
 Con el backend y el frontend en marcha, abrir `/admin/videos/upload` desde
 **Upload video** en la cabecera (también desde un móvil en la misma red).
 
-1. Pulsar **Seleccionar vídeo** y elegir un fichero de vídeo de la galería
+1. Pulsar **Select video** y elegir un fichero de vídeo de la galería
    o del disco. No usar captura de cámara en la app.
 2. Comprobar que el nombre del fichero aparece (puede ocupar varias líneas).
-3. Pulsar **Subir vídeo**. Debe ocultarse el selector.
+3. Pulsar **Upload video**. Debe ocultarse el selector.
 4. Desde otro dispositivo o navegador, abrir `/admin/videos/upload`: debe
    aparecer el mismo job (nombre, fases) sin volver a subir.
-5. Si el vídeo es HEVC, **Procesando vídeo** muestra un porcentaje real y
+5. Si el vídeo es HEVC, **Processing video** muestra un porcentaje real y
    una barra. Al pasar a thumbnail e instalar, el porcentaje desaparece.
-6. Al completar: "Vídeo añadido correctamente". **View in Sin tags** abre
+6. Al completar: "Video added successfully". **View in Untagged** abre
    `/admin/videos` con el vídeo nuevo.
 7. `/` sigue siendo la vista de consumo (**View** en la cabecera).
 8. El refresh de biblioteca está en la cabecera de todas las páginas.
@@ -151,7 +151,7 @@ No usar `POST /api/library/refresh` para ver el vídeo nuevo: la UI recarga
 5. thumbnail;
 6. finalización;
 7. SQLite;
-8. aparición en Admin/Sin tags.
+8. aparición en Admin/Untagged.
 
 No usar rsync durante esta prueba.
 

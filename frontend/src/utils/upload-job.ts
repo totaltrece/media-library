@@ -21,11 +21,11 @@ const STEP_ORDER: UploadStepId[] = [
 ];
 
 const STEP_LABELS: Record<UploadStepId, string> = {
-  uploading: "Subiendo vídeo",
-  processing: "Procesando vídeo",
-  generating_thumbnail: "Generando thumbnail",
-  installing: "Instalando vídeo",
-  completed: "Completado",
+  uploading: "Uploading video",
+  processing: "Processing video",
+  generating_thumbnail: "Generating thumbnail",
+  installing: "Installing video",
+  completed: "Completed",
 };
 
 export function isUploadJobActive(job: Pick<UploadJobView, "status"> | null): boolean {
@@ -113,37 +113,37 @@ export function showsConversionProgress(job: Pick<UploadJobView, "phase" | "prog
 export function mapUploadError(error: unknown): string {
   if (error instanceof ApiRequestError) {
     if (error.status === 413) {
-      return "El vídeo supera el tamaño máximo permitido.";
+      return "The video exceeds the maximum allowed size.";
     }
 
     if (error.status === 409) {
       if (error.message.includes("already exists")) {
-        return "Ya existe un vídeo con este nombre.";
+        return "A video with this name already exists.";
       }
 
-      return "Ya hay un vídeo en proceso.";
+      return "A video is already being processed.";
     }
 
     if (error.status === 404) {
-      return "No se ha encontrado el estado de la subida.";
+      return "The upload status could not be found.";
     }
 
     if (error.status === 400) {
-      return "El vídeo seleccionado no es válido.";
+      return "The selected video is not valid.";
     }
 
     if (error.status >= 500) {
-      return "No se ha podido procesar el vídeo.";
+      return "The video could not be processed.";
     }
   }
 
   if (error instanceof Error && error.message.toLowerCase().includes("fetch")) {
-    return "No se ha podido enviar el vídeo. Comprueba la conexión.";
+    return "The video could not be uploaded. Check your connection.";
   }
 
-  return "No se ha podido enviar el vídeo. Comprueba la conexión.";
+  return "The video could not be uploaded. Check your connection.";
 }
 
 export function pollingWarningMessage(): string {
-  return "No se puede consultar el estado. Se reintentará.";
+  return "Unable to check status. Retrying.";
 }

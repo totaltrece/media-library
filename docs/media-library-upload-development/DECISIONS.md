@@ -99,7 +99,7 @@ La administración sube y sigue el vídeo en `/admin/videos/upload`. Al entrar,
 consulta `GET /api/admin/uploads/active` y retoma el polling si hay un job
 `uploading` o `processing`. El intervalo es 1 s; se detiene en
 `completed`/`failed`, en `404` y al desmontar. Un fallo de red en el polling
-no marca el job como fallido. Tras completar, **View in Sin tags** abre el
+no marca el job como fallido. Tras completar, **View in Untagged** abre el
 catálogo con `GET /api/search` + `GET /api/tags`, no con refresh del
 filesystem. El porcentaje de conversión sale de FFmpeg `-progress`
 (`out_time` / duración de ffprobe), se guarda en el job en memoria y se lee

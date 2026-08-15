@@ -113,7 +113,7 @@ highlighted. Upload lives at `/admin/videos/upload`: it loads
 `POST /api/admin/uploads` uses multipart field `video`. During HEVC
 conversion the processing step shows `progress` (0–100). `/admin/videos` and
 the consumer screen at `/` do not include this upload zone. After a
-successful upload, **View in Sin tags** returns to the catalog with the new
+successful upload, **View in Untagged** returns to the catalog with the new
 video visible through `GET /api/search`; the upload page does not call
 `POST /api/library/refresh`.
 
