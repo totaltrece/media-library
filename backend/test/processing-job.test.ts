@@ -40,12 +40,20 @@ test("processing jobs follow the upload to completed path", () => {
   job = transitionProcessingJob(job, { status: "processing", phase: "processing" });
   job = transitionProcessingJob(job, { status: "processing", phase: "generating_thumbnail" });
   job = transitionProcessingJob(job, { status: "processing", phase: "finalizing" });
+  job = transitionProcessingJob(job, { status: "processing", phase: "installing" });
   job = transitionProcessingJob(job, { status: "completed", videoId: "clip.mp4" });
 
   assert.equal(isActiveProcessingJob(job), false);
   assert.equal(isTerminalProcessingJob(job), true);
   assert.deepEqual(job.state, { status: "completed", videoId: "clip.mp4" });
   assert.equal(processingJobPhase(job.state), "completed");
+  assert.equal(
+    canTransitionProcessingJob(
+      { status: "processing", phase: "finalizing" },
+      { status: "completed", videoId: "clip.mp4" },
+    ),
+    true,
+  );
 });
 
 test("a processing job can fail from an active step without skipping ahead", () => {

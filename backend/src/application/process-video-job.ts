@@ -24,8 +24,7 @@ export type ProcessVideoJobProgressEvent =
   | { step: "generating_thumbnail"; outcome: "ok" }
   | { step: "finalizing"; outcome: "ok" };
 
-export interface ProcessVideoJobSuccess {
-  status: "completed";
+export interface ProcessedVideoJob {
   jobId: string;
   originalName: string;
   converted: boolean;
@@ -36,6 +35,9 @@ export interface ProcessVideoJobSuccess {
   job: ProcessingJob;
 }
 
+export type ProcessVideoJobSuccess = ProcessedVideoJob & { status: "completed" };
+export type ProcessStagedSuccess = ProcessedVideoJob & { status: "processed" };
+
 export interface ProcessVideoJobFailure {
   status: "failed";
   jobId: string;
@@ -44,6 +46,7 @@ export interface ProcessVideoJobFailure {
   job: ProcessingJob;
 }
 
+export type ProcessStagedResult = ProcessStagedSuccess | ProcessVideoJobFailure;
 export type ProcessVideoJobResult = ProcessVideoJobSuccess | ProcessVideoJobFailure;
 
 export interface StartedProcessingJob {
@@ -53,7 +56,9 @@ export interface StartedProcessingJob {
 
 /**
  * Orchestrates one processing job: stage a copy, probe, convert HEVC, thumbnail.
- * Does not write to LIBRARY_PATH or SQLite. On success the workspace is kept for M5.
+ * `processStaged` stops at `finalizing` so M5 can install before `completed`.
+ * `execute` (CLI) marks the job completed without installing.
+ * Does not write to LIBRARY_PATH or SQLite.
  */
 export class ProcessVideoJobUseCase {
   constructor(
@@ -95,7 +100,24 @@ export class ProcessVideoJobUseCase {
 
     try {
       await this.workspace.stageSource(started.job.id, input.inputPath);
-      return await this.processStaged(started.job.id, options);
+      const processed = await this.processStaged(started.job.id, options);
+
+      if (processed.status === "failed") {
+        return processed;
+      }
+
+      const job = this.save(
+        transitionProcessingJob(processed.job, {
+          status: "completed",
+          videoId: processed.originalName,
+        }),
+      );
+
+      return {
+        ...processed,
+        status: "completed",
+        job,
+      };
     } catch (error: unknown) {
       return this.failStartedJob(started.job, error);
     }
@@ -104,7 +126,7 @@ export class ProcessVideoJobUseCase {
   async processStaged(
     jobId: string,
     options?: { onProgress?: (event: ProcessVideoJobProgressEvent) => void },
-  ): Promise<ProcessVideoJobResult> {
+  ): Promise<ProcessStagedResult> {
     let job = this.requireJob(jobId);
 
     try {
@@ -139,10 +161,9 @@ export class ProcessVideoJobUseCase {
 
       job = this.save(transitionProcessingJob(job, { status: "processing", phase: "finalizing" }));
       options?.onProgress?.({ step: "finalizing", outcome: "ok" });
-      job = this.save(transitionProcessingJob(job, { status: "completed", videoId: job.originalName }));
 
       return {
-        status: "completed",
+        status: "processed",
         jobId: job.id,
         originalName: job.originalName,
         converted,

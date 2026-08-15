@@ -109,6 +109,12 @@ function nextProcessingTransitions(phase: ProcessingPhase): ProcessingJobState[]
     case "generating_thumbnail":
       return [{ status: "processing", phase: "finalizing" }, failedPlaceholder];
     case "finalizing":
+      return [
+        { status: "processing", phase: "installing" },
+        { status: "completed", videoId: "*" },
+        failedPlaceholder,
+      ];
+    case "installing":
       return [{ status: "completed", videoId: "*" }, failedPlaceholder];
   }
 }

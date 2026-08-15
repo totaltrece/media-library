@@ -2,10 +2,12 @@ import Fastify from "fastify";
 
 import { AddVideoTagUseCase } from "./application/add-video-tag.js";
 import { DeleteTagUseCase } from "./application/delete-tag.js";
+import { CompleteUploadUseCase } from "./application/complete-upload.js";
 import { GetTagsUseCase } from "./application/get-tags.js";
 import { GetThumbnailUseCase } from "./application/get-thumbnail.js";
 import { GetUploadJobUseCase } from "./application/get-upload-job.js";
 import { GetVideoTagsUseCase } from "./application/get-video-tags.js";
+import { InstallProcessedUploadUseCase } from "./application/install-processed-upload.js";
 import { ListTagCatalogUseCase } from "./application/list-tag-catalog.js";
 import type { ProcessVideoJobUseCase } from "./application/process-video-job.js";
 import type { RefreshLibraryUseCase } from "./application/refresh-library.js";
@@ -14,6 +16,7 @@ import { RenameTagUseCase } from "./application/rename-tag.js";
 import { SearchVideosUseCase } from "./application/search-videos.js";
 import { SetVideoTagsUseCase } from "./application/set-video-tags.js";
 import { StreamVideoUseCase } from "./application/stream-video.js";
+import { FilesystemLibraryMediaInstaller } from "./adapters/filesystem/filesystem-library-media-installer.js";
 import { FilesystemVideoStore } from "./adapters/filesystem/filesystem-video-store.js";
 import { TagSpacesThumbnailStore } from "./adapters/filesystem/tagspaces-thumbnail-store.js";
 import { registerAdminTagsRoutes } from "./adapters/http/admin-tags-controller.js";
@@ -25,6 +28,7 @@ import { registerThumbnailRoutes } from "./adapters/http/thumbnail-controller.js
 import { registerUploadsRoutes } from "./adapters/http/uploads-controller.js";
 import { registerVideoRoutes } from "./adapters/http/video-controller.js";
 import { registerVideoTagsRoutes } from "./adapters/http/video-tags-controller.js";
+import type { LibraryMediaInstaller } from "./ports/library-media-installer.js";
 import type { LibraryStore } from "./ports/library-store.js";
 import type { ProcessingJobStore } from "./ports/processing-job-store.js";
 import { isMutableVideoIndex, type VideoIndex } from "./ports/video-index.js";
@@ -37,6 +41,7 @@ export interface AppDependencies {
   libraryStore?: LibraryStore;
   processVideoJobUseCase?: ProcessVideoJobUseCase;
   processingJobStore?: ProcessingJobStore;
+  libraryMediaInstaller?: LibraryMediaInstaller;
   uploadMaxBytes?: number;
 }
 
@@ -122,10 +127,26 @@ export async function createApp(dependencies: AppDependencies) {
     if (
       dependencies.processVideoJobUseCase !== undefined &&
       dependencies.processingJobStore !== undefined &&
+      dependencies.libraryStore !== undefined &&
+      isMutableVideoIndex(dependencies.videoIndex) &&
       uploadMaxBytes !== undefined
     ) {
+      const installer = dependencies.libraryMediaInstaller
+        ?? new FilesystemLibraryMediaInstaller(dependencies.libraryPath);
+      const installProcessedUploadUseCase = new InstallProcessedUploadUseCase(
+        installer,
+        dependencies.libraryStore,
+        dependencies.videoIndex,
+        dependencies.processingJobStore,
+        dependencies.libraryPath,
+      );
+
       await registerUploadsRoutes(api, {
         processVideoJobUseCase: dependencies.processVideoJobUseCase,
+        completeUploadUseCase: new CompleteUploadUseCase(
+          dependencies.processVideoJobUseCase,
+          installProcessedUploadUseCase,
+        ),
         getUploadJobUseCase: new GetUploadJobUseCase(dependencies.processingJobStore),
         uploadMaxBytes,
       });

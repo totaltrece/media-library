@@ -285,10 +285,10 @@ The endpoint supports HTTP Range requests and is compatible with the HTML5
 
 ---
 
-## Admin uploads (M4)
+## Admin uploads (M5)
 
-The upload endpoints process a video into a temporary job workspace. They do
-**not** install files into the media library or write to SQLite.
+The upload endpoints process a video and, on success, install it into the
+media library and SQLite catalog. Existing library files are never overwritten.
 
 ```text
 POST /api/admin/uploads
@@ -297,7 +297,7 @@ Content-Type: multipart/form-data
 
 Field: `video` (exactly one file).
 
-The request stays open until processing finishes.
+The request stays open until processing and installation finish.
 
 Success (`200`):
 
@@ -307,6 +307,7 @@ Success (`200`):
   "status": "completed",
   "videoId": "clip.mp4",
   "converted": true,
+  "installed": true,
   "outputs": {
     "source": "source",
     "converted": "converted.mp4",
@@ -316,6 +317,12 @@ Success (`200`):
 ```
 
 `outputs` are workspace-relative names, never absolute filesystem paths.
+`installed: true` means the video is in `LIBRARY_PATH`, registered in SQLite
+without tags, and present in the in-memory search index.
+
+The video is then available at `GET /api/video/:id` and
+`GET /api/thumbnail/:id`, and appears in `GET /api/search` with an empty
+`tags` array (Admin → Videos → Untagged).
 
 ```text
 GET /api/admin/uploads/:jobId
@@ -324,10 +331,11 @@ GET /api/admin/uploads/:jobId
 Returns the job status. Unknown jobs return **404 Not Found**.
 
 A second upload while a job is active returns **409 Conflict**.
+A video whose id already exists in SQLite or on disk returns **409 Conflict**.
 A file larger than `UPLOAD_MAX_BYTES` returns **413 Payload Too Large**.
 A missing or invalid file returns **400 Bad Request**.
-A processing failure returns **500** with `status: "failed"` and a safe error
-message. Internal paths and stack traces are not exposed.
+A processing or installation failure returns **500** with `status: "failed"`
+and a safe error message. Internal paths and stack traces are not exposed.
 
 ---
 
@@ -376,7 +384,7 @@ Backend
 - identifier resolution
 - thumbnail serving
 - video streaming
-- admin video upload and processing jobs (temporary workspace only)
+- admin video upload, processing, and installation of new library files
 
 Frontend
 

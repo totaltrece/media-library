@@ -5,7 +5,9 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import multipart from "@fastify/multipart";
 
 import { ActiveProcessingJobError } from "../../application/active-processing-job-error.js";
+import type { CompleteUploadUseCase } from "../../application/complete-upload.js";
 import type { GetUploadJobUseCase } from "../../application/get-upload-job.js";
+import { PUBLIC_INSTALLATION_FAILED_MESSAGE } from "../../application/install-processed-upload.js";
 import type { ProcessVideoJobUseCase } from "../../application/process-video-job.js";
 import {
   InvalidUploadFileNameError,
@@ -17,9 +19,14 @@ import {
   PUBLIC_PROCESSING_FAILED_MESSAGE,
   toUploadJobView,
 } from "../../application/to-upload-job-view.js";
+import {
+  PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE,
+  VideoAlreadyExistsError,
+} from "../../application/video-already-exists-error.js";
 
 export interface UploadsControllerOptions {
   processVideoJobUseCase: ProcessVideoJobUseCase;
+  completeUploadUseCase: CompleteUploadUseCase;
   getUploadJobUseCase: GetUploadJobUseCase;
   uploadMaxBytes: number;
 }
@@ -136,6 +143,13 @@ async function handleUpload(
         });
       }
 
+      try {
+        await options.completeUploadUseCase.assertAvailable(originalName);
+      } catch (error: unknown) {
+        part.file.resume();
+        throw error;
+      }
+
       const started = await options.processVideoJobUseCase.begin({ originalName });
       jobId = started.job.id;
       await pipeline(part.file, createWriteStream(started.paths.sourcePath));
@@ -150,14 +164,26 @@ async function handleUpload(
       });
     }
 
-    const result = await options.processVideoJobUseCase.processStaged(jobId);
+    const result = await options.completeUploadUseCase.execute(jobId);
 
     if (result.status === "failed") {
+      if (result.conflict) {
+        return reply.status(409).send({
+          jobId: result.jobId,
+          status: "failed",
+          error: {
+            message: PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE,
+          },
+        });
+      }
+
       return reply.status(500).send({
         jobId: result.jobId,
         status: "failed",
         error: {
-          message: PUBLIC_PROCESSING_FAILED_MESSAGE,
+          message: result.stage === "installing"
+            ? PUBLIC_INSTALLATION_FAILED_MESSAGE
+            : PUBLIC_PROCESSING_FAILED_MESSAGE,
         },
       });
     }
@@ -169,9 +195,18 @@ async function handleUpload(
       status: view.status,
       videoId: view.videoId,
       converted: view.converted,
+      installed: true,
       outputs: view.outputs,
     };
   } catch (error: unknown) {
+    if (error instanceof VideoAlreadyExistsError) {
+      return reply.status(409).send({
+        error: {
+          message: PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE,
+        },
+      });
+    }
+
     if (error instanceof ActiveProcessingJobError) {
       return reply.status(409).send({
         error: {

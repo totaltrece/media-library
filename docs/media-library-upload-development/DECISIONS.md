@@ -63,8 +63,8 @@ no depender del idioma de la salida.
 pertenece al use case: solo `hevc` se convierte a H.264. H.264 y el resto de
 codecs conservan la copia staged y no llaman a `convert()`.
 
-El layout TagSpaces `.ts/<filename>.jpg` se aplaza a M5. M2/M3 escriben
-`thumbnail.jpg` en el workspace temporal.
+El layout TagSpaces `.ts/<filename>.jpg` lo aplica M5 al instalar. M2/M3
+escriben `thumbnail.jpg` en el workspace temporal.
 
 ## ProcessVideoJobUseCase
 M3 orquesta un job completo sin HTTP. Dependencias: `VideoProcessor`,
@@ -78,7 +78,11 @@ M3 orquesta un job completo sin HTTP. Dependencias: `VideoProcessor`,
 - `ProcessingWorkspace.stageSource` copia el input a `sourcePath` sin modificar
   el original. Así un H.264 también queda en el workspace.
 - HTTP (M4) no copia: `begin()` prepara el workspace, el adapter escribe el
-  stream en `sourcePath`, y `processStaged()` continúa el pipeline.
+  stream en `sourcePath`, y `processStaged()` continúa el pipeline hasta
+  `finalizing`. El CLI `execute()` marca `completed` sin instalar.
+- M5 (`CompleteUploadUseCase` / `InstallProcessedUploadUseCase`) instala
+  después de `processStaged`: `installing` → ficheros → SQLite → índice →
+  `completed`.
 
 ## Upload HTTP síncrono (M4)
 La petición `POST /api/admin/uploads` espera a FFmpeg. Multipart se gestiona con
@@ -88,8 +92,9 @@ asíncrono). Los jobs siguen en memoria. El límite de tamaño es `UPLOAD_MAX_BY
 
 ## VideoStore y ThumbnailStore siguen siendo de lectura
 No se amplían para escribir temporales ni archivos nuevos. El workspace de un
-job es `ProcessingWorkspace`. La biblioteca definitiva se tocará en M5, y solo
-para colocar el resultado de un upload, nunca para mutar TagSpaces.
+job es `ProcessingWorkspace`. La instalación definitiva usa el port
+`LibraryMediaInstaller` (`FilesystemLibraryMediaInstaller`): solo coloca el
+resultado de un upload nuevo. Nunca muta TagSpaces JSON ni ficheros existentes.
 
 ## Estado de job como union discriminado
 `status` es el ciclo de vida; `phase` es el paso interno de `processing`. Así
@@ -105,4 +110,18 @@ actuales.
 `upload-temp` al lado de `SQLITE_PATH`, fuera de `LIBRARY_PATH`.
 
 ## Límite de upload configurable
-`UPLOAD_MAX_BYTES` por defecto es 512 MiB. Se validará de verdad en el upload HTTP (M4).
+`UPLOAD_MAX_BYTES` por defecto es 512 MiB. Se valida en el upload HTTP.
+
+## Instalación en la biblioteca (M5)
+M5 es el primer hito que escribe en `LIBRARY_PATH`.
+
+- `videoId` = nombre original sanitizado (media id existente).
+- Vídeo: `LIBRARY_PATH/<videoId>`. Thumbnail: `LIBRARY_PATH/.ts/<videoId>.jpg`.
+- Copia con `fs.copyFile(..., COPYFILE_EXCL)`; no se usa shell.
+- Si SQLite o el destino ya existen → `409`, sin sobrescribir.
+- SQLite (`upsertVideo`) solo después de vídeo + thumbnail instalados.
+- Recarga del índice con `reloadVideoIndex`, no con `POST /api/library/refresh`.
+- Compensación: borrar solo ficheros creados por este job. Nunca borrar
+  preexistentes. Si falla SQLite tras copiar, se eliminan los ficheros nuevos.
+  Si falla la compensación, se conserva el workspace y el job queda `failed`.
+- El thumbnail instalado es el de M3; no se vuelve a ejecutar FFmpeg.

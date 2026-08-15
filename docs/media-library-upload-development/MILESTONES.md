@@ -29,7 +29,10 @@ El resultado permanece en el workspace temporal. Sin instalación en
 `LIBRARY_PATH` ni escritura en SQLite.
 
 ## M5 — Integración con biblioteca
-Tras éxito, mover vídeo/thumbnail a ubicaciones definitivas y crear el vídeo en SQLite sin tags.
+Implementado: tras un procesamiento correcto, el vídeo y el thumbnail se
+instalan en `LIBRARY_PATH` / `.ts/`, se registra `upsertVideo` sin tags y se
+recarga el índice. Un id o fichero existente se rechaza con `409`.
+Sin cola, sin UI de upload y sin persistencia de jobs.
 
 ## M6 — UI de estado
 Mostrar subida, procesamiento, thumbnail, finalización y errores. El estado debe poder consultarse tras recargar.

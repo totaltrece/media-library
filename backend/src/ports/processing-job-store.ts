@@ -11,10 +11,15 @@ export type ProcessingJobPhase =
   | "processing"
   | "generating_thumbnail"
   | "finalizing"
+  | "installing"
   | "completed"
   | "failed";
 
-export type ProcessingPhase = "processing" | "generating_thumbnail" | "finalizing";
+export type ProcessingPhase =
+  | "processing"
+  | "generating_thumbnail"
+  | "finalizing"
+  | "installing";
 
 export type ProcessingJobState =
   | { status: "idle" }

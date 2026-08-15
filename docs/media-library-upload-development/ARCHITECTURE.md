@@ -60,7 +60,8 @@ No importa FFmpeg ni el filesystem concreto. Flujo:
 
 M3 no escribe en `LIBRARY_PATH` ni en SQLite. M4 añade el upload HTTP y
 reutiliza este use case (`begin` → escribir `source` → `processStaged`).
-M5 instalará vídeo/thumbnail en la biblioteca y registrará el catálogo.
+`processStaged` deja el job en `finalizing`. M5 instala vídeo/thumbnail,
+registra SQLite y marca `completed`.
 
 En error: `failed`, se descarta el workspace y se conserva el mensaje.
 
@@ -112,24 +113,33 @@ pnpm --filter @media-library/backend process-video -- "<ruta-al-video>"
 El workspace queda en `UPLOAD_TEMP_PATH/<jobId>/` (`source`, `converted.mp4`,
 `thumbnail.jpg`). `--discard` lo elimina tras un éxito. El original no se modifica.
 
-## Upload HTTP (M4)
+## Upload HTTP (M4) e instalación (M5)
 
 `POST /api/admin/uploads` recibe `multipart/form-data` (campo `video`), escribe
 el fichero en el `sourcePath` del job y ejecuta el pipeline de M3 en la misma
-petición. `GET /api/admin/uploads/:jobId` consulta el estado.
+petición. Tras un procesamiento correcto, `InstallProcessedUploadUseCase`
+copia el vídeo y el thumbnail a la biblioteca, llama a `upsertVideo` y recarga
+el índice en memoria. `GET /api/admin/uploads/:jobId` consulta el estado.
 
-El resultado sigue en el workspace temporal. No se toca `LIBRARY_PATH` ni SQLite.
+Ubicaciones definitivas:
+
+- vídeo: `LIBRARY_PATH/<videoId>`
+- thumbnail: `LIBRARY_PATH/.ts/<videoId>.jpg`
+
+`videoId` es el nombre original sanitizado (el mismo media id de la aplicación).
+No se sobrescriben ficheros ni filas existentes. No se escribe JSON sidecar.
+No se usa `POST /api/library/refresh` internamente.
 
 ## Estados
 
 Como mínimo:
 
-`idle`, `uploading`, `processing`, `generating_thumbnail`, `finalizing`, `completed`, `failed`.
+`idle`, `uploading`, `processing`, `generating_thumbnail`, `finalizing`, `installing`, `completed`, `failed`.
 
 En código, el job usa un union discriminado (`ProcessingJobState`):
 
 - `status` es el ciclo de vida: `idle` | `uploading` | `processing` | `completed` | `failed`.
-- `phase` detalla el paso mientras `status` es `processing`: `processing` | `generating_thumbnail` | `finalizing`.
+- `phase` detalla el paso mientras `status` es `processing`: `processing` | `generating_thumbnail` | `finalizing` | `installing`.
 
 `queued` y `cancelled` se podrán añadir como nuevos `status` sin cambiar los
 existentes. El MVP rechaza un segundo job activo; no hay cola todavía.
@@ -146,7 +156,10 @@ Solo registrar el vídeo en SQLite después de:
 3. thumbnail completa;
 4. archivos finales colocados.
 
-Si falla, limpiar temporales y no registrar el vídeo.
+Si falla la instalación, compensar solo los ficheros **nuevos** de este job.
+No borrar nunca un vídeo o thumbnail que ya existía. Conservar el workspace
+temporal para diagnóstico. Si la compensación también falla, el job queda
+`failed` y el workspace se conserva.
 
 ## Persistencia
 

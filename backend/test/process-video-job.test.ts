@@ -177,6 +177,25 @@ test("an active job prevents another processing run", async () => {
   assert.equal(jobs.findActive()?.id, "busy");
 });
 
+test("processStaged stops at finalizing so install can complete the job", async () => {
+  const { useCase, workspace, jobs } = createHarness({
+    probe: probeResult("h264"),
+  });
+
+  const started = await useCase.begin({ originalName: "clip.mp4", jobId: "job-staged" });
+  await workspace.stageSource(started.job.id, originalPath);
+  const result = await useCase.processStaged(started.job.id);
+
+  assert.equal(result.status, "processed");
+  if (result.status !== "processed") {
+    return;
+  }
+
+  assert.deepEqual(result.job.state, { status: "processing", phase: "finalizing" });
+  assert.equal(jobs.findActive()?.id, "job-staged");
+  assert.deepEqual(workspace.discarded, []);
+});
+
 function probeResult(videoCodec: string): VideoProbeResult {
   return {
     durationSeconds: 4,

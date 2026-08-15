@@ -74,7 +74,7 @@ pnpm --filter @media-library/backend process-video -- /ruta/al/hevc.mp4 --discar
 El resultado queda en `UPLOAD_TEMP_PATH/<jobId>/`. El original no se modifica.
 `--discard` borra el workspace después de un éxito.
 
-## Prueba manual de M4
+## Prueba manual de M4 / M5
 
 Arrancar el backend y, en Windows, usar `curl.exe` (no el alias `curl` de PowerShell):
 
@@ -94,8 +94,21 @@ curl -X POST "http://localhost:3000/api/admin/uploads" \
 curl "http://localhost:3000/api/admin/uploads/<jobId>"
 ```
 
-Comprobar que el resultado está en `UPLOAD_TEMP_PATH/<jobId>/` y que
-`LIBRARY_PATH` y SQLite no cambian.
+Comprobar:
+
+1. respuesta `completed` con `installed: true`
+2. vídeo en `LIBRARY_PATH/<nombre>.mp4`  
+   (ejemplo: `C:\Users\Carlos\Documents\baile\PXL_20260813_214135367.TS.mp4`)
+3. thumbnail en `LIBRARY_PATH/.ts/<nombre>.mp4.jpg`
+4. `http://localhost:3000/api/video/PXL_20260813_214135367.TS.mp4`
+5. `http://localhost:3000/api/thumbnail/PXL_20260813_214135367.TS.mp4`
+6. `http://localhost:3000/api/search` incluye el vídeo con `tags: []`
+7. `http://localhost:3000/admin/videos` → Sin tags
+8. SQLite: `videos` +1, `tags` y `video_tags` sin cambio
+9. Refresh library: el vídeo sigue una sola vez y sin tags
+10. repetir el mismo upload → HTTP `409` y ficheros intactos
+
+El workspace del job permanece en `UPLOAD_TEMP_PATH/<jobId>/` para inspección.
 
 ## Prueba local
 
