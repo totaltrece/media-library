@@ -1,5 +1,7 @@
 import type {
   ApiErrorResponse,
+  CatalogTag,
+  CatalogTagsResponse,
   RefreshLibraryResponse,
   SearchResponse,
   TagsResponse,
@@ -94,4 +96,30 @@ export async function updateVideoTags(mediaId: string, tags: string[]): Promise<
   });
 
   return readJsonResponse<VideoTagsResponse>(response);
+}
+
+export async function fetchTagCatalog(): Promise<CatalogTagsResponse> {
+  const response = await fetch(buildApiUrl("/admin/tags"));
+
+  return readJsonResponse<CatalogTagsResponse>(response);
+}
+
+export async function renameCatalogTag(tagId: number, name: string): Promise<CatalogTag> {
+  const response = await fetch(buildApiUrl(`/admin/tags/${tagId}`), {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
+
+  return readJsonResponse<CatalogTag>(response);
+}
+
+export async function deleteCatalogTag(tagId: number): Promise<void> {
+  const response = await fetch(buildApiUrl(`/admin/tags/${tagId}`), {
+    method: "DELETE",
+  });
+
+  await readJsonResponse<{ id: number }>(response);
 }

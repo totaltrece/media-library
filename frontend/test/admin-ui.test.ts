@@ -6,6 +6,7 @@ import { createMemoryHistory, createRouter, type Router } from "vue-router";
 import type { SearchResultItem } from "../src/api/types.js";
 import TagEditor from "../src/components/TagEditor.vue";
 import TagSearch from "../src/components/TagSearch.vue";
+import AdminTagsView from "../src/views/AdminTagsView.vue";
 import AdminVideoEditView from "../src/views/AdminVideoEditView.vue";
 import AdminVideosView from "../src/views/AdminVideosView.vue";
 import HomeView from "../src/views/HomeView.vue";
@@ -113,6 +114,7 @@ function createTestRouter(initialPath = "/admin/videos"): Router {
     routes: [
       { path: "/", name: "home", component: HomeView },
       { path: "/admin/videos", name: "admin-videos", component: AdminVideosView },
+      { path: "/admin/tags", name: "admin-tags", component: AdminTagsView },
       {
         path: "/admin/videos/:id(.*)",
         name: "admin-video-edit",

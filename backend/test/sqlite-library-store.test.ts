@@ -285,3 +285,80 @@ test("setVideoTags rolls back when a later tag is invalid", () => {
     store.close();
   }
 });
+
+test("listTagUsages includes unused tags with a zero count", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    store.upsertVideo("salsa/first.mp4");
+    store.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
+    store.upsertTag("bufanda");
+
+    assert.deepEqual(store.listTagUsages(), [
+      { id: store.findTagByName("bufanda")!.id, name: "bufanda", usageCount: 0 },
+      { id: store.findTagByName("jota")!.id, name: "jota", usageCount: 1 },
+      { id: store.findTagByName("salsa")!.id, name: "salsa", usageCount: 1 },
+    ]);
+  } finally {
+    store.close();
+  }
+});
+
+test("renameTag changes the name and keeps the same id and video relations", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    store.upsertVideo("salsa/first.mp4");
+    store.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
+    const jota = store.findTagByName("jota")!;
+
+    const renamed = store.renameTag(jota.id, "jota-nueva");
+
+    assert.strictEqual(renamed.id, jota.id);
+    assert.strictEqual(renamed.name, "jota-nueva");
+    assert.equal(store.findTagByName("jota"), null);
+    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["salsa", "jota-nueva"]);
+  } finally {
+    store.close();
+  }
+});
+
+test("renameTag rejects empty names and existing names", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    const salsa = store.upsertTag("salsa");
+    store.upsertTag("jota");
+
+    assert.throws(() => store.renameTag(salsa.id, ""), /Tag name must not be empty/);
+    assert.throws(() => store.renameTag(salsa.id, "jota"), /Tag name already exists: jota/);
+    assert.throws(() => store.renameTag(999, "nuevo"), /Tag not found: 999/);
+    assert.deepEqual(store.listTags().map((tag) => tag.name), ["jota", "salsa"]);
+  } finally {
+    store.close();
+  }
+});
+
+test("deleteTag removes the catalog entry and its video relations", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    store.upsertVideo("salsa/first.mp4");
+    store.upsertVideo("salsa/second.mp4");
+    store.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
+    store.setVideoTags("salsa/second.mp4", ["salsa"]);
+    const jota = store.findTagByName("jota")!;
+    const salsa = store.findTagByName("salsa")!;
+
+    store.deleteTag(jota.id);
+
+    assert.equal(store.findTagById(jota.id), null);
+    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["salsa"]);
+    assert.deepEqual(store.getVideoTags("salsa/second.mp4"), ["salsa"]);
+    assert.deepEqual(store.listVideos().map((video) => video.id), ["salsa/first.mp4", "salsa/second.mp4"]);
+    assert.deepEqual(store.findTagById(salsa.id), salsa);
+    assert.throws(() => store.deleteTag(999), /Tag not found: 999/);
+  } finally {
+    store.close();
+  }
+});

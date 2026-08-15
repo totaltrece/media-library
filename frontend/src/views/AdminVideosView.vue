@@ -6,7 +6,10 @@
           <h1>Video tags</h1>
           <p>Find a video and edit its tags.</p>
         </div>
-        <RouterLink class="secondary-button" to="/">Back to library</RouterLink>
+        <div class="search-actions">
+          <AdminNav />
+          <RouterLink class="secondary-button" to="/">Back to library</RouterLink>
+        </div>
       </div>
     </header>
 
@@ -43,7 +46,7 @@
       @search="runSearch"
     />
 
-    <LoadingIndicator v-if="loadingCatalog" message="Loading videos..." />
+    <LoadingIndicator v-if="loadingCatalog && !hasSearched" message="Loading videos..." />
     <ErrorMessage v-else-if="error" :message="error" />
 
     <template v-else>
@@ -66,11 +69,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
 import { fetchTags, searchVideos } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
+import AdminNav from "../components/AdminNav.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 import SearchResults from "../components/SearchResults.vue";
@@ -78,6 +82,7 @@ import TagSearch from "../components/TagSearch.vue";
 import { applyUntaggedFilter, countUntaggedVideos } from "../utils/admin-videos.js";
 
 const router = useRouter();
+const route = useRoute();
 const catalogVideos = ref<SearchResultItem[]>([]);
 const searchResults = ref<SearchResultItem[]>([]);
 const availableTags = ref<string[]>([]);
@@ -173,6 +178,33 @@ async function runSearch(): Promise<void> {
     loadingSearch.value = false;
   }
 }
+
+function parseRouteTags(value: unknown): string[] {
+  if (typeof value === "string" && value.length > 0) {
+    return [value];
+  }
+
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string" && item.length > 0);
+  }
+
+  return [];
+}
+
+watch(
+  () => route.query.tag,
+  async () => {
+    const tags = parseRouteTags(route.query.tag);
+
+    if (tags.length === 0) {
+      return;
+    }
+
+    selectedTags.value = tags;
+    await runSearch();
+  },
+  { immediate: true },
+);
 
 function openVideo(result: SearchResultItem): void {
   void router.push({ name: "admin-video-edit", params: { id: result.id } });

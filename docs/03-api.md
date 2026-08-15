@@ -180,6 +180,62 @@ do not create videos.
 
 ---
 
+## Admin tag catalog
+
+`GET /api/tags` remains the consumer catalog: unique tag names currently used by
+indexed videos. Administration uses a separate SQLite catalog that includes
+unused tags and numeric ids.
+
+```text
+GET /api/admin/tags
+PUT /api/admin/tags/:id
+DELETE /api/admin/tags/:id
+```
+
+`GET` returns every row in `tags`, ordered by name, with the number of
+`video_tags` relations for each tag.
+
+```json
+{
+  "count": 3,
+  "tags": [
+    {
+      "id": 3,
+      "name": "bufanda",
+      "usageCount": 0
+    },
+    {
+      "id": 2,
+      "name": "jota",
+      "usageCount": 84
+    },
+    {
+      "id": 1,
+      "name": "salsa",
+      "usageCount": 127
+    }
+  ]
+}
+```
+
+`PUT` renames a tag by id. The `tag_id` and all `video_tags` relations stay
+unchanged. Empty names return **400 Bad Request**. A name that already belongs
+to another tag returns **409 Conflict**. A missing id returns **404 Not Found**.
+
+```json
+{
+  "name": "jota-nueva"
+}
+```
+
+`DELETE` removes the catalog row. SQLite `ON DELETE CASCADE` removes its
+`video_tags` relations. Videos and other tags are left in place. A missing id
+returns **404 Not Found**.
+
+These endpoints never write media files or TagSpaces metadata.
+
+---
+
 ## Library Refresh
 
 ```text
