@@ -1,16 +1,20 @@
 import Fastify from "fastify";
 
 import { AddVideoTagUseCase } from "./application/add-video-tag.js";
+import { DeleteTagUseCase } from "./application/delete-tag.js";
 import { GetTagsUseCase } from "./application/get-tags.js";
 import { GetThumbnailUseCase } from "./application/get-thumbnail.js";
 import { GetVideoTagsUseCase } from "./application/get-video-tags.js";
+import { ListTagCatalogUseCase } from "./application/list-tag-catalog.js";
 import type { RefreshLibraryUseCase } from "./application/refresh-library.js";
 import { RemoveVideoTagUseCase } from "./application/remove-video-tag.js";
+import { RenameTagUseCase } from "./application/rename-tag.js";
 import { SearchVideosUseCase } from "./application/search-videos.js";
 import { SetVideoTagsUseCase } from "./application/set-video-tags.js";
 import { StreamVideoUseCase } from "./application/stream-video.js";
 import { FilesystemVideoStore } from "./adapters/filesystem/filesystem-video-store.js";
 import { TagSpacesThumbnailStore } from "./adapters/filesystem/tagspaces-thumbnail-store.js";
+import { registerAdminTagsRoutes } from "./adapters/http/admin-tags-controller.js";
 import { registerLibraryRoutes } from "./adapters/http/library-controller.js";
 import { registerSearchRoutes } from "./adapters/http/search-controller.js";
 import { registerStaticFrontend } from "./adapters/http/register-static-frontend.js";
@@ -83,6 +87,20 @@ export async function createApp(dependencies: AppDependencies) {
           dependencies.libraryPath,
         ),
         setVideoTagsUseCase: new SetVideoTagsUseCase(
+          dependencies.libraryStore,
+          dependencies.videoIndex,
+          dependencies.libraryPath,
+        ),
+      });
+
+      registerAdminTagsRoutes(api, {
+        listTagCatalogUseCase: new ListTagCatalogUseCase(dependencies.libraryStore),
+        renameTagUseCase: new RenameTagUseCase(
+          dependencies.libraryStore,
+          dependencies.videoIndex,
+          dependencies.libraryPath,
+        ),
+        deleteTagUseCase: new DeleteTagUseCase(
           dependencies.libraryStore,
           dependencies.videoIndex,
           dependencies.libraryPath,

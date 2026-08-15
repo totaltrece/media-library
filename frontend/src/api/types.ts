@@ -32,3 +32,14 @@ export interface RefreshLibraryResponse {
 export interface VideoTagsResponse {
   tags: string[];
 }
+
+export interface CatalogTag {
+  id: number;
+  name: string;
+  usageCount: number;
+}
+
+export interface CatalogTagsResponse {
+  count: number;
+  tags: CatalogTag[];
+}

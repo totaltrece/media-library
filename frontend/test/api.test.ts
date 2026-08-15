@@ -84,3 +84,49 @@ describe("video tags API", () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe("tag catalog API", () => {
+  it("loads, renames, and deletes catalog tags", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          count: 1,
+          tags: [{ id: 7, name: "salsa", usageCount: 12 }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 7, name: "salsa-linea", usageCount: 12 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 7 }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { deleteCatalogTag, fetchTagCatalog, renameCatalogTag } = await import("../src/api/client.js");
+
+    await expect(fetchTagCatalog()).resolves.toEqual({
+      count: 1,
+      tags: [{ id: 7, name: "salsa", usageCount: 12 }],
+    });
+    await expect(renameCatalogTag(7, "salsa-linea")).resolves.toEqual({
+      id: 7,
+      name: "salsa-linea",
+      usageCount: 12,
+    });
+    await expect(deleteCatalogTag(7)).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/admin/tags");
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/admin/tags/7", {
+      headers: { "Content-Type": "application/json" },
+      method: "PUT",
+      body: JSON.stringify({ name: "salsa-linea" }),
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/admin/tags/7", { method: "DELETE" });
+
+    vi.unstubAllGlobals();
+  });
+});

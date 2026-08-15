@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import type {
   LibraryStore,
   LibraryTag,
+  LibraryTagUsage,
   LibraryVideo,
   LibraryVideoWithTags,
 } from "../../ports/library-store.js";
@@ -70,6 +71,12 @@ export class SqliteLibraryStore implements LibraryStore {
     return isTagRow(row) ? { id: Number(row.id), name: row.name } : null;
   }
 
+  findTagById(id: number): LibraryTag | null {
+    const row = this.database.prepare("SELECT id, name FROM tags WHERE id = ?").get(id);
+
+    return isTagRow(row) ? { id: Number(row.id), name: row.name } : null;
+  }
+
   listTags(): LibraryTag[] {
     const rows = this.database.prepare("SELECT id, name FROM tags ORDER BY name").all();
 
@@ -77,6 +84,63 @@ export class SqliteLibraryStore implements LibraryStore {
       id: Number(row.id),
       name: row.name,
     }));
+  }
+
+  listTagUsages(): LibraryTagUsage[] {
+    const rows = this.database
+      .prepare(
+        `
+          SELECT tags.id AS id, tags.name AS name, COUNT(video_tags.video_id) AS usageCount
+          FROM tags
+          LEFT JOIN video_tags ON video_tags.tag_id = tags.id
+          GROUP BY tags.id, tags.name
+          ORDER BY tags.name
+        `,
+      )
+      .all();
+
+    return rows.filter(isTagUsageRow).map((row) => ({
+      id: Number(row.id),
+      name: row.name,
+      usageCount: Number(row.usageCount),
+    }));
+  }
+
+  renameTag(id: number, name: string): LibraryTag {
+    const tagName = requireNonEmpty(name, "Tag name");
+    const current = this.findTagById(id);
+
+    if (current === null) {
+      throw new Error(`Tag not found: ${id}`);
+    }
+
+    if (current.name === tagName) {
+      return current;
+    }
+
+    const conflict = this.findTagByName(tagName);
+
+    if (conflict !== null) {
+      throw new Error(`Tag name already exists: ${tagName}`);
+    }
+
+    this.database.prepare("UPDATE tags SET name = ? WHERE id = ?").run(tagName, id);
+
+    const renamed = this.findTagById(id);
+
+    if (renamed === null) {
+      throw new Error(`Unable to rename tag ${id}`);
+    }
+
+    return renamed;
+  }
+
+  deleteTag(id: number): void {
+    const result = this.database.prepare("DELETE FROM tags WHERE id = ?").run(id);
+
+    if (result.changes === 0) {
+      throw new Error(`Tag not found: ${id}`);
+    }
   }
 
   setVideoTags(videoId: string, tagNames: string[]): void {
@@ -263,6 +327,17 @@ function isTagRow(value: unknown): value is { id: number | bigint; name: string 
 
 function isNameRow(value: unknown): value is { name: string } {
   return isRecord(value) && typeof value.name === "string";
+}
+
+function isTagUsageRow(
+  value: unknown,
+): value is { id: number | bigint; name: string; usageCount: number | bigint } {
+  return (
+    isRecord(value) &&
+    (typeof value.id === "number" || typeof value.id === "bigint") &&
+    typeof value.name === "string" &&
+    (typeof value.usageCount === "number" || typeof value.usageCount === "bigint")
+  );
 }
 
 function isPositionRow(value: unknown): value is { position: number | bigint | null } {

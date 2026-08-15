@@ -24,6 +24,7 @@ The backend is responsible for:
 - coordinating indexing
 - executing searches
 - editing video tags in SQLite
+- managing the SQLite tag catalog (rename and delete)
 - exposing application statistics
 - managing the application lifecycle
 

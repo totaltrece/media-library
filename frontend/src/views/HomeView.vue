@@ -6,16 +6,23 @@
           <h1>Media Library</h1>
           <p>Search your tagged videos and watch them from any browser.</p>
         </div>
-        <button
-          class="refresh-button"
-          type="button"
-          :aria-busy="refreshing"
-          :disabled="refreshing"
-          @click="refreshLibrary"
-        >
-          <span class="refresh-button-icon" aria-hidden="true">↻</span>
-          {{ refreshing ? "Refreshing..." : "Refresh library" }}
-        </button>
+        <div class="search-actions">
+          <AdminNav />
+          <button
+            class="refresh-button"
+            type="button"
+            aria-label="Refresh library"
+            title="Refresh library"
+            :aria-busy="refreshing"
+            :disabled="refreshing"
+            @click="refreshLibrary"
+          >
+            <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 12a9 9 0 1 1-3.16-6.85" />
+              <path d="M21 3v6h-6" />
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -67,6 +74,7 @@ import { onMounted, ref } from "vue";
 
 import { fetchTags, refreshLibrary as refreshLibraryIndex, searchVideos } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
+import AdminNav from "../components/AdminNav.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 import SearchResults from "../components/SearchResults.vue";

@@ -6,7 +6,10 @@
           <h1>{{ video?.name ?? "Edit tags" }}</h1>
           <p>Edit tags for this video. Changes are saved to the library.</p>
         </div>
-        <RouterLink class="secondary-button" to="/admin/videos">Back to videos</RouterLink>
+        <div class="search-actions">
+          <AdminNav />
+          <RouterLink class="secondary-button" to="/admin/videos">Back to videos</RouterLink>
+        </div>
       </div>
     </header>
 
@@ -58,6 +61,7 @@ import { computed, ref, watch } from "vue";
 
 import { fetchTags, fetchVideoTags, searchVideos, updateVideoTags } from "../api/client.js";
 import type { SearchResultItem as VideoResult } from "../api/types.js";
+import AdminNav from "../components/AdminNav.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 import SearchResultItem from "../components/SearchResultItem.vue";

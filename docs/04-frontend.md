@@ -58,7 +58,8 @@ The initial screen contains:
 - search box
 - active tag filters
 - search button (optional)
-- refresh library button
+- refresh library icon (discovers new videos on disk and reloads the SQLite index)
+- links to `/admin/videos` and `/admin/tags`
 - search results
 
 Searching should feel immediate and responsive.
@@ -95,11 +96,13 @@ The frontend never downloads or copies media files.
 
 ## Admin video tags
 
-Additional screens live at `/admin/videos` and `/admin/videos/:id`.
+Additional screens live at `/admin/videos`, `/admin/videos/:id`, and `/admin/tags`.
 
 They reuse the existing `TagSearch` component and `GET /api/search?tag=...`
 to find videos by tags, filter untagged items, and edit tags through
 `GET /api/videos/:id/tags`, `GET /api/tags`, and `PUT /api/videos/:id/tags`.
+The tag catalog at `/admin/tags` is managed through `GET /api/admin/tags`,
+`PUT /api/admin/tags/:id`, and `DELETE /api/admin/tags/:id`.
 The consumer search screen at `/` is unchanged.
 
 # Layout
