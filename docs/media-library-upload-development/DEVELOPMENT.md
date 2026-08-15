@@ -74,16 +74,22 @@ pnpm --filter @media-library/backend process-video -- /ruta/al/hevc.mp4 --discar
 El resultado queda en `UPLOAD_TEMP_PATH/<jobId>/`. El original no se modifica.
 `--discard` borra el workspace después de un éxito.
 
-## Prueba manual de M4 / M5
+## Prueba manual de M6.1
 
 Arrancar el backend y, en Windows, usar `curl.exe` (no el alias `curl` de PowerShell):
 
 ```powershell
 curl.exe -X POST "http://localhost:3000/api/admin/uploads" `
   -F "video=@C:\Users\Carlos\Documents\baile-hvc\PXL_20260813_214135367.TS.mp4"
+```
 
+Debe responder `202` con `jobId` de inmediato. Consultar el estado:
+
+```powershell
 curl.exe "http://localhost:3000/api/admin/uploads/<jobId>"
 ```
+
+Repetir el GET hasta `completed` o `failed`.
 
 Linux:
 
@@ -96,19 +102,21 @@ curl "http://localhost:3000/api/admin/uploads/<jobId>"
 
 Comprobar:
 
-1. respuesta `completed` con `installed: true`
-2. vídeo en `LIBRARY_PATH/<nombre>.mp4`  
+1. POST responde `202` con `status: "uploading"`
+2. GET llega a `completed`
+3. vídeo en `LIBRARY_PATH/<nombre>.mp4`  
    (ejemplo: `C:\Users\Carlos\Documents\baile\PXL_20260813_214135367.TS.mp4`)
-3. thumbnail en `LIBRARY_PATH/.ts/<nombre>.mp4.jpg`
-4. `http://localhost:3000/api/video/PXL_20260813_214135367.TS.mp4`
-5. `http://localhost:3000/api/thumbnail/PXL_20260813_214135367.TS.mp4`
-6. `http://localhost:3000/api/search` incluye el vídeo con `tags: []`
-7. `http://localhost:3000/admin/videos` → Sin tags
-8. SQLite: `videos` +1, `tags` y `video_tags` sin cambio
-9. Refresh library: el vídeo sigue una sola vez y sin tags
-10. repetir el mismo upload → HTTP `409` y ficheros intactos
+4. thumbnail en `LIBRARY_PATH/.ts/<nombre>.mp4.jpg`
+5. `http://localhost:3000/api/video/PXL_20260813_214135367.TS.mp4`
+6. `http://localhost:3000/api/thumbnail/PXL_20260813_214135367.TS.mp4`
+7. `http://localhost:3000/api/search` incluye el vídeo con `tags: []`
+8. `http://localhost:3000/admin/videos` → Sin tags
+9. SQLite: `videos` +1, `tags` y `video_tags` sin cambio
+10. Refresh library: el vídeo sigue una sola vez y sin tags
+11. repetir el mismo upload → HTTP `409` y ficheros intactos
 
 El workspace del job permanece en `UPLOAD_TEMP_PATH/<jobId>/` para inspección.
+Si se reinicia Node durante un job, el estado en memoria se pierde.
 
 ## Prueba local
 

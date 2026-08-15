@@ -285,10 +285,11 @@ The endpoint supports HTTP Range requests and is compatible with the HTML5
 
 ---
 
-## Admin uploads (M5)
+## Admin uploads (M6.1)
 
-The upload endpoints process a video and, on success, install it into the
-media library and SQLite catalog. Existing library files are never overwritten.
+The upload endpoints accept a video, process it in the background, and on
+success install it into the media library and SQLite catalog. Existing library
+files are never overwritten.
 
 ```text
 POST /api/admin/uploads
@@ -297,28 +298,19 @@ Content-Type: multipart/form-data
 
 Field: `video` (exactly one file).
 
-The request stays open until processing and installation finish.
-
-Success (`200`):
+The request returns **202 Accepted** after the file is stored in the job
+workspace. Processing and installation continue in the background.
 
 ```json
 {
   "jobId": "...",
-  "status": "completed",
-  "videoId": "clip.mp4",
-  "converted": true,
-  "installed": true,
-  "outputs": {
-    "source": "source",
-    "converted": "converted.mp4",
-    "thumbnail": "thumbnail.jpg"
-  }
+  "status": "uploading"
 }
 ```
 
-`outputs` are workspace-relative names, never absolute filesystem paths.
-`installed: true` means the video is in `LIBRARY_PATH`, registered in SQLite
-without tags, and present in the in-memory search index.
+Poll `GET /api/admin/uploads/:jobId` until `status` is `completed` or `failed`.
+When completed, the video is in `LIBRARY_PATH`, registered in SQLite without
+tags, and present in the in-memory search index.
 
 The video is then available at `GET /api/video/:id` and
 `GET /api/thumbnail/:id`, and appears in `GET /api/search` with an empty
@@ -334,8 +326,11 @@ A second upload while a job is active returns **409 Conflict**.
 A video whose id already exists in SQLite or on disk returns **409 Conflict**.
 A file larger than `UPLOAD_MAX_BYTES` returns **413 Payload Too Large**.
 A missing or invalid file returns **400 Bad Request**.
-A processing or installation failure returns **500** with `status: "failed"`
-and a safe error message. Internal paths and stack traces are not exposed.
+Processing and installation failures are reported on `GET` as `status: "failed"`
+with a safe error message. Internal paths and stack traces are not exposed.
+
+Jobs are stored in memory. A process restart drops any active job; it is not
+resumed.
 
 ---
 

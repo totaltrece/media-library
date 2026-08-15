@@ -5,9 +5,9 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import multipart from "@fastify/multipart";
 
 import { ActiveProcessingJobError } from "../../application/active-processing-job-error.js";
+import type { BackgroundUploadJobRunner } from "../../application/background-upload-job-runner.js";
 import type { CompleteUploadUseCase } from "../../application/complete-upload.js";
 import type { GetUploadJobUseCase } from "../../application/get-upload-job.js";
-import { PUBLIC_INSTALLATION_FAILED_MESSAGE } from "../../application/install-processed-upload.js";
 import type { ProcessVideoJobUseCase } from "../../application/process-video-job.js";
 import {
   InvalidUploadFileNameError,
@@ -17,7 +17,6 @@ import {
 import {
   ACTIVE_UPLOAD_JOB_MESSAGE,
   PUBLIC_PROCESSING_FAILED_MESSAGE,
-  toUploadJobView,
 } from "../../application/to-upload-job-view.js";
 import {
   PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE,
@@ -27,6 +26,7 @@ import {
 export interface UploadsControllerOptions {
   processVideoJobUseCase: ProcessVideoJobUseCase;
   completeUploadUseCase: CompleteUploadUseCase;
+  backgroundUploadJobRunner: BackgroundUploadJobRunner;
   getUploadJobUseCase: GetUploadJobUseCase;
   uploadMaxBytes: number;
 }
@@ -164,40 +164,12 @@ async function handleUpload(
       });
     }
 
-    const result = await options.completeUploadUseCase.execute(jobId);
+    options.backgroundUploadJobRunner.start(jobId);
 
-    if (result.status === "failed") {
-      if (result.conflict) {
-        return reply.status(409).send({
-          jobId: result.jobId,
-          status: "failed",
-          error: {
-            message: PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE,
-          },
-        });
-      }
-
-      return reply.status(500).send({
-        jobId: result.jobId,
-        status: "failed",
-        error: {
-          message: result.stage === "installing"
-            ? PUBLIC_INSTALLATION_FAILED_MESSAGE
-            : PUBLIC_PROCESSING_FAILED_MESSAGE,
-        },
-      });
-    }
-
-    const view = toUploadJobView(result.job);
-
-    return {
-      jobId: view.jobId,
-      status: view.status,
-      videoId: view.videoId,
-      converted: view.converted,
-      installed: true,
-      outputs: view.outputs,
-    };
+    return reply.status(202).send({
+      jobId,
+      status: "uploading",
+    });
   } catch (error: unknown) {
     if (error instanceof VideoAlreadyExistsError) {
       return reply.status(409).send({

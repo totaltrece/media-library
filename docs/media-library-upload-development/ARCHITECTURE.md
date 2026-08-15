@@ -113,15 +113,18 @@ pnpm --filter @media-library/backend process-video -- "<ruta-al-video>"
 El workspace queda en `UPLOAD_TEMP_PATH/<jobId>/` (`source`, `converted.mp4`,
 `thumbnail.jpg`). `--discard` lo elimina tras un éxito. El original no se modifica.
 
-## Upload HTTP (M4) e instalación (M5)
+## Upload HTTP asíncrono (M6.1)
 
-`POST /api/admin/uploads` recibe `multipart/form-data` (campo `video`), escribe
-el fichero en el `sourcePath` del job y ejecuta el pipeline de M3 en la misma
-petición. Tras un procesamiento correcto, `InstallProcessedUploadUseCase`
-copia el vídeo y el thumbnail a la biblioteca, llama a `upsertVideo` y recarga
-el índice en memoria. `GET /api/admin/uploads/:jobId` consulta el estado.
+`POST /api/admin/uploads` recibe `multipart/form-data` (campo `video`), valida,
+crea el job, escribe el fichero en `sourcePath` y responde `202` con `jobId`.
+`BackgroundUploadJobRunner` ejecuta `CompleteUploadUseCase` en background
+(pipeline M3 + instalación M5). `GET /api/admin/uploads/:jobId` consulta el
+estado.
 
-Ubicaciones definitivas:
+Los jobs siguen en `InMemoryProcessingJobStore`. Si Node se reinicia con un
+job activo, ese job se pierde; no se reanuda. No hay cola ni UI todavía.
+
+Ubicaciones definitivas tras `completed`:
 
 - vídeo: `LIBRARY_PATH/<videoId>`
 - thumbnail: `LIBRARY_PATH/.ts/<videoId>.jpg`
@@ -164,7 +167,9 @@ temporal para diagnóstico. Si la compensación también falla, el job queda
 ## Persistencia
 
 MVP: estado del job en memoria (`ProcessingJobStore` / `InMemoryProcessingJobStore`);
-SQLite solo catálogo. Si Node se reinicia durante un job, este puede perderse. Es aceptable inicialmente.
+SQLite solo catálogo. M6.1 no persiste ni reanuda jobs. Si Node se reinicia
+durante un job activo, el trabajo en curso se pierde y el workspace temporal
+puede quedar huérfano. Es aceptable hasta una persistencia posterior.
 
 ## Seguridad
 

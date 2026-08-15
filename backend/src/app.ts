@@ -2,6 +2,7 @@ import Fastify from "fastify";
 
 import { AddVideoTagUseCase } from "./application/add-video-tag.js";
 import { DeleteTagUseCase } from "./application/delete-tag.js";
+import { BackgroundUploadJobRunner, type BackgroundUploadErrorLogger } from "./application/background-upload-job-runner.js";
 import { CompleteUploadUseCase } from "./application/complete-upload.js";
 import { GetTagsUseCase } from "./application/get-tags.js";
 import { GetThumbnailUseCase } from "./application/get-thumbnail.js";
@@ -42,6 +43,7 @@ export interface AppDependencies {
   processVideoJobUseCase?: ProcessVideoJobUseCase;
   processingJobStore?: ProcessingJobStore;
   libraryMediaInstaller?: LibraryMediaInstaller;
+  backgroundUploadErrorLogger?: BackgroundUploadErrorLogger;
   uploadMaxBytes?: number;
 }
 
@@ -141,12 +143,21 @@ export async function createApp(dependencies: AppDependencies) {
         dependencies.libraryPath,
       );
 
+      const completeUploadUseCase = new CompleteUploadUseCase(
+        dependencies.processVideoJobUseCase,
+        installProcessedUploadUseCase,
+      );
+      const backgroundUploadJobRunner = new BackgroundUploadJobRunner(
+        completeUploadUseCase,
+        dependencies.processVideoJobUseCase,
+        dependencies.processingJobStore,
+        dependencies.backgroundUploadErrorLogger,
+      );
+
       await registerUploadsRoutes(api, {
         processVideoJobUseCase: dependencies.processVideoJobUseCase,
-        completeUploadUseCase: new CompleteUploadUseCase(
-          dependencies.processVideoJobUseCase,
-          installProcessedUploadUseCase,
-        ),
+        completeUploadUseCase,
+        backgroundUploadJobRunner,
         getUploadJobUseCase: new GetUploadJobUseCase(dependencies.processingJobStore),
         uploadMaxBytes,
       });

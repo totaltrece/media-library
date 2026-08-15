@@ -84,11 +84,14 @@ M3 orquesta un job completo sin HTTP. Dependencias: `VideoProcessor`,
   después de `processStaged`: `installing` → ficheros → SQLite → índice →
   `completed`.
 
-## Upload HTTP síncrono (M4)
-La petición `POST /api/admin/uploads` espera a FFmpeg. Multipart se gestiona con
-`@fastify/multipart` y se escribe a disco, no se carga el vídeo entero en memoria.
-`GET /api/admin/uploads/:jobId` permite consultar el job (preparado para M6
-asíncrono). Los jobs siguen en memoria. El límite de tamaño es `UPLOAD_MAX_BYTES`.
+## Upload HTTP asíncrono (M6.1)
+`POST /api/admin/uploads` ya no espera a FFmpeg. Tras validar y escribir el
+fichero en el workspace responde `202` y `BackgroundUploadJobRunner` continúa
+con `CompleteUploadUseCase`. Los errores de background marcan el job `failed`,
+aplican la compensación de M5 y se registran en logs del servidor; no producen
+unhandled rejections. `GET /api/admin/uploads/:jobId` es la fuente de estado
+para el cliente. Los jobs siguen en memoria: no hay persistencia ni reanudación
+tras un reinicio de Node. No hay cola.
 
 ## VideoStore y ThumbnailStore siguen siendo de lectura
 No se amplían para escribir temporales ni archivos nuevos. El workspace de un

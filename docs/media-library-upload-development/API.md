@@ -2,9 +2,9 @@
 
 Los nombres definitivos deben adaptarse a las convenciones existentes.
 
-M5 completa el upload HTTP: la petición permanece abierta hasta que el vídeo
-está instalado en la biblioteca y registrado en SQLite, o hasta `failed`.
-M6 podrá hacer el procesamiento asíncrono reutilizando `GET`.
+M6.1 hace el upload HTTP asíncrono: `POST` acepta el fichero y responde `202`.
+El pipeline de M5 continúa en background. `GET` consulta el estado.
+Los jobs siguen en memoria; no hay persistencia ni reanudación tras un reinicio.
 
 ## Upload
 
@@ -15,15 +15,42 @@ Content-Type: multipart/form-data
 
 Campo: `video` (un único fichero).
 
-Respuesta de éxito (`200`):
+La petición solo espera a validar el upload y a escribir el fichero en el
+workspace del job. No espera a FFmpeg ni a la instalación.
+
+Respuesta de aceptación (`202`):
 
 ```json
 {
   "jobId": "...",
-  "status": "completed",
+  "status": "uploading"
+}
+```
+
+No se exponen rutas absolutas. El estado vivo se consulta con `GET`.
+
+Cuando el job termina, el resultado de M5 sigue siendo el mismo:
+
+- vídeo en `LIBRARY_PATH/<videoId>`
+- thumbnail en `LIBRARY_PATH/.ts/<videoId>.jpg`
+- fila SQLite sin tags
+- índice en memoria actualizado
+
+## Estado
+
+```http
+GET /api/admin/uploads/:jobId
+```
+
+Mientras procesa:
+
+```json
+{
+  "jobId": "...",
+  "status": "processing",
+  "phase": "generating_thumbnail",
   "videoId": "PXL_20260813_214135367.TS.mp4",
   "converted": true,
-  "installed": true,
   "outputs": {
     "source": "source",
     "converted": "converted.mp4",
@@ -32,23 +59,7 @@ Respuesta de éxito (`200`):
 }
 ```
 
-`installed: true` significa:
-
-- vídeo en `LIBRARY_PATH/<videoId>`
-- thumbnail en `LIBRARY_PATH/.ts/<videoId>.jpg`
-- fila SQLite sin tags
-- índice en memoria actualizado
-
-`outputs` son nombres relativos dentro de `UPLOAD_TEMP_PATH/<jobId>/`.
-`converted` en `outputs` es `null` si el vídeo ya era H.264.
-
-No se exponen rutas absolutas.
-
-## Estado
-
-```http
-GET /api/admin/uploads/:jobId
-```
+Al completar:
 
 ```json
 {
@@ -65,36 +76,38 @@ GET /api/admin/uploads/:jobId
 }
 ```
 
-`status` y `phase` salen de `ProcessingJobState`. Mientras convierte, genera
-thumbnail, finaliza o instala, `status` es `processing` y `phase` distingue
-el paso (`installing` durante la copia a la biblioteca).
-
-Job inexistente: `404`.
-
-## Error de procesamiento o instalación
-
-`500` si el job llegó a crearse y falló:
+Al fallar (`200` con `status: "failed"`):
 
 ```json
 {
   "jobId": "...",
   "status": "failed",
+  "phase": "failed",
+  "videoId": "PXL_20260813_214135367.TS.mp4",
+  "converted": null,
+  "outputs": null,
   "error": {
     "message": "Video processing failed."
   }
 }
 ```
 
-Un fallo al copiar a la biblioteca usa el mensaje público
-`The video could not be installed.` No se exponen trazas ni rutas internas.
+`status` y `phase` salen de `ProcessingJobState`. Mientras convierte, genera
+thumbnail, finaliza o instala, `status` es `processing` y `phase` distingue
+el paso (`installing` durante la copia a la biblioteca).
 
-## Otros errores
+Job inexistente: `404`. No se exponen trazas ni rutas internas.
+
+## Errores de POST
 
 | Código | Caso |
 | --- | --- |
 | 400 | Fichero ausente, campo incorrecto, nombre o tipo no válido |
 | 409 | Ya hay un job activo, o el vídeo ya existe |
 | 413 | El fichero supera `UPLOAD_MAX_BYTES` |
+
+Los fallos de FFmpeg o de instalación **no** se devuelven en el `POST`.
+Quedan en el job (`failed`) y se consultan con `GET`.
 
 Job activo:
 
@@ -118,5 +131,6 @@ Vídeo existente (SQLite o fichero definitivo):
 
 ## Un único procesamiento
 
-Mientras exista un job activo, otro upload responde `409 Conflict`.
+Mientras exista un job activo (`uploading` o `processing`, incluida la fase
+`installing`), otro upload responde `409 Conflict`.
 `queued` / `cancelled` se podrán añadir como `status` nuevos más adelante.

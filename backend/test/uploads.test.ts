@@ -12,21 +12,22 @@ import { WorkspaceVideoDiscovery } from "../src/adapters/indexer/workspace-video
 import { SqliteLibraryIndexer } from "../src/adapters/sqlite/sqlite-library-indexer.js";
 import { openSqliteLibraryStore } from "../src/adapters/sqlite/sqlite-library-store.js";
 import { createApp } from "../src/app.js";
+import { createProcessingJob, isTerminalProcessingJob, transitionProcessingJob } from "../src/application/processing-job.js";
 import { ProcessVideoJobUseCase } from "../src/application/process-video-job.js";
-import { createProcessingJob, transitionProcessingJob } from "../src/application/processing-job.js";
 import { RefreshLibraryUseCase } from "../src/application/refresh-library.js";
 import { SyncNewVideosUseCase } from "../src/application/sync-new-videos.js";
 import { toIndexedVideos } from "../src/application/to-indexed-videos.js";
-import { PUBLIC_INSTALLATION_FAILED_MESSAGE } from "../src/application/install-processed-upload.js";
+import { PUBLIC_PROCESSING_FAILED_MESSAGE } from "../src/application/to-upload-job-view.js";
 import { PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE } from "../src/application/video-already-exists-error.js";
 import type { LibraryMediaInstaller } from "../src/ports/library-media-installer.js";
 import type { LibraryStore } from "../src/ports/library-store.js";
+import type { ProcessingJob } from "../src/ports/processing-job-store.js";
 import type { VideoProbeResult, VideoProcessor } from "../src/ports/video-processor.js";
 
 const VIDEO_BYTES = Buffer.from("fake-video-bytes");
 const THUMBNAIL_BYTES = Buffer.from([0xff, 0xd8, 0xff]);
 
-test("POST /api/admin/uploads installs an HEVC video into the library", async () => {
+test("POST /api/admin/uploads returns 202 and finishes HEVC install asynchronously", async () => {
   await withUploadApp({ codec: "hevc" }, async (context) => {
     const clientPath = join(context.clientDir, "PXL_clip.mp4");
     await writeFile(clientPath, VIDEO_BYTES);
@@ -40,24 +41,26 @@ test("POST /api/admin/uploads installs an HEVC video into the library", async ()
       ...multipartRequest("PXL_clip.mp4", VIDEO_BYTES),
     });
 
-    assert.equal(response.statusCode, 200);
+    assert.equal(response.statusCode, 202);
     const body = response.json() as Record<string, unknown>;
-    assert.equal(body.status, "completed");
-    assert.equal(body.videoId, "PXL_clip.mp4");
-    assert.equal(body.converted, true);
-    assert.equal(body.installed, true);
-    assert.deepEqual(body.outputs, {
-      source: "source",
-      converted: "converted.mp4",
-      thumbnail: "thumbnail.jpg",
-    });
     assert.equal(typeof body.jobId, "string");
+    assert.equal(body.status, "uploading");
+    assert.equal(body.installed, undefined);
     assert.equal(JSON.stringify(body).includes(context.uploadTempPath.replaceAll("\\", "\\\\")), false);
     assert.equal(JSON.stringify(body).includes(context.libraryPath.replaceAll("\\", "\\\\")), false);
 
     const jobId = String(body.jobId);
-    const jobDir = join(context.uploadTempPath, jobId);
-    const names = await readdir(jobDir);
+    const immediate = await context.app.inject({
+      method: "GET",
+      url: `/api/admin/uploads/${jobId}`,
+    });
+    assert.equal(immediate.statusCode, 200);
+    assert.ok(["uploading", "processing", "completed"].includes(String(immediate.json().status)));
+
+    const job = await waitForTerminalJob(context.jobs, jobId);
+    assert.equal(job.state.status, "completed");
+
+    const names = await readdir(join(context.uploadTempPath, jobId));
     assert.ok(names.includes("source"));
     assert.ok(names.includes("converted.mp4"));
     assert.ok(names.includes("thumbnail.jpg"));
@@ -108,6 +111,34 @@ test("POST /api/admin/uploads installs an HEVC video into the library", async ()
     assert.equal(status.json().phase, "completed");
     assert.equal(status.json().converted, true);
     assert.equal(status.json().videoId, "PXL_clip.mp4");
+    assert.equal(JSON.stringify(status.json()).includes(context.libraryPath.replaceAll("\\", "\\\\")), false);
+  });
+});
+
+test("POST /api/admin/uploads does not wait for processing when the pipeline is gated", async () => {
+  await withUploadApp({ codec: "h264", holdProcessing: true }, async (context) => {
+    const response = await context.app.inject({
+      method: "POST",
+      url: "/api/admin/uploads",
+      ...multipartRequest("clip.mp4", VIDEO_BYTES),
+    });
+
+    assert.equal(response.statusCode, 202);
+    const jobId = String(response.json().jobId);
+    assert.notEqual(context.jobs.findById(jobId)?.state.status, "completed");
+    assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
+
+    const status = await context.app.inject({
+      method: "GET",
+      url: `/api/admin/uploads/${jobId}`,
+    });
+    assert.equal(status.statusCode, 200);
+    assert.ok(["uploading", "processing"].includes(String(status.json().status)));
+
+    context.processor.release();
+    const job = await waitForTerminalJob(context.jobs, jobId);
+    assert.equal(job.state.status, "completed");
+    assert.equal(context.libraryStore.findVideo("clip.mp4")?.id, "clip.mp4");
   });
 });
 
@@ -119,13 +150,14 @@ test("POST /api/admin/uploads installs an H.264 video without conversion", async
       ...multipartRequest("clip.mp4", VIDEO_BYTES),
     });
 
-    assert.equal(response.statusCode, 200);
-    assert.equal(response.json().converted, false);
-    assert.equal(response.json().installed, true);
-    assert.equal(response.json().outputs.converted, null);
+    assert.equal(response.statusCode, 202);
+    const jobId = String(response.json().jobId);
+    const job = await waitForTerminalJob(context.jobs, jobId);
+    assert.equal(job.state.status, "completed");
+    assert.equal(job.converted, false);
     assert.equal(context.processor.convertCalls, 0);
 
-    const names = await readdir(join(context.uploadTempPath, String(response.json().jobId)));
+    const names = await readdir(join(context.uploadTempPath, jobId));
     assert.ok(names.includes("source"));
     assert.ok(names.includes("thumbnail.jpg"));
     assert.equal(names.includes("converted.mp4"), false);
@@ -179,9 +211,13 @@ test("POST /api/admin/uploads rejects path traversal file names", async () => {
       ...multipartRequest("../../archivo.mp4", VIDEO_BYTES),
     });
 
-    if (nested.statusCode === 200) {
-      assert.equal(nested.json().videoId, "archivo.mp4");
-      const jobDir = join(context.uploadTempPath, String(nested.json().jobId));
+    if (nested.statusCode === 202) {
+      assert.equal(nested.json().status, "uploading");
+      const jobId = String(nested.json().jobId);
+      const job = await waitForTerminalJob(context.jobs, jobId);
+      assert.equal(job.state.status, "completed");
+      assert.equal(job.originalName, "archivo.mp4");
+      const jobDir = join(context.uploadTempPath, jobId);
       assert.equal(jobDir.startsWith(context.uploadTempPath), true);
       assert.equal(await readFile(join(context.libraryPath, "archivo.mp4"), "utf8"), VIDEO_BYTES.toString());
     } else {
@@ -212,6 +248,54 @@ test("POST /api/admin/uploads rejects a second active job", async () => {
   });
 });
 
+test("POST /api/admin/uploads returns 409 while a gated job is still active", async () => {
+  await withUploadApp({ codec: "h264", holdProcessing: true }, async (context) => {
+    const first = await context.app.inject({
+      method: "POST",
+      url: "/api/admin/uploads",
+      ...multipartRequest("one.mp4", VIDEO_BYTES),
+    });
+    assert.equal(first.statusCode, 202);
+    const firstJobId = String(first.json().jobId);
+
+    const second = await context.app.inject({
+      method: "POST",
+      url: "/api/admin/uploads",
+      ...multipartRequest("two.mp4", VIDEO_BYTES),
+    });
+    assert.equal(second.statusCode, 409);
+    assert.equal(second.json().error.message, "A video processing job is already active.");
+    assert.equal(context.libraryStore.findVideo("two.mp4"), null);
+    assert.equal((await readdir(context.libraryPath)).includes("two.mp4"), false);
+
+    context.processor.release();
+    const job = await waitForTerminalJob(context.jobs, firstJobId);
+    assert.equal(job.state.status, "completed");
+  });
+});
+
+test("POST /api/admin/uploads accepts another file after the previous job completed", async () => {
+  await withUploadApp({ codec: "h264" }, async (context) => {
+    const first = await context.app.inject({
+      method: "POST",
+      url: "/api/admin/uploads",
+      ...multipartRequest("one.mp4", VIDEO_BYTES),
+    });
+    assert.equal(first.statusCode, 202);
+    assert.equal((await waitForTerminalJob(context.jobs, String(first.json().jobId))).state.status, "completed");
+
+    const second = await context.app.inject({
+      method: "POST",
+      url: "/api/admin/uploads",
+      ...multipartRequest("two.mp4", VIDEO_BYTES),
+    });
+    assert.equal(second.statusCode, 202);
+    assert.equal((await waitForTerminalJob(context.jobs, String(second.json().jobId))).state.status, "completed");
+    assert.equal(context.libraryStore.findVideo("one.mp4")?.id, "one.mp4");
+    assert.equal(context.libraryStore.findVideo("two.mp4")?.id, "two.mp4");
+  });
+});
+
 test("GET /api/admin/uploads/:jobId returns 404 for an unknown job", async () => {
   await withUploadApp({ codec: "h264" }, async (context) => {
     const response = await context.app.inject({
@@ -224,7 +308,7 @@ test("GET /api/admin/uploads/:jobId returns 404 for an unknown job", async () =>
   });
 });
 
-test("POST /api/admin/uploads returns a safe error when processing fails", async () => {
+test("failed processing is visible on GET without exposing internal paths", async () => {
   await withUploadApp({ codec: "hevc", failAt: "probe" }, async (context) => {
     const response = await context.app.inject({
       method: "POST",
@@ -232,12 +316,19 @@ test("POST /api/admin/uploads returns a safe error when processing fails", async
       ...multipartRequest("clip.mp4", VIDEO_BYTES),
     });
 
-    assert.equal(response.statusCode, 500);
-    assert.equal(response.json().status, "failed");
-    assert.equal(typeof response.json().jobId, "string");
-    assert.equal(response.json().error.message, "Video processing failed.");
-    assert.equal(JSON.stringify(response.json()).includes("C:\\secret"), false);
-    assert.equal(context.jobs.findById(String(response.json().jobId))?.state.status, "failed");
+    assert.equal(response.statusCode, 202);
+    const jobId = String(response.json().jobId);
+    const job = await waitForTerminalJob(context.jobs, jobId);
+    assert.equal(job.state.status, "failed");
+
+    const status = await context.app.inject({
+      method: "GET",
+      url: `/api/admin/uploads/${jobId}`,
+    });
+    assert.equal(status.statusCode, 200);
+    assert.equal(status.json().status, "failed");
+    assert.equal(status.json().error.message, PUBLIC_PROCESSING_FAILED_MESSAGE);
+    assert.equal(JSON.stringify(status.json()).includes("C:\\secret"), false);
     assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
     assert.equal((await readdir(context.libraryPath)).includes("clip.mp4"), false);
   });
@@ -250,7 +341,8 @@ test("POST /api/admin/uploads rejects a duplicate video without overwriting", as
       url: "/api/admin/uploads",
       ...multipartRequest("clip.mp4", VIDEO_BYTES),
     });
-    assert.equal(first.statusCode, 200);
+    assert.equal(first.statusCode, 202);
+    assert.equal((await waitForTerminalJob(context.jobs, String(first.json().jobId))).state.status, "completed");
 
     const original = await readFile(join(context.libraryPath, "clip.mp4"));
     const originalThumb = await readFile(join(context.libraryPath, ".ts", "clip.mp4.jpg"));
@@ -299,13 +391,20 @@ test("POST /api/admin/uploads cleans up a partial video when thumbnail install f
       ...multipartRequest("clip.mp4", VIDEO_BYTES),
     });
 
-    assert.equal(response.statusCode, 500);
-    assert.equal(response.json().status, "failed");
-    assert.equal(response.json().error.message, PUBLIC_INSTALLATION_FAILED_MESSAGE);
-    assert.equal(context.jobs.findById(String(response.json().jobId))?.state.status, "failed");
+    assert.equal(response.statusCode, 202);
+    const jobId = String(response.json().jobId);
+    const job = await waitForTerminalJob(context.jobs, jobId);
+    assert.equal(job.state.status, "failed");
     assert.equal((await readdir(context.libraryPath)).includes("clip.mp4"), false);
     assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
-    assert.ok((await readdir(join(context.uploadTempPath, String(response.json().jobId)))).includes("source"));
+    assert.ok((await readdir(join(context.uploadTempPath, jobId))).includes("source"));
+
+    const status = await context.app.inject({
+      method: "GET",
+      url: `/api/admin/uploads/${jobId}`,
+    });
+    assert.equal(status.json().status, "failed");
+    assert.equal(status.json().error.message, PUBLIC_PROCESSING_FAILED_MESSAGE);
   });
 });
 
@@ -317,8 +416,9 @@ test("POST /api/admin/uploads does not leave a library video when video install 
       ...multipartRequest("clip.mp4", VIDEO_BYTES),
     });
 
-    assert.equal(response.statusCode, 500);
-    assert.equal(response.json().error.message, PUBLIC_INSTALLATION_FAILED_MESSAGE);
+    assert.equal(response.statusCode, 202);
+    const job = await waitForTerminalJob(context.jobs, String(response.json().jobId));
+    assert.equal(job.state.status, "failed");
     assert.equal((await readdir(context.libraryPath)).includes("clip.mp4"), false);
     assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
   });
@@ -333,8 +433,9 @@ test("POST /api/admin/uploads compensates files when SQLite fails after install"
       ...multipartRequest("clip.mp4", VIDEO_BYTES),
     });
 
-    assert.equal(response.statusCode, 500);
-    assert.equal(response.json().error.message, PUBLIC_INSTALLATION_FAILED_MESSAGE);
+    assert.equal(response.statusCode, 202);
+    const job = await waitForTerminalJob(context.jobs, String(response.json().jobId));
+    assert.equal(job.state.status, "failed");
     assert.equal((await readdir(context.libraryPath)).includes("clip.mp4"), false);
     assert.equal(await readFile(join(context.libraryPath, "keep.mp4"), "utf8"), "preexisting");
     assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
@@ -348,7 +449,8 @@ test("POST /api/library/refresh after upload does not duplicate the video or add
       url: "/api/admin/uploads",
       ...multipartRequest("clip.mp4", VIDEO_BYTES),
     });
-    assert.equal(upload.statusCode, 200);
+    assert.equal(upload.statusCode, 202);
+    assert.equal((await waitForTerminalJob(context.jobs, String(upload.json().jobId))).state.status, "completed");
 
     const refresh = await context.app.inject({
       method: "POST",
@@ -371,6 +473,7 @@ async function withUploadApp(
     failAt?: "probe" | "convert" | "thumbnail";
     failInstallAt?: "video" | "thumbnail";
     failSqlite?: boolean;
+    holdProcessing?: boolean;
     uploadMaxBytes?: number;
   },
   run: (context: {
@@ -398,6 +501,9 @@ async function withUploadApp(
   failUpsert.current = options.failSqlite === true;
   const jobs = new InMemoryProcessingJobStore();
   const processor = new RecordingVideoProcessor(options.codec, options.failAt);
+  if (options.holdProcessing === true) {
+    processor.hold();
+  }
   const videoIndex = new InMemoryVideoIndex(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath));
   const installer: LibraryMediaInstaller = new FailingLibraryMediaInstaller(
     new FilesystemLibraryMediaInstaller(libraryPath),
@@ -419,16 +525,40 @@ async function withUploadApp(
       jobs,
     ),
     processingJobStore: jobs,
+    backgroundUploadErrorLogger: () => undefined,
     uploadMaxBytes: options.uploadMaxBytes ?? 1024 * 1024,
   });
 
+  const rejections: unknown[] = [];
+  const onUnhandledRejection = (reason: unknown) => {
+    rejections.push(reason);
+  };
+  process.on("unhandledRejection", onUnhandledRejection);
+
   try {
     await run({ app, processor, jobs, libraryStore, libraryPath, uploadTempPath, clientDir });
+    assert.equal(rejections.length, 0, `Unhandled rejections: ${String(rejections[0])}`);
   } finally {
+    process.off("unhandledRejection", onUnhandledRejection);
+    processor.release();
     await app.close();
     innerStore.close();
     await rm(root, { recursive: true, force: true });
   }
+}
+
+async function waitForTerminalJob(jobs: InMemoryProcessingJobStore, jobId: string): Promise<ProcessingJob> {
+  for (let attempt = 0; attempt < 5000; attempt += 1) {
+    const job = jobs.findById(jobId);
+
+    if (job !== null && isTerminalProcessingJob(job)) {
+      return job;
+    }
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
+
+  throw new Error(`Timed out waiting for job ${jobId} to finish`);
 }
 
 function relationCount(libraryStore: LibraryStore): number {
@@ -510,13 +640,29 @@ class FailingLibraryMediaInstaller implements LibraryMediaInstaller {
 
 class RecordingVideoProcessor implements VideoProcessor {
   convertCalls = 0;
+  private gate: Promise<void> = Promise.resolve();
+  private resolveGate: (() => void) | undefined;
 
   constructor(
     private readonly videoCodec: string,
     private readonly failAt?: "probe" | "convert" | "thumbnail",
   ) {}
 
+  hold(): void {
+    this.gate = new Promise((resolve) => {
+      this.resolveGate = resolve;
+    });
+  }
+
+  release(): void {
+    this.resolveGate?.();
+    this.resolveGate = undefined;
+    this.gate = Promise.resolve();
+  }
+
   async probe(_inputPath: string): Promise<VideoProbeResult> {
+    await this.gate;
+
     if (this.failAt === "probe") {
       throw new Error(String.raw`probe failed at C:\secret\internal.mp4`);
     }

@@ -34,6 +34,12 @@ instalan en `LIBRARY_PATH` / `.ts/`, se registra `upsertVideo` sin tags y se
 recarga el índice. Un id o fichero existente se rechaza con `409`.
 Sin cola, sin UI de upload y sin persistencia de jobs.
 
+## M6.1 — Upload HTTP asíncrono
+Implementado: `POST /api/admin/uploads` responde `202` tras persistir el
+fichero; el pipeline de M5 continúa en background. `GET` consulta el estado.
+Jobs en memoria; un reinicio pierde jobs activos. Sin UI, sin cola y sin
+reanudación.
+
 ## M6 — UI de estado
 Mostrar subida, procesamiento, thumbnail, finalización y errores. El estado debe poder consultarse tras recargar.
 
