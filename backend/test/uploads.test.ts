@@ -244,6 +244,7 @@ test("POST /api/admin/uploads rejects a second active job", async () => {
 
     assert.equal(response.statusCode, 409);
     assert.equal(response.json().error.message, "A video processing job is already active.");
+    assert.equal(response.json().jobId, "busy");
     assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
   });
 });
@@ -265,6 +266,7 @@ test("POST /api/admin/uploads returns 409 while a gated job is still active", as
     });
     assert.equal(second.statusCode, 409);
     assert.equal(second.json().error.message, "A video processing job is already active.");
+    assert.equal(second.json().jobId, firstJobId);
     assert.equal(context.libraryStore.findVideo("two.mp4"), null);
     assert.equal((await readdir(context.libraryPath)).includes("two.mp4"), false);
 

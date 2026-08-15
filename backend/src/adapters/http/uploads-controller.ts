@@ -207,6 +207,7 @@ async function handleUpload(
         error: {
           message: ACTIVE_UPLOAD_JOB_MESSAGE,
         },
+        jobId: error.jobId,
       });
     }
 
