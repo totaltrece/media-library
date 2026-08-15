@@ -9,7 +9,8 @@ Permitir:
 El procesamiento debe continuar aunque se cierre el navegador.
 
 ## M1 — Arquitectura y contratos
-Definir puertos, estados, configuración, directorios temporales y límites. Sin cambiar todavía el flujo de subida.
+Puertos, estados, configuración y límites definidos en el backend.
+Sin upload HTTP, sin adapter FFmpeg y sin cambios en el flujo actual.
 
 ## M2 — Procesador multiplataforma
 Integrar FFmpeg/FFprobe mediante procesos del sistema, sin scripts shell específicos de Linux/Windows.

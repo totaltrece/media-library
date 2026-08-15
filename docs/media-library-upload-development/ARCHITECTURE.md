@@ -21,13 +21,22 @@ Catálogo de vídeos/tags. Un vídeo nuevo solo se registra cuando todo el proce
 
 ```ts
 interface VideoProcessor {
-  probe(inputPath: string): Promise<VideoInfo>;
+  probe(inputPath: string): Promise<VideoProbeResult>;
   convert(inputPath: string, outputPath: string): Promise<void>;
-  generateThumbnail(inputPath: string, outputPath: string, options?: ThumbnailOptions): Promise<void>;
+  generateThumbnail(
+    inputPath: string,
+    outputPath: string,
+    options?: Partial<ThumbnailGenerationOptions>,
+  ): Promise<void>;
 }
 ```
 
-Los nombres finales deben adaptarse a la arquitectura actual.
+Los nombres en código viven en `backend/src/ports/video-processor.ts`.
+Las rutas son de filesystem, no media ids del catálogo.
+
+`VideoStore` y `ThumbnailStore` siguen siendo acceso de solo lectura a la
+biblioteca. El workspace temporal de un job es un port aparte:
+`ProcessingWorkspace`.
 
 ## Compatibilidad
 
@@ -48,6 +57,14 @@ Como mínimo:
 
 `idle`, `uploading`, `processing`, `generating_thumbnail`, `finalizing`, `completed`, `failed`.
 
+En código, el job usa un union discriminado (`ProcessingJobState`):
+
+- `status` es el ciclo de vida: `idle` | `uploading` | `processing` | `completed` | `failed`.
+- `phase` detalla el paso mientras `status` es `processing`: `processing` | `generating_thumbnail` | `finalizing`.
+
+`queued` y `cancelled` se podrán añadir como nuevos `status` sin cambiar los
+existentes. El MVP rechaza un segundo job activo; no hay cola todavía.
+
 ## Un único job
 
 MVP: máximo un procesamiento activo. Un segundo upload se rechaza claramente. No introducir todavía una cola distribuida ni procesamiento paralelo.
@@ -64,7 +81,8 @@ Si falla, limpiar temporales y no registrar el vídeo.
 
 ## Persistencia
 
-MVP: estado del job en memoria; SQLite solo catálogo. Si Node se reinicia durante un job, este puede perderse. Es aceptable inicialmente.
+MVP: estado del job en memoria (`ProcessingJobStore` / `InMemoryProcessingJobStore`);
+SQLite solo catálogo. Si Node se reinicia durante un job, este puede perderse. Es aceptable inicialmente.
 
 ## Seguridad
 

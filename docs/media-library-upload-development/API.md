@@ -39,6 +39,10 @@ Ejemplo:
 
 `progress` puede ser `null` inicialmente.
 
+`status` y `phase` salen de `ProcessingJobState`. Mientras el job convierte,
+genera thumbnail o finaliza, `status` es `processing` y `phase` distingue el
+paso. `queued` / `cancelled` se podrán añadir como `status` nuevos.
+
 ## Completado
 
 ```json

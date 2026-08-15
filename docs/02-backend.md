@@ -212,6 +212,9 @@ Examples:
 - library location (`LIBRARY_PATH`)
 - server port (`PORT`)
 - SQLite database path (`SQLITE_PATH`, required at runtime and for `pnpm import-library`)
+- FFmpeg/FFprobe executables (`FFMPEG_PATH`, `FFPROBE_PATH`; optional, default to PATH names)
+- upload temp directory (`UPLOAD_TEMP_PATH`; optional, defaults next to the SQLite file)
+- upload size limit (`UPLOAD_MAX_BYTES`; optional, default 512 MiB)
 
 Configuration should never be hardcoded.
 

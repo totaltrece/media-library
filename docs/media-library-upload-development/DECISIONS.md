@@ -23,3 +23,28 @@ El MVP crea vídeos sin tags. Después se puede reutilizar el catálogo y los ca
 
 ## Local primero
 El desarrollo y las pruebas deben hacerse primero en local. El despliegue remoto debería cambiar principalmente paths, FFmpeg y límites de recursos, no la arquitectura.
+
+## VideoProcessor como port, FFmpeg como adapter posterior
+M1 define `VideoProcessor` sin adapter. M2 lo implementará invocando ejecutables
+con `execFile`/`spawn`, usando `FFMPEG_PATH` y `FFPROBE_PATH`.
+
+## VideoStore y ThumbnailStore siguen siendo de lectura
+No se amplían para escribir temporales ni archivos nuevos. El workspace de un
+job es `ProcessingWorkspace`. La biblioteca definitiva se tocará en M5, y solo
+para colocar el resultado de un upload, nunca para mutar TagSpaces.
+
+## Estado de job como union discriminado
+`status` es el ciclo de vida; `phase` es el paso interno de `processing`. Así
+`queued` y `cancelled` pueden añadirse después sin reinterpretar los estados
+actuales.
+
+## FFmpeg opcional en PATH
+`FFMPEG_PATH` y `FFPROBE_PATH` no son obligatorios. Si faltan, se usa `ffmpeg` y
+`ffprobe` del PATH. En Windows puede configurarse una ruta a `.exe`.
+
+## Temporales junto a SQLite por defecto
+`UPLOAD_TEMP_PATH` es opcional. Si no está, el directorio por defecto es
+`upload-temp` al lado de `SQLITE_PATH`, fuera de `LIBRARY_PATH`.
+
+## Límite de upload configurable
+`UPLOAD_MAX_BYTES` por defecto es 512 MiB. Se validará de verdad en M3.
