@@ -1,10 +1,14 @@
 import { existsSync } from "node:fs";
 
+import { FfmpegVideoProcessor } from "./adapters/ffmpeg/ffmpeg-video-processor.js";
+import { FilesystemProcessingWorkspace } from "./adapters/filesystem/filesystem-processing-workspace.js";
+import { InMemoryProcessingJobStore } from "./adapters/in-memory-processing-job-store.js";
 import { InMemoryVideoIndex } from "./adapters/in-memory-video-index.js";
 import { WorkspaceVideoDiscovery } from "./adapters/indexer/workspace-video-discovery.js";
 import { SqliteLibraryIndexer } from "./adapters/sqlite/sqlite-library-indexer.js";
 import { openSqliteLibraryStore } from "./adapters/sqlite/sqlite-library-store.js";
 import { createApp } from "./app.js";
+import { ProcessVideoJobUseCase } from "./application/process-video-job.js";
 import { RefreshLibraryUseCase } from "./application/refresh-library.js";
 import { SyncNewVideosUseCase } from "./application/sync-new-videos.js";
 import { toIndexedVideos } from "./application/to-indexed-videos.js";
@@ -41,11 +45,24 @@ async function main(): Promise<void> {
       videoIndex,
     );
 
+    const processingJobStore = new InMemoryProcessingJobStore();
+    const processVideoJobUseCase = new ProcessVideoJobUseCase(
+      new FfmpegVideoProcessor({
+        ffmpegPath: config.ffmpegPath,
+        ffprobePath: config.ffprobePath,
+      }),
+      new FilesystemProcessingWorkspace(config.uploadTempPath),
+      processingJobStore,
+    );
+
     const app = await createApp({
       videoIndex,
       libraryPath,
       libraryStore,
       refreshLibraryUseCase,
+      processVideoJobUseCase,
+      processingJobStore,
+      uploadMaxBytes: config.uploadMaxBytes,
       staticRoot: existsSync(staticRoot) ? staticRoot : undefined,
     });
 

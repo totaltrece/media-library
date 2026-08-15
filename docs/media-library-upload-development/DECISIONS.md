@@ -70,13 +70,21 @@ El layout TagSpaces `.ts/<filename>.jpg` se aplaza a M5. M2/M3 escriben
 M3 orquesta un job completo sin HTTP. Dependencias: `VideoProcessor`,
 `ProcessingWorkspace`, `ProcessingJobStore` (en memoria).
 
-- Éxito: el workspace se conserva para que M4/M5 instalen el resultado.
+- Éxito: el workspace se conserva para que M5 instale el resultado.
 - Error: `failed` y se descarta el workspace.
 - Un segundo job activo se rechaza con `ActiveProcessingJobError` (HTTP 409 en M4).
 - `completed.videoId` es el nombre original, no un id de catálogo. M5 usará las
   rutas del resultado para instalar y registrar SQLite.
 - `ProcessingWorkspace.stageSource` copia el input a `sourcePath` sin modificar
   el original. Así un H.264 también queda en el workspace.
+- HTTP (M4) no copia: `begin()` prepara el workspace, el adapter escribe el
+  stream en `sourcePath`, y `processStaged()` continúa el pipeline.
+
+## Upload HTTP síncrono (M4)
+La petición `POST /api/admin/uploads` espera a FFmpeg. Multipart se gestiona con
+`@fastify/multipart` y se escribe a disco, no se carga el vídeo entero en memoria.
+`GET /api/admin/uploads/:jobId` permite consultar el job (preparado para M6
+asíncrono). Los jobs siguen en memoria. El límite de tamaño es `UPLOAD_MAX_BYTES`.
 
 ## VideoStore y ThumbnailStore siguen siendo de lectura
 No se amplían para escribir temporales ni archivos nuevos. El workspace de un

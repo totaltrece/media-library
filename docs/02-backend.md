@@ -27,6 +27,7 @@ The backend is responsible for:
 - managing the SQLite tag catalog (rename and delete)
 - exposing application statistics
 - managing the application lifecycle
+- receiving admin video uploads and running processing jobs in a temp workspace
 
 The backend is not responsible for:
 
@@ -124,6 +125,7 @@ Examples:
 - HTTP controllers
 - FFmpeg video processor
 - Filesystem processing workspace
+- Multipart upload (`@fastify/multipart`)
 - Future persistence adapters
 
 Adapters may depend on external libraries.

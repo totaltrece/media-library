@@ -22,8 +22,11 @@ Implementado: `ProcessVideoJobUseCase` orquesta job, workspace, probe,
 conversión HEVC y thumbnail. CLI `process-video` para prueba local.
 Sin upload HTTP, sin SQLite de jobs y sin escritura en `LIBRARY_PATH`.
 
-## M4 — Upload local
-Recibir un único vídeo por HTTP y ejecutar el pipeline de M3.
+## M4 — Upload HTTP
+Implementado: `POST /api/admin/uploads` y `GET /api/admin/uploads/:jobId`.
+El upload multipart ejecuta el pipeline de M3 de forma síncrona.
+El resultado permanece en el workspace temporal. Sin instalación en
+`LIBRARY_PATH` ni escritura en SQLite.
 
 ## M5 — Integración con biblioteca
 Tras éxito, mover vídeo/thumbnail a ubicaciones definitivas y crear el vídeo en SQLite sin tags.

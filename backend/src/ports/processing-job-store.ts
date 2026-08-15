@@ -28,6 +28,10 @@ export interface ProcessingJob {
   originalName: string;
   createdAt: string;
   state: ProcessingJobState;
+  /**
+   * Whether HEVC conversion ran. `null` until processing has decided.
+   */
+  converted: boolean | null;
 }
 
 export interface ProcessingJobStore {

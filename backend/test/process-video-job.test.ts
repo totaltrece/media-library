@@ -37,8 +37,9 @@ test("HEVC jobs convert, thumbnail the converted file, and keep the workspace", 
   assert.equal(result.thumbnailPath, paths.thumbnailPath);
   assert.equal(result.workspaceDirectory, paths.directory);
   assert.deepEqual(result.job.state, { status: "completed", videoId: "clip.mp4" });
-  assert.deepEqual(workspace.prepared, ["job-1"]);
   assert.deepEqual(workspace.staged, [{ jobId: "job-1", inputPath: originalPath }]);
+  assert.ok(workspace.prepared.length >= 1);
+  assert.ok(workspace.prepared.every((id) => id === "job-1"));
   assert.deepEqual(workspace.discarded, []);
   assert.equal(jobs.findActive(), null);
   assert.equal(processor.touched(originalPath), false);

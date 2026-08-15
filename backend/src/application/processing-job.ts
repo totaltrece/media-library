@@ -43,6 +43,7 @@ export function createProcessingJob(input: {
     originalName,
     createdAt: input.createdAt ?? new Date().toISOString(),
     state: { status: "idle" },
+    converted: null,
   };
 }
 

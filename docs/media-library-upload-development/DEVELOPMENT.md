@@ -74,6 +74,29 @@ pnpm --filter @media-library/backend process-video -- /ruta/al/hevc.mp4 --discar
 El resultado queda en `UPLOAD_TEMP_PATH/<jobId>/`. El original no se modifica.
 `--discard` borra el workspace después de un éxito.
 
+## Prueba manual de M4
+
+Arrancar el backend y, en Windows, usar `curl.exe` (no el alias `curl` de PowerShell):
+
+```powershell
+curl.exe -X POST "http://localhost:3000/api/admin/uploads" `
+  -F "video=@C:\Users\Carlos\Documents\baile-hvc\PXL_20260813_214135367.TS.mp4"
+
+curl.exe "http://localhost:3000/api/admin/uploads/<jobId>"
+```
+
+Linux:
+
+```bash
+curl -X POST "http://localhost:3000/api/admin/uploads" \
+  -F "video=@/ruta/al/video.mp4"
+
+curl "http://localhost:3000/api/admin/uploads/<jobId>"
+```
+
+Comprobar que el resultado está en `UPLOAD_TEMP_PATH/<jobId>/` y que
+`LIBRARY_PATH` y SQLite no cambian.
+
 ## Prueba local
 
 1. upload;

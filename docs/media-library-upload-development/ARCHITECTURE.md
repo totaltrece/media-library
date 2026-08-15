@@ -58,7 +58,8 @@ No importa FFmpeg ni el filesystem concreto. Flujo:
 5. `generating_thumbnail`: thumbnail del vídeo de salida (convertido o source).
 6. `finalizing` → `completed`. El resultado permanece en el workspace.
 
-M3 no escribe en `LIBRARY_PATH` ni en SQLite. M4 añadirá el upload HTTP.
+M3 no escribe en `LIBRARY_PATH` ni en SQLite. M4 añade el upload HTTP y
+reutiliza este use case (`begin` → escribir `source` → `processStaged`).
 M5 instalará vídeo/thumbnail en la biblioteca y registrará el catálogo.
 
 En error: `failed`, se descarta el workspace y se conserva el mensaje.
@@ -110,6 +111,14 @@ pnpm --filter @media-library/backend process-video -- "<ruta-al-video>"
 
 El workspace queda en `UPLOAD_TEMP_PATH/<jobId>/` (`source`, `converted.mp4`,
 `thumbnail.jpg`). `--discard` lo elimina tras un éxito. El original no se modifica.
+
+## Upload HTTP (M4)
+
+`POST /api/admin/uploads` recibe `multipart/form-data` (campo `video`), escribe
+el fichero en el `sourcePath` del job y ejecuta el pipeline de M3 en la misma
+petición. `GET /api/admin/uploads/:jobId` consulta el estado.
+
+El resultado sigue en el workspace temporal. No se toca `LIBRARY_PATH` ni SQLite.
 
 ## Estados
 

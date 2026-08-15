@@ -23,6 +23,7 @@ test("createProcessingJob starts idle and rejects an empty name", () => {
     originalName: "clip.mp4",
     createdAt: "2026-08-15T10:00:00.000Z",
     state: { status: "idle" },
+    converted: null,
   });
   assert.equal(isActiveProcessingJob(job), false);
   assert.equal(isTerminalProcessingJob(job), false);

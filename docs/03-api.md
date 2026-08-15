@@ -285,6 +285,52 @@ The endpoint supports HTTP Range requests and is compatible with the HTML5
 
 ---
 
+## Admin uploads (M4)
+
+The upload endpoints process a video into a temporary job workspace. They do
+**not** install files into the media library or write to SQLite.
+
+```text
+POST /api/admin/uploads
+Content-Type: multipart/form-data
+```
+
+Field: `video` (exactly one file).
+
+The request stays open until processing finishes.
+
+Success (`200`):
+
+```json
+{
+  "jobId": "...",
+  "status": "completed",
+  "videoId": "clip.mp4",
+  "converted": true,
+  "outputs": {
+    "source": "source",
+    "converted": "converted.mp4",
+    "thumbnail": "thumbnail.jpg"
+  }
+}
+```
+
+`outputs` are workspace-relative names, never absolute filesystem paths.
+
+```text
+GET /api/admin/uploads/:jobId
+```
+
+Returns the job status. Unknown jobs return **404 Not Found**.
+
+A second upload while a job is active returns **409 Conflict**.
+A file larger than `UPLOAD_MAX_BYTES` returns **413 Payload Too Large**.
+A missing or invalid file returns **400 Bad Request**.
+A processing failure returns **500** with `status: "failed"` and a safe error
+message. Internal paths and stack traces are not exposed.
+
+---
+
 # Media Identifier
 
 Every indexed video has a stable identifier.
@@ -330,6 +376,7 @@ Backend
 - identifier resolution
 - thumbnail serving
 - video streaming
+- admin video upload and processing jobs (temporary workspace only)
 
 Frontend
 

@@ -46,9 +46,14 @@ export interface ProcessVideoJobFailure {
 
 export type ProcessVideoJobResult = ProcessVideoJobSuccess | ProcessVideoJobFailure;
 
+export interface StartedProcessingJob {
+  job: ProcessingJob;
+  paths: ProcessingJobPaths;
+}
+
 /**
  * Orchestrates one processing job: stage a copy, probe, convert HEVC, thumbnail.
- * Does not write to LIBRARY_PATH or SQLite. On success the workspace is kept for M4/M5.
+ * Does not write to LIBRARY_PATH or SQLite. On success the workspace is kept for M5.
  */
 export class ProcessVideoJobUseCase {
   constructor(
@@ -57,18 +62,11 @@ export class ProcessVideoJobUseCase {
     private readonly jobs: ProcessingJobStore,
   ) {}
 
-  async execute(
-    input: ProcessVideoJobInput,
-    options?: { onProgress?: (event: ProcessVideoJobProgressEvent) => void },
-  ): Promise<ProcessVideoJobResult> {
+  async begin(input: { originalName: string; jobId?: string }): Promise<StartedProcessingJob> {
     const originalName = input.originalName.trim();
 
     if (originalName.length === 0) {
       throw new Error("Processing job original name must not be empty");
-    }
-
-    if (input.inputPath.trim().length === 0) {
-      throw new Error("Processing job input path must not be empty");
     }
 
     const active = this.jobs.findActive();
@@ -79,17 +77,45 @@ export class ProcessVideoJobUseCase {
 
     let job = createProcessingJob({ originalName, id: input.jobId });
     this.jobs.create(job);
+    job = this.save(transitionProcessingJob(job, { status: "uploading" }));
+    const paths = await this.workspace.prepareJob(job.id);
+
+    return { job, paths };
+  }
+
+  async execute(
+    input: ProcessVideoJobInput,
+    options?: { onProgress?: (event: ProcessVideoJobProgressEvent) => void },
+  ): Promise<ProcessVideoJobResult> {
+    if (input.inputPath.trim().length === 0) {
+      throw new Error("Processing job input path must not be empty");
+    }
+
+    const started = await this.begin({ originalName: input.originalName, jobId: input.jobId });
 
     try {
-      job = this.save(transitionProcessingJob(job, { status: "uploading" }));
+      await this.workspace.stageSource(started.job.id, input.inputPath);
+      return await this.processStaged(started.job.id, options);
+    } catch (error: unknown) {
+      return this.failStartedJob(started.job, error);
+    }
+  }
+
+  async processStaged(
+    jobId: string,
+    options?: { onProgress?: (event: ProcessVideoJobProgressEvent) => void },
+  ): Promise<ProcessVideoJobResult> {
+    let job = this.requireJob(jobId);
+
+    try {
       const paths = await this.workspace.prepareJob(job.id);
-      await this.workspace.stageSource(job.id, input.inputPath);
 
       job = this.save(transitionProcessingJob(job, { status: "processing", phase: "processing" }));
       const probe = await this.processor.probe(paths.sourcePath);
       options?.onProgress?.({ step: "probe", outcome: "ok", probe });
 
       const converted = needsH264Conversion(probe.videoCodec);
+      job = this.save({ ...job, converted });
       options?.onProgress?.({
         step: "processing",
         outcome: "detected",
@@ -113,12 +139,12 @@ export class ProcessVideoJobUseCase {
 
       job = this.save(transitionProcessingJob(job, { status: "processing", phase: "finalizing" }));
       options?.onProgress?.({ step: "finalizing", outcome: "ok" });
-      job = this.save(transitionProcessingJob(job, { status: "completed", videoId: originalName }));
+      job = this.save(transitionProcessingJob(job, { status: "completed", videoId: job.originalName }));
 
       return {
         status: "completed",
         jobId: job.id,
-        originalName,
+        originalName: job.originalName,
         converted,
         probe,
         outputVideoPath,
@@ -127,18 +153,42 @@ export class ProcessVideoJobUseCase {
         job,
       };
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      job = this.failJob(job, message);
-      await this.discardWorkspace(job.id);
-
-      return {
-        status: "failed",
-        jobId: job.id,
-        originalName,
-        error: message,
-        job,
-      };
+      return this.failStartedJob(job, error);
     }
+  }
+
+  async failActiveJob(jobId: string, error: string): Promise<void> {
+    const job = this.jobs.findById(jobId);
+
+    if (job === null) {
+      return;
+    }
+
+    await this.failStartedJob(job, error);
+  }
+
+  private async failStartedJob(job: ProcessingJob, error: unknown): Promise<ProcessVideoJobFailure> {
+    const message = error instanceof Error ? error.message : String(error);
+    const failed = this.markFailed(job, message);
+    await this.discardWorkspace(job.id);
+
+    return {
+      status: "failed",
+      jobId: failed.id,
+      originalName: failed.originalName,
+      error: message,
+      job: failed,
+    };
+  }
+
+  private requireJob(jobId: string): ProcessingJob {
+    const job = this.jobs.findById(jobId);
+
+    if (job === null) {
+      throw new Error(`Processing job not found: ${jobId}`);
+    }
+
+    return job;
   }
 
   private save(job: ProcessingJob): ProcessingJob {
@@ -146,7 +196,7 @@ export class ProcessVideoJobUseCase {
     return job;
   }
 
-  private failJob(job: ProcessingJob, error: string): ProcessingJob {
+  private markFailed(job: ProcessingJob, error: string): ProcessingJob {
     if (job.state.status === "failed" || job.state.status === "completed") {
       return job;
     }

@@ -4,8 +4,10 @@ import { AddVideoTagUseCase } from "./application/add-video-tag.js";
 import { DeleteTagUseCase } from "./application/delete-tag.js";
 import { GetTagsUseCase } from "./application/get-tags.js";
 import { GetThumbnailUseCase } from "./application/get-thumbnail.js";
+import { GetUploadJobUseCase } from "./application/get-upload-job.js";
 import { GetVideoTagsUseCase } from "./application/get-video-tags.js";
 import { ListTagCatalogUseCase } from "./application/list-tag-catalog.js";
+import type { ProcessVideoJobUseCase } from "./application/process-video-job.js";
 import type { RefreshLibraryUseCase } from "./application/refresh-library.js";
 import { RemoveVideoTagUseCase } from "./application/remove-video-tag.js";
 import { RenameTagUseCase } from "./application/rename-tag.js";
@@ -20,9 +22,11 @@ import { registerSearchRoutes } from "./adapters/http/search-controller.js";
 import { registerStaticFrontend } from "./adapters/http/register-static-frontend.js";
 import { registerTagsRoutes } from "./adapters/http/tags-controller.js";
 import { registerThumbnailRoutes } from "./adapters/http/thumbnail-controller.js";
+import { registerUploadsRoutes } from "./adapters/http/uploads-controller.js";
 import { registerVideoRoutes } from "./adapters/http/video-controller.js";
 import { registerVideoTagsRoutes } from "./adapters/http/video-tags-controller.js";
 import type { LibraryStore } from "./ports/library-store.js";
+import type { ProcessingJobStore } from "./ports/processing-job-store.js";
 import { isMutableVideoIndex, type VideoIndex } from "./ports/video-index.js";
 
 export interface AppDependencies {
@@ -31,10 +35,17 @@ export interface AppDependencies {
   staticRoot?: string;
   refreshLibraryUseCase?: RefreshLibraryUseCase;
   libraryStore?: LibraryStore;
+  processVideoJobUseCase?: ProcessVideoJobUseCase;
+  processingJobStore?: ProcessingJobStore;
+  uploadMaxBytes?: number;
 }
 
 export async function createApp(dependencies: AppDependencies) {
-  const app = Fastify({ logger: false });
+  const uploadMaxBytes = dependencies.uploadMaxBytes;
+  const app = Fastify({
+    logger: false,
+    ...(uploadMaxBytes === undefined ? {} : { bodyLimit: uploadMaxBytes + 1024 * 1024 }),
+  });
 
   const searchVideosUseCase = new SearchVideosUseCase(dependencies.videoIndex);
   const getTagsUseCase = new GetTagsUseCase(dependencies.videoIndex);
@@ -105,6 +116,18 @@ export async function createApp(dependencies: AppDependencies) {
           dependencies.videoIndex,
           dependencies.libraryPath,
         ),
+      });
+    }
+
+    if (
+      dependencies.processVideoJobUseCase !== undefined &&
+      dependencies.processingJobStore !== undefined &&
+      uploadMaxBytes !== undefined
+    ) {
+      await registerUploadsRoutes(api, {
+        processVideoJobUseCase: dependencies.processVideoJobUseCase,
+        getUploadJobUseCase: new GetUploadJobUseCase(dependencies.processingJobStore),
+        uploadMaxBytes,
       });
     }
   }, { prefix: "/api" });
