@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { test } from "node:test";
 import { join, resolve } from "node:path";
 
-import { indexLibrary } from "../src/index.js";
+import { discoverVideoPaths, indexLibrary } from "../src/index.js";
 
 const libraryPath = resolve(process.cwd(), "../../samples/indexer-library");
 
@@ -50,6 +50,30 @@ test("indexes real TagSpaces metadata and extracts only tag titles", async () =>
     },
 
   ]);
+});
+
+test("discovers video paths without reading TagSpaces metadata", async () => {
+  const temporaryLibraryPath = await mkdtemp(join(tmpdir(), "media-library-discover-"));
+
+  try {
+    await mkdir(join(temporaryLibraryPath, ".ts"));
+    await writeFile(join(temporaryLibraryPath, "first.mp4"), "video");
+    await writeFile(join(temporaryLibraryPath, "second.mov"), "video");
+    await writeFile(join(temporaryLibraryPath, "notes.txt"), "ignore");
+    await writeFile(
+      join(temporaryLibraryPath, ".ts", "first.mp4.json"),
+      JSON.stringify({ tags: [{ title: "should-not-be-read" }] }),
+    );
+
+    const videoPaths = await discoverVideoPaths(temporaryLibraryPath);
+
+    assert.deepEqual(videoPaths, [
+      join(temporaryLibraryPath, "first.mp4"),
+      join(temporaryLibraryPath, "second.mov"),
+    ]);
+  } finally {
+    await rm(temporaryLibraryPath, { force: true, recursive: true });
+  }
 });
 
 test("continues indexing when metadata is missing or invalid", async () => {

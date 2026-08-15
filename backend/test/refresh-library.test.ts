@@ -1,65 +1,104 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-
-import type { IndexedVideo } from "@media-library/indexer";
+import { join } from "node:path";
 
 import { InMemoryVideoIndex } from "../src/adapters/in-memory-video-index.js";
+import { SqliteLibraryIndexer } from "../src/adapters/sqlite/sqlite-library-indexer.js";
+import { openSqliteLibraryStore } from "../src/adapters/sqlite/sqlite-library-store.js";
 import { RefreshLibraryUseCase } from "../src/application/refresh-library.js";
+import { SyncNewVideosUseCase } from "../src/application/sync-new-videos.js";
+import { toMediaId } from "../src/application/media-id.js";
 import type { LibraryIndexer } from "../src/ports/library-indexer.js";
+import type { VideoDiscovery } from "../src/ports/video-discovery.js";
 
-import { testVideos } from "./fixtures.js";
+import { testLibraryPath, testVideos } from "./fixtures.js";
 
-class StubLibraryIndexer implements LibraryIndexer {
-  constructor(
-    private readonly results: IndexedVideo[][] | Error,
-    private indexCalls = 0,
-  ) {}
+class StubVideoDiscovery implements VideoDiscovery {
+  constructor(private readonly result: string[] | Error) {}
 
-  get indexCallCount(): number {
-    return this.indexCalls;
-  }
-
-  async index(): Promise<IndexedVideo[]> {
-    this.indexCalls += 1;
-
-    if (this.results instanceof Error) {
-      throw this.results;
+  async discoverVideoPaths(): Promise<string[]> {
+    if (this.result instanceof Error) {
+      throw this.result;
     }
 
-    const result = this.results[this.indexCalls - 1];
-
-    if (result === undefined) {
-      throw new Error("No more stubbed index results");
-    }
-
-    return result;
+    return this.result;
   }
 }
 
-test("RefreshLibraryUseCase replaces the in-memory index with newly indexed videos", async () => {
-  const refreshedVideos = [
-    testVideos[0]!,
-    {
-      videoPath: testVideos[0]!.videoPath.replace("first.mp4", "fourth.mp4"),
-      tags: ["kizomba"],
-    },
-  ];
-  const libraryIndexer = new StubLibraryIndexer([refreshedVideos]);
-  const videoIndex = new InMemoryVideoIndex(testVideos);
-  const useCase = new RefreshLibraryUseCase(libraryIndexer, videoIndex);
+class StubLibraryIndexer implements LibraryIndexer {
+  constructor(private readonly result: typeof testVideos | Error) {}
 
-  const response = await useCase.execute();
+  async index() {
+    if (this.result instanceof Error) {
+      throw this.result;
+    }
 
-  assert.deepEqual(response, { count: 2 });
-  assert.strictEqual(videoIndex.getVideos(), refreshedVideos);
-  assert.strictEqual(libraryIndexer.indexCallCount, 1);
+    return this.result;
+  }
+}
+
+test("RefreshLibraryUseCase syncs new videos then reloads the SQLite snapshot", async () => {
+  const libraryStore = openSqliteLibraryStore(":memory:");
+
+  try {
+    libraryStore.upsertVideo("salsa/first.mp4");
+    libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "bea"]);
+
+    const videoIndex = new InMemoryVideoIndex(testVideos);
+    const useCase = new RefreshLibraryUseCase(
+      new SyncNewVideosUseCase(
+        new StubVideoDiscovery([
+          join(testLibraryPath, "salsa", "first.mp4"),
+          join(testLibraryPath, "salsa", "fourth.mp4"),
+        ]),
+        libraryStore,
+        testLibraryPath,
+      ),
+      new SqliteLibraryIndexer(libraryStore, testLibraryPath),
+      videoIndex,
+    );
+
+    const response = await useCase.execute();
+
+    assert.deepEqual(libraryStore.listVideosWithTags(), [
+      { id: "salsa/first.mp4", tags: ["salsa", "bea"] },
+      { id: "salsa/fourth.mp4", tags: [] },
+    ]);
+    assert.deepEqual(response, { count: 2 });
+    assert.deepEqual(
+      videoIndex.getVideos().map((video) => ({
+        id: toMediaId(video.videoPath, testLibraryPath),
+        tags: video.tags,
+      })),
+      [
+        { id: "salsa/first.mp4", tags: ["salsa", "bea"] },
+        { id: "salsa/fourth.mp4", tags: [] },
+      ],
+    );
+  } finally {
+    libraryStore.close();
+  }
 });
 
-test("RefreshLibraryUseCase leaves the existing index unchanged when indexing fails", async () => {
-  const libraryIndexer = new StubLibraryIndexer(new Error("Indexing failed"));
-  const videoIndex = new InMemoryVideoIndex(testVideos);
-  const useCase = new RefreshLibraryUseCase(libraryIndexer, videoIndex);
+test("RefreshLibraryUseCase leaves the existing index unchanged when discovery fails", async () => {
+  const libraryStore = openSqliteLibraryStore(":memory:");
 
-  await assert.rejects(() => useCase.execute(), /Indexing failed/);
-  assert.deepEqual(videoIndex.getVideos(), testVideos);
+  try {
+    const videoIndex = new InMemoryVideoIndex(testVideos);
+    const useCase = new RefreshLibraryUseCase(
+      new SyncNewVideosUseCase(
+        new StubVideoDiscovery(new Error("Discovery failed")),
+        libraryStore,
+        testLibraryPath,
+      ),
+      new StubLibraryIndexer(testVideos),
+      videoIndex,
+    );
+
+    await assert.rejects(() => useCase.execute(), /Discovery failed/);
+    assert.deepEqual(videoIndex.getVideos(), testVideos);
+    assert.deepEqual(libraryStore.listVideos(), []);
+  } finally {
+    libraryStore.close();
+  }
 });

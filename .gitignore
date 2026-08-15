@@ -4,3 +4,6 @@ dist/
 dist-test/
 samples/indexer-library/
 .env
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

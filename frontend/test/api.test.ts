@@ -46,3 +46,41 @@ describe("refreshLibrary", () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe("video tags API", () => {
+  it("builds video tag URLs from the media id", async () => {
+    const { buildVideoTagsUrl } = await import("../src/api/client.js");
+
+    expect(buildVideoTagsUrl("salsa/first.mp4")).toBe("/api/videos/salsa/first.mp4/tags");
+  });
+
+  it("loads and replaces video tags", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ tags: ["salsa"] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ tags: ["salsa", "bufanda"] }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { fetchVideoTags, updateVideoTags } = await import("../src/api/client.js");
+
+    await expect(fetchVideoTags("salsa/first.mp4")).resolves.toEqual({ tags: ["salsa"] });
+    await expect(updateVideoTags("salsa/first.mp4", ["salsa", "bufanda"])).resolves.toEqual({
+      tags: ["salsa", "bufanda"],
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/videos/salsa/first.mp4/tags");
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/videos/salsa/first.mp4/tags", {
+      headers: { "Content-Type": "application/json" },
+      method: "PUT",
+      body: JSON.stringify({ tags: ["salsa", "bufanda"] }),
+    });
+
+    vi.unstubAllGlobals();
+  });
+});

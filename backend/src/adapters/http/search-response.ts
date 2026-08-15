@@ -1,6 +1,8 @@
-import { basename, relative } from "node:path";
+import { basename } from "node:path";
 
 import type { IndexedVideo } from "@media-library/indexer";
+
+import { toMediaId } from "../../application/media-id.js";
 
 export interface SearchResultItem {
   id: string;
@@ -18,9 +20,7 @@ export interface SearchResponse {
   results: SearchResultItem[];
 }
 
-export function toMediaId(videoPath: string, libraryPath: string): string {
-  return relative(libraryPath, videoPath).split("\\").join("/");
-}
+export { toMediaId } from "../../application/media-id.js";
 
 export function toSearchResult(video: IndexedVideo, libraryPath: string): SearchResultItem {
   const id = toMediaId(video.videoPath, libraryPath);

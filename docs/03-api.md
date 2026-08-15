@@ -25,8 +25,10 @@ The API should be:
 
 - simple
 - predictable
-- read-only
 - stateless
+
+Tag editing writes to SQLite only. The API never modifies video files or
+TagSpaces sidecars.
 
 All responses use JSON except media streaming endpoints.
 
@@ -121,15 +123,75 @@ Tags are unique and sorted alphabetically.
 
 ---
 
+## Video tags
+
+Media ids may contain slashes, so these routes use the same wildcard form as
+thumbnails and video streaming. Tag names in `DELETE` are URL-decoded, so names
+with spaces or reserved characters must be encoded.
+
+```text
+GET /api/videos/:id/tags
+POST /api/videos/:id/tags
+PUT /api/videos/:id/tags
+DELETE /api/videos/:id/tags/:tag
+```
+
+`GET` returns the tags currently stored for that video, in order.
+
+```json
+{
+  "tags": [
+    "salsa",
+    "isa",
+    "jota",
+    "codo"
+  ]
+}
+```
+
+`POST` appends one tag. If the tag does not exist in the catalog, it is created.
+Repeating the same tag is idempotent and preserves order.
+
+```json
+{
+  "name": "bufanda"
+}
+```
+
+`PUT` replaces the complete list. Duplicates keep the first occurrence. Missing
+catalog tags are created automatically.
+
+```json
+{
+  "tags": [
+    "salsa",
+    "isa",
+    "jota",
+    "bufanda"
+  ]
+}
+```
+
+`DELETE` removes the video/tag relation. It does not delete the tag from the
+global catalog. Removing a tag the video does not have is idempotent.
+
+Editing a video that is not in SQLite returns **404 Not Found**. These endpoints
+do not create videos.
+
+---
+
 ## Library Refresh
 
 ```text
 POST /api/library/refresh
 ```
 
-Re-indexes the configured media library and replaces the in-memory video index.
+Re-indexes the configured media library by discovering new video files on
+`LIBRARY_PATH`, inserting any missing videos into SQLite without tags, and
+replacing the in-memory video index from SQLite.
 
-The endpoint does not modify video files or TagSpaces metadata. If indexing
+The endpoint does not read TagSpaces sidecars, modify existing tags, delete
+SQLite videos that are missing from disk, or change video files. If refresh
 fails, the existing in-memory index remains unchanged.
 
 Response
@@ -207,6 +269,7 @@ Backend
 - indexing
 - searching
 - tag listing
+- tag editing in SQLite
 - in-memory index refresh
 - identifier resolution
 - thumbnail serving

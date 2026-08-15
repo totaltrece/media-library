@@ -1,10 +1,13 @@
 import Fastify from "fastify";
 
-import { WorkspaceLibraryIndexer } from "./adapters/indexer/workspace-library-indexer.js";
+import { AddVideoTagUseCase } from "./application/add-video-tag.js";
 import { GetTagsUseCase } from "./application/get-tags.js";
 import { GetThumbnailUseCase } from "./application/get-thumbnail.js";
-import { RefreshLibraryUseCase } from "./application/refresh-library.js";
+import { GetVideoTagsUseCase } from "./application/get-video-tags.js";
+import type { RefreshLibraryUseCase } from "./application/refresh-library.js";
+import { RemoveVideoTagUseCase } from "./application/remove-video-tag.js";
 import { SearchVideosUseCase } from "./application/search-videos.js";
+import { SetVideoTagsUseCase } from "./application/set-video-tags.js";
 import { StreamVideoUseCase } from "./application/stream-video.js";
 import { FilesystemVideoStore } from "./adapters/filesystem/filesystem-video-store.js";
 import { TagSpacesThumbnailStore } from "./adapters/filesystem/tagspaces-thumbnail-store.js";
@@ -14,12 +17,16 @@ import { registerStaticFrontend } from "./adapters/http/register-static-frontend
 import { registerTagsRoutes } from "./adapters/http/tags-controller.js";
 import { registerThumbnailRoutes } from "./adapters/http/thumbnail-controller.js";
 import { registerVideoRoutes } from "./adapters/http/video-controller.js";
+import { registerVideoTagsRoutes } from "./adapters/http/video-tags-controller.js";
+import type { LibraryStore } from "./ports/library-store.js";
 import { isMutableVideoIndex, type VideoIndex } from "./ports/video-index.js";
 
 export interface AppDependencies {
   videoIndex: VideoIndex;
   libraryPath: string;
   staticRoot?: string;
+  refreshLibraryUseCase?: RefreshLibraryUseCase;
+  libraryStore?: LibraryStore;
 }
 
 export async function createApp(dependencies: AppDependencies) {
@@ -56,11 +63,29 @@ export async function createApp(dependencies: AppDependencies) {
       streamVideoUseCase,
     });
 
-    if (isMutableVideoIndex(dependencies.videoIndex)) {
+    if (dependencies.refreshLibraryUseCase !== undefined) {
       registerLibraryRoutes(api, {
-        refreshLibraryUseCase: new RefreshLibraryUseCase(
-          new WorkspaceLibraryIndexer(dependencies.libraryPath),
+        refreshLibraryUseCase: dependencies.refreshLibraryUseCase,
+      });
+    }
+
+    if (dependencies.libraryStore !== undefined && isMutableVideoIndex(dependencies.videoIndex)) {
+      registerVideoTagsRoutes(api, {
+        getVideoTagsUseCase: new GetVideoTagsUseCase(dependencies.libraryStore),
+        addVideoTagUseCase: new AddVideoTagUseCase(
+          dependencies.libraryStore,
           dependencies.videoIndex,
+          dependencies.libraryPath,
+        ),
+        removeVideoTagUseCase: new RemoveVideoTagUseCase(
+          dependencies.libraryStore,
+          dependencies.videoIndex,
+          dependencies.libraryPath,
+        ),
+        setVideoTagsUseCase: new SetVideoTagsUseCase(
+          dependencies.libraryStore,
+          dependencies.videoIndex,
+          dependencies.libraryPath,
         ),
       });
     }

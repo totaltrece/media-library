@@ -9,17 +9,25 @@
       <img :alt="`Thumbnail for video tagged ${result.tags.join(', ')}`" :src="thumbnailUrl" />
       <span class="result-card-date">{{ displayDate }}</span>
     </button>
+    <p v-if="showName" class="result-card-name">{{ result.name }}</p>
     <div class="result-card-tags">
-      <button
-        v-for="tag in result.tags"
-        :key="tag"
-        class="result-card-tag"
-        type="button"
-        :aria-label="`Add ${tag} to search`"
-        @click="$emit('select-tag', tag)"
-      >
-        {{ tag }}
-      </button>
+      <template v-if="interactiveTags">
+        <button
+          v-for="tag in result.tags"
+          :key="tag"
+          class="result-card-tag"
+          type="button"
+          :aria-label="`Add ${tag} to search`"
+          @click="$emit('select-tag', tag)"
+        >
+          {{ tag }}
+        </button>
+      </template>
+      <template v-else>
+        <span v-for="tag in result.tags" :key="tag" class="result-card-tag">
+          {{ tag }}
+        </span>
+      </template>
     </div>
   </article>
 </template>
@@ -31,10 +39,18 @@ import { buildApiUrl } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
 import { formatVideoDateFromName } from "../utils/video-date.js";
 
-const props = defineProps<{
-  result: SearchResultItem;
-  selected: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    result: SearchResultItem;
+    selected: boolean;
+    interactiveTags?: boolean;
+    showName?: boolean;
+  }>(),
+  {
+    interactiveTags: true,
+    showName: false,
+  },
+);
 
 defineEmits<{
   "select-video": [];

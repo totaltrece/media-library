@@ -93,6 +93,15 @@ The frontend never downloads or copies media files.
 
 ---
 
+## Admin video tags
+
+Additional screens live at `/admin/videos` and `/admin/videos/:id`.
+
+They reuse the existing `TagSearch` component and `GET /api/search?tag=...`
+to find videos by tags, filter untagged items, and edit tags through
+`GET /api/videos/:id/tags`, `GET /api/tags`, and `PUT /api/videos/:id/tags`.
+The consumer search screen at `/` is unchanged.
+
 # Layout
 
 The application follows a simple two-area layout.
