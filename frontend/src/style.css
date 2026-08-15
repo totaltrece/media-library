@@ -149,7 +149,8 @@
 }
 
 .tag-suggestions button:hover,
-.tag-suggestions button:focus {
+.tag-suggestions button:focus,
+.tag-suggestions button.highlighted {
   background: #f1f3f4;
 }
 

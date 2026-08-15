@@ -408,7 +408,7 @@ describe("tag editor", () => {
 
     await wrapper.setProps({ tags: ["salsa", "bufanda"] } as never);
     await input.setValue("bufanda");
-    await input.trigger("keydown.enter");
+    await input.trigger("keydown", { key: "Enter" });
 
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "bufanda"]);
   });
@@ -423,7 +423,7 @@ describe("tag editor", () => {
 
     const input = wrapper.get("#admin-tag-input");
     await input.setValue("nuevo-tag");
-    await input.trigger("keydown.enter");
+    await input.trigger("keydown", { key: "Enter" });
 
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "nuevo-tag"]);
   });
@@ -447,6 +447,94 @@ describe("tag editor", () => {
     await wrapper.get('[data-testid="add-new-tag"]').trigger("click");
 
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "estela"]);
+  });
+
+  it("lets the keyboard highlight a matching tag and add it with Enter", async () => {
+    const wrapper = mount(TagEditor, {
+      props: {
+        tags: ["salsa"],
+        availableTags: ["salsa", "bufanda", "bachata"],
+      },
+    });
+
+    const input = wrapper.get("#admin-tag-input");
+    await input.setValue("ba");
+    await input.trigger("focus");
+    await nextTick();
+
+    await input.trigger("keydown", { key: "ArrowDown" });
+    await nextTick();
+
+    expect(wrapper.get(".tag-suggestions button.highlighted").text()).toBe("bachata");
+
+    await input.trigger("keydown", { key: "Enter" });
+
+    expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "bachata"]);
+  });
+});
+
+describe("tag search", () => {
+  it("lets the keyboard highlight a matching tag and add it with Enter", async () => {
+    const wrapper = mount(TagSearch, {
+      props: {
+        availableTags: ["salsa", "bufanda", "bachata"],
+        selectedTags: [],
+        searching: false,
+      },
+    });
+
+    const input = wrapper.get("#tag-input");
+    await input.setValue("ba");
+    await input.trigger("focus");
+    await nextTick();
+    await input.trigger("keydown", { key: "ArrowDown" });
+    await nextTick();
+
+    expect(wrapper.get(".tag-suggestions button.highlighted").text()).toBe("bachata");
+
+    await input.trigger("keydown", { key: "Enter" });
+
+    expect(wrapper.emitted("add-tag")?.at(-1)?.[0]).toBe("bachata");
+  });
+
+  it("selects the first matching tag with Enter when nothing is highlighted", async () => {
+    const wrapper = mount(TagSearch, {
+      props: {
+        availableTags: ["salsa", "bufanda", "bachata"],
+        selectedTags: [],
+        searching: false,
+      },
+    });
+
+    const input = wrapper.get("#tag-input");
+    await input.setValue("bu");
+    await input.trigger("focus");
+    await nextTick();
+    await input.trigger("keydown", { key: "Enter" });
+
+    expect(wrapper.emitted("add-tag")?.at(-1)?.[0]).toBe("bufanda");
+  });
+
+  it("shows No matching tags instead of creating a new search tag", async () => {
+    const wrapper = mount(TagSearch, {
+      props: {
+        availableTags: ["salsa"],
+        selectedTags: [],
+        searching: false,
+      },
+    });
+
+    const input = wrapper.get("#tag-input");
+    await input.setValue("nuevo-tag");
+    await input.trigger("focus");
+    await nextTick();
+
+    expect(wrapper.text()).toContain("No matching tags");
+    expect(wrapper.text()).not.toContain("Añadir nuevo tag");
+
+    await input.trigger("keydown", { key: "Enter" });
+
+    expect(wrapper.emitted("add-tag")).toBeUndefined();
   });
 });
 
@@ -490,7 +578,7 @@ describe("admin video editor", () => {
 
     await wrapper.get('button[aria-label="Remove isa"]').trigger("click");
     await wrapper.get("#admin-tag-input").setValue("bufanda");
-    await wrapper.get("#admin-tag-input").trigger("keydown.enter");
+    await wrapper.get("#admin-tag-input").trigger("keydown", { key: "Enter" });
     await wrapper.get('[data-testid="save-tags"]').trigger("click");
     await flushPromises();
 
@@ -534,7 +622,7 @@ describe("admin video editor", () => {
     await flushPromises();
 
     await wrapper.get("#admin-tag-input").setValue("salsa");
-    await wrapper.get("#admin-tag-input").trigger("keydown.enter");
+    await wrapper.get("#admin-tag-input").trigger("keydown", { key: "Enter" });
     await wrapper.get('[data-testid="save-tags"]').trigger("click");
     await flushPromises();
 
@@ -599,7 +687,7 @@ describe("admin untagged flow", () => {
     await flushPromises();
 
     await wrapper.get("#admin-tag-input").setValue("salsa");
-    await wrapper.get("#admin-tag-input").trigger("keydown.enter");
+    await wrapper.get("#admin-tag-input").trigger("keydown", { key: "Enter" });
     await wrapper.get('[data-testid="save-tags"]').trigger("click");
     await flushPromises();
 
