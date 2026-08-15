@@ -13,6 +13,8 @@
       </div>
     </header>
 
+    <AdminVideoUpload @completed="onUploadCompleted" />
+
     <div class="admin-filter-row" role="group" aria-label="Video filters">
       <button
         class="secondary-button"
@@ -75,6 +77,7 @@ import { useRoute, useRouter } from "vue-router";
 import { fetchTags, searchVideos } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
 import AdminNav from "../components/AdminNav.vue";
+import AdminVideoUpload from "../components/AdminVideoUpload.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 import SearchResults from "../components/SearchResults.vue";
@@ -208,6 +211,19 @@ watch(
 
 function openVideo(result: SearchResultItem): void {
   void router.push({ name: "admin-video-edit", params: { id: result.id } });
+}
+
+async function onUploadCompleted(): Promise<void> {
+  try {
+    const [searchResponse, tagsResponse] = await Promise.all([searchVideos([]), fetchTags()]);
+    catalogVideos.value = searchResponse.results;
+    availableTags.value = tagsResponse.tags;
+    resetSearch();
+    untaggedOnly.value = true;
+    error.value = null;
+  } catch (loadError: unknown) {
+    error.value = loadError instanceof Error ? loadError.message : "Unable to load videos.";
+  }
 }
 </script>
 

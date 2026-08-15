@@ -6,6 +6,10 @@ M6.1 hace el upload HTTP asíncrono: `POST` acepta el fichero y responde `202`.
 El pipeline de M5 continúa en background. `GET` consulta el estado.
 Los jobs siguen en memoria; no hay persistencia ni reanudación tras un reinicio.
 
+La UI de administración (M6.2) envía el multipart sin `Content-Type` manual
+(el navegador añade el boundary) y hace polling del `GET` hasta un estado
+terminal. No hay endpoint de progreso porcentual.
+
 ## Upload
 
 ```http

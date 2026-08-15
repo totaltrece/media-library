@@ -43,3 +43,38 @@ export interface CatalogTagsResponse {
   count: number;
   tags: CatalogTag[];
 }
+
+export type UploadJobStatus = "idle" | "uploading" | "processing" | "completed" | "failed";
+
+export type UploadJobPhase =
+  | "idle"
+  | "uploading"
+  | "processing"
+  | "generating_thumbnail"
+  | "finalizing"
+  | "installing"
+  | "completed"
+  | "failed";
+
+export interface UploadJobOutputs {
+  source: "source";
+  converted: "converted.mp4" | null;
+  thumbnail: "thumbnail.jpg";
+}
+
+export interface UploadAcceptedResponse {
+  jobId: string;
+  status: UploadJobStatus;
+}
+
+export interface UploadJobView {
+  jobId: string;
+  status: UploadJobStatus;
+  phase: UploadJobPhase;
+  videoId: string | null;
+  converted: boolean | null;
+  outputs: UploadJobOutputs | null;
+  error?: {
+    message: string;
+  };
+}

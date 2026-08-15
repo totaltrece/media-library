@@ -101,6 +101,13 @@ Additional screens live at `/admin/videos`, `/admin/videos/:id`, and `/admin/tag
 They reuse the existing `TagSearch` component and `GET /api/search?tag=...`
 to find videos by tags, filter untagged items, and edit tags through
 `GET /api/videos/:id/tags`, `GET /api/tags`, and `PUT /api/videos/:id/tags`.
+
+`/admin/videos` also has an upload zone at the top of the catalog. It posts
+`POST /api/admin/uploads` (multipart field `video`) and polls
+`GET /api/admin/uploads/:jobId` until `completed` or `failed`. A completed
+upload refreshes the catalog with `GET /api/search` and `GET /api/tags` and
+shows the new video under Sin tags.
+
 The tag catalog at `/admin/tags` is managed through `GET /api/admin/tags`,
 `PUT /api/admin/tags/:id`, and `DELETE /api/admin/tags/:id`.
 The consumer search screen at `/` is unchanged.

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildApiUrl, buildSearchUrl } from "../src/api/client.js";
+import { buildApiUrl, buildSearchUrl, buildUploadJobUrl } from "../src/api/client.js";
 
 describe("buildApiUrl", () => {
   it("prefixes relative API paths with /api", () => {
@@ -126,6 +126,59 @@ describe("tag catalog API", () => {
       body: JSON.stringify({ name: "salsa-linea" }),
     });
     expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/admin/tags/7", { method: "DELETE" });
+
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("admin uploads API", () => {
+  it("posts the video as multipart without setting content-type", async () => {
+    const file = new File(["bytes"], "clip.mp4", { type: "video/mp4" });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 202,
+      json: async () => ({ jobId: "job-1", status: "uploading" }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { uploadVideo } = await import("../src/api/client.js");
+    await expect(uploadVideo(file)).resolves.toEqual({ jobId: "job-1", status: "uploading" });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads", {
+      method: "POST",
+      body: expect.any(FormData),
+    });
+    const body = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+    expect(body.get("video")).toBe(file);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("loads upload job status from the job URL", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        jobId: "job-1",
+        status: "processing",
+        phase: "generating_thumbnail",
+        videoId: "clip.mp4",
+        converted: true,
+        outputs: null,
+      }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { fetchUploadJob } = await import("../src/api/client.js");
+
+    expect(buildUploadJobUrl("job-1")).toBe("/api/admin/uploads/job-1");
+    await expect(fetchUploadJob("job-1")).resolves.toMatchObject({
+      jobId: "job-1",
+      status: "processing",
+      phase: "generating_thumbnail",
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads/job-1");
 
     vi.unstubAllGlobals();
   });

@@ -5,6 +5,8 @@ import type {
   RefreshLibraryResponse,
   SearchResponse,
   TagsResponse,
+  UploadAcceptedResponse,
+  UploadJobView,
   VideoTagsResponse,
 } from "./types.js";
 
@@ -36,21 +38,38 @@ export function buildSearchUrl(tags: string[]): string {
   return buildApiUrl(query.length > 0 ? `/search?${query}` : "/search");
 }
 
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly jobId: string | null;
+
+  constructor(message: string, status: number, jobId: string | null = null) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.jobId = jobId;
+  }
+}
+
 async function readJsonResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`;
+    let jobId: string | null = null;
 
     try {
-      const errorBody = (await response.json()) as ApiErrorResponse;
+      const errorBody = (await response.json()) as ApiErrorResponse & { jobId?: unknown };
 
       if (typeof errorBody.error?.message === "string") {
         message = errorBody.error.message;
+      }
+
+      if (typeof errorBody.jobId === "string" && errorBody.jobId.length > 0) {
+        jobId = errorBody.jobId;
       }
     } catch {
       // Keep the default message when the body is not JSON.
     }
 
-    throw new Error(message);
+    throw new ApiRequestError(message, response.status, jobId);
   }
 
   return (await response.json()) as T;
@@ -122,4 +141,26 @@ export async function deleteCatalogTag(tagId: number): Promise<void> {
   });
 
   await readJsonResponse<{ id: number }>(response);
+}
+
+export function buildUploadJobUrl(jobId: string): string {
+  return buildApiUrl(`/admin/uploads/${jobId}`);
+}
+
+export async function uploadVideo(file: File): Promise<UploadAcceptedResponse> {
+  const body = new FormData();
+  body.append("video", file);
+
+  const response = await fetch(buildApiUrl("/admin/uploads"), {
+    method: "POST",
+    body,
+  });
+
+  return readJsonResponse<UploadAcceptedResponse>(response);
+}
+
+export async function fetchUploadJob(jobId: string): Promise<UploadJobView> {
+  const response = await fetch(buildUploadJobUrl(jobId));
+
+  return readJsonResponse<UploadJobView>(response);
 }

@@ -118,6 +118,27 @@ Comprobar:
 El workspace del job permanece en `UPLOAD_TEMP_PATH/<jobId>/` para inspección.
 Si se reinicia Node durante un job, el estado en memoria se pierde.
 
+## Prueba manual de M6.2
+
+Con el backend y el frontend en marcha, abrir `/admin/videos` (también desde
+un móvil en la misma red).
+
+1. Pulsar **Seleccionar vídeo** y elegir un fichero de vídeo de la galería
+   o del disco. No usar captura de cámara en la app.
+2. Comprobar que el nombre del fichero aparece (puede ocupar varias líneas).
+3. Pulsar **Subir vídeo**. Debe deshabilitarse un segundo upload.
+4. Las fases avanzan: subiendo → procesando → thumbnail → instalando →
+   completado. No hay porcentaje.
+5. Al completar: "Vídeo añadido correctamente", el catálogo se recarga y el
+   vídeo aparece en **Sin tags**.
+6. `/` sigue siendo solo búsqueda/reproducción; no muestra la zona de upload.
+7. Mientras hay un job activo, un segundo intento muestra que ya hay un
+   vídeo en proceso (`409` del backend).
+8. Un fichero demasiado grande muestra el mensaje de tamaño (`413`).
+
+No usar `POST /api/library/refresh` para ver el vídeo nuevo: la UI recarga
+`GET /api/search`.
+
 ## Prueba local
 
 1. upload;

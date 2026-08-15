@@ -37,11 +37,19 @@ Sin cola, sin UI de upload y sin persistencia de jobs.
 ## M6.1 — Upload HTTP asíncrono
 Implementado: `POST /api/admin/uploads` responde `202` tras persistir el
 fichero; el pipeline de M5 continúa en background. `GET` consulta el estado.
-Jobs en memoria; un reinicio pierde jobs activos. Sin UI, sin cola y sin
+Jobs en memoria; un reinicio pierde jobs activos. Sin cola y sin
 reanudación.
 
+## M6.2 — UI de subida y seguimiento
+Implementado: zona de upload en `/admin/videos` (encima del catálogo).
+`POST` multipart, polling de `GET /api/admin/uploads/:jobId`, fases visibles,
+un solo upload activo y refresh del catálogo con `GET /api/search`.
+Sin cola, sin porcentaje de FFmpeg, sin captura de cámara y sin cambios en `/`.
+
 ## M6 — UI de estado
-Mostrar subida, procesamiento, thumbnail, finalización y errores. El estado debe poder consultarse tras recargar.
+La presentación de fases y errores está en M6.2. Recargar la página no
+restaura un job en curso: el estado sigue en memoria y el `409` activo no
+incluye `jobId` por defecto.
 
 ## M7 — MVP remoto
 Instalar/configurar FFmpeg en Ubuntu, desplegar el mismo backend y probar desde móvil/PC.

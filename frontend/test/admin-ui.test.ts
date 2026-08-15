@@ -177,7 +177,7 @@ describe("admin video list", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["zenit"]);
-    await wrapper.get(".primary-button").trigger("click");
+    await wrapper.get(".tag-search .primary-button").trigger("click");
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=zenit");
@@ -205,7 +205,7 @@ describe("admin video list", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["salsa", "jota"]);
-    await wrapper.get(".primary-button").trigger("click");
+    await wrapper.get(".tag-search .primary-button").trigger("click");
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
@@ -228,7 +228,7 @@ describe("admin video list", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["zenit"]);
-    await wrapper.get(".primary-button").trigger("click");
+    await wrapper.get(".tag-search .primary-button").trigger("click");
     await flushPromises();
     await wrapper.get('button[aria-label="Play video tagged zenit"]').trigger("click");
     await flushPromises();
@@ -753,7 +753,7 @@ describe("consumer search view", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["salsa"]);
-    await wrapper.get(".primary-button").trigger("click");
+    await wrapper.get(".tag-search .primary-button").trigger("click");
     await flushPromises();
 
     await wrapper.get('button[aria-label="Add jota to search"]').trigger("click");

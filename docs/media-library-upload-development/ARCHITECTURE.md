@@ -122,7 +122,25 @@ crea el job, escribe el fichero en `sourcePath` y responde `202` con `jobId`.
 estado.
 
 Los jobs siguen en `InMemoryProcessingJobStore`. Si Node se reinicia con un
-job activo, ese job se pierde; no se reanuda. No hay cola ni UI todavía.
+job activo, ese job se pierde; no se reanuda. No hay cola.
+
+## UI de subida (M6.2)
+
+La administración en `/admin/videos` incluye una zona de upload encima del
+catálogo. El navegador envía `POST /api/admin/uploads` como multipart (campo
+`video`, sin `Content-Type` manual) y, tras el `202`, consulta
+`GET /api/admin/uploads/:jobId` cada segundo hasta `completed` o `failed`.
+
+La UI muestra las fases (`uploading`, `processing`, `generating_thumbnail`,
+`installing`, `completed`) usando `status` y `phase`. `finalizing` se presenta
+como instalación. No hay porcentaje de FFmpeg. Un job activo deshabilita un
+segundo upload. Un `409` se traduce a un mensaje claro; si el cuerpo incluye
+`jobId`, se retoma el seguimiento. Un error de red en el polling no marca el
+job como `failed`: se avisa y se reintenta.
+
+Al completar, el frontend recarga el catálogo con `GET /api/search` y
+`GET /api/tags` (no `POST /api/library/refresh`) y muestra el vídeo en
+Sin tags. La vista de consumo `/` no cambia.
 
 Ubicaciones definitivas tras `completed`:
 

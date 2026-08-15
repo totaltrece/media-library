@@ -93,6 +93,14 @@ unhandled rejections. `GET /api/admin/uploads/:jobId` es la fuente de estado
 para el cliente. Los jobs siguen en memoria: no hay persistencia ni reanudación
 tras un reinicio de Node. No hay cola.
 
+## UI de subida y seguimiento (M6.2)
+La administración sube el vídeo y sigue el job con polling al `GET` de M6.1.
+El intervalo es 1 s; se detiene en `completed`/`failed`, en `404` y al
+desmontar. Un fallo de red en el polling no marca el job como fallido. El
+catálogo se refresca con `GET /api/search` + `GET /api/tags`, no con refresh
+del filesystem. Un único upload activo en la UI; el backend sigue siendo la
+autoridad (`409`). No hay porcentaje de FFmpeg ni captura desde cámara.
+
 ## VideoStore y ThumbnailStore siguen siendo de lectura
 No se amplían para escribir temporales ni archivos nuevos. El workspace de un
 job es `ProcessingWorkspace`. La instalación definitiva usa el port
