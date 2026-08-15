@@ -327,8 +327,8 @@ async function confirmDelete(): Promise<void> {
 }
 
 .admin-tag-sort .secondary-button {
-  font-size: 0.8125rem;
-  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  padding: 0.375rem 0.625rem;
 }
 
 .admin-tag-sort .secondary-button.active {
@@ -398,11 +398,11 @@ async function confirmDelete(): Promise<void> {
   color: #5f6368;
   cursor: pointer;
   display: inline-flex;
-  height: 1.5rem;
+  height: 1.25rem;
   justify-content: center;
   padding: 0;
   text-decoration: none;
-  width: 1.5rem;
+  width: 1.25rem;
 }
 
 .admin-tag-action:hover,
@@ -419,8 +419,8 @@ async function confirmDelete(): Promise<void> {
 
 .admin-tag-action svg {
   display: block;
-  height: 0.875rem;
-  width: 0.875rem;
+  height: 0.75rem;
+  width: 0.75rem;
 }
 
 .admin-tag-confirm-modal {

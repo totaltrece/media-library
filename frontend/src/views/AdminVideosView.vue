@@ -215,7 +215,7 @@ function openVideo(result: SearchResultItem): void {
 .admin-filter-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
