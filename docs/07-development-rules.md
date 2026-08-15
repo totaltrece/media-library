@@ -86,14 +86,16 @@ framework-specific types.
 
 # Read-only Guarantee
 
-The application must never modify:
+The application must never modify existing:
 
 - video files
 - TagSpaces metadata
 - TagSpaces thumbnails
-- directory structure
+- directory structure of already indexed media
 
-All media is treated as immutable.
+Existing media is treated as immutable. Admin upload installation may **add**
+new video files and new thumbnails under `.ts/`; it must never overwrite or
+alter files that already exist.
 
 ---
 

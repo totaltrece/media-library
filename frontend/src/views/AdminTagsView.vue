@@ -1,17 +1,10 @@
 <template>
   <div class="app-shell">
-    <header class="app-header">
-      <div class="app-header-row">
-        <div>
-          <h1>Tag catalog</h1>
-          <p>Rename or delete tags used across the library.</p>
-        </div>
-        <div class="search-actions">
-          <AdminNav />
-          <RouterLink class="secondary-button" to="/">Back to library</RouterLink>
-        </div>
-      </div>
-    </header>
+    <AppHeader
+      title="Tag catalog"
+      subtitle="Rename or delete tags used across the library."
+      @refreshed="onLibraryRefreshed"
+    />
 
     <LoadingIndicator v-if="loading" message="Loading tags..." />
     <ErrorMessage v-else-if="error" :message="error" />
@@ -155,7 +148,7 @@ import { computed, onMounted, ref, watch } from "vue";
 
 import { deleteCatalogTag, fetchTagCatalog, renameCatalogTag } from "../api/client.js";
 import type { CatalogTag } from "../api/types.js";
-import AdminNav from "../components/AdminNav.vue";
+import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 
@@ -215,15 +208,26 @@ watch(filterQuery, () => {
 });
 
 onMounted(async () => {
+  await loadTags();
+});
+
+async function loadTags(): Promise<void> {
+  loading.value = true;
+
   try {
     const response = await fetchTagCatalog();
     tags.value = response.tags;
+    error.value = null;
   } catch (loadError: unknown) {
     error.value = loadError instanceof Error ? loadError.message : "Unable to load tags.";
   } finally {
     loading.value = false;
   }
-});
+}
+
+async function onLibraryRefreshed(): Promise<void> {
+  await loadTags();
+}
 
 function startEdit(tag: CatalogTag): void {
   editingId.value = tag.id;
@@ -327,8 +331,8 @@ async function confirmDelete(): Promise<void> {
 }
 
 .admin-tag-sort .secondary-button {
-  font-size: 0.8125rem;
-  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  padding: 0.375rem 0.625rem;
 }
 
 .admin-tag-sort .secondary-button.active {
@@ -398,11 +402,11 @@ async function confirmDelete(): Promise<void> {
   color: #5f6368;
   cursor: pointer;
   display: inline-flex;
-  height: 1.5rem;
+  height: 1.25rem;
   justify-content: center;
   padding: 0;
   text-decoration: none;
-  width: 1.5rem;
+  width: 1.25rem;
 }
 
 .admin-tag-action:hover,
@@ -419,8 +423,8 @@ async function confirmDelete(): Promise<void> {
 
 .admin-tag-action svg {
   display: block;
-  height: 0.875rem;
-  width: 0.875rem;
+  height: 0.75rem;
+  width: 0.75rem;
 }
 
 .admin-tag-confirm-modal {

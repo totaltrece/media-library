@@ -1,51 +1,98 @@
 <template>
   <div class="app-shell">
-    <header class="app-header">
-      <div class="app-header-row">
-        <div>
-          <h1>{{ video?.name ?? "Edit tags" }}</h1>
-          <p>Edit tags for this video. Changes are saved to the library.</p>
-        </div>
-        <div class="search-actions">
-          <AdminNav />
-          <RouterLink class="secondary-button" to="/admin/videos">Back to videos</RouterLink>
-        </div>
-      </div>
-    </header>
+    <AppHeader
+      :title="video?.name ?? 'Edit tags'"
+      subtitle="Edit tags for this video. Changes are saved to the library."
+      @refreshed="loadVideo"
+    />
 
     <LoadingIndicator v-if="loading" message="Loading video..." />
     <ErrorMessage v-else-if="error" :message="error" />
 
     <template v-else-if="video">
-      <div class="admin-video-preview">
-        <SearchResultItem
-          :interactive-tags="false"
-          :show-name="true"
-          :result="previewResult"
-          :selected="false"
-          @select-video="showPlayer = true"
-        />
+      <div class="admin-video-edit">
+        <div class="admin-video-preview">
+          <SearchResultItem
+            :interactive-tags="false"
+            :show-name="true"
+            :result="previewResult"
+            :selected="false"
+            @select-video="showPlayer = true"
+          />
+        </div>
+
+        <div class="admin-video-tags">
+          <TagEditor v-model:tags="draftTags" :available-tags="availableTags" />
+
+          <div class="search-actions">
+            <button
+              class="primary-button"
+              data-testid="save-tags"
+              type="button"
+              :disabled="saving || deleting || !isDirty"
+              @click="saveTags"
+            >
+              {{ saving ? "Saving..." : "Guardar cambios" }}
+            </button>
+            <button
+              class="danger-button"
+              data-testid="delete-video"
+              type="button"
+              :disabled="saving || deleting"
+              @click="openDeleteModal"
+            >
+              Eliminar vídeo
+            </button>
+          </div>
+
+          <p v-if="saveMessage" class="status-message info" role="status">
+            {{ saveMessage }}
+          </p>
+          <ErrorMessage v-if="saveError" :message="saveError" />
+          <ErrorMessage v-if="deleteError" :message="deleteError" />
+        </div>
       </div>
-
-      <TagEditor v-model:tags="draftTags" :available-tags="availableTags" />
-
-      <div class="search-actions">
-        <button
-          class="primary-button"
-          data-testid="save-tags"
-          type="button"
-          :disabled="saving || !isDirty"
-          @click="saveTags"
-        >
-          {{ saving ? "Saving..." : "Guardar cambios" }}
-        </button>
-      </div>
-
-      <p v-if="saveMessage" class="status-message info" role="status">
-        {{ saveMessage }}
-      </p>
-      <ErrorMessage v-if="saveError" :message="saveError" />
     </template>
+
+    <div
+      v-if="confirmingDelete"
+      class="video-modal-backdrop"
+      role="presentation"
+      @click.self="cancelDelete"
+    >
+      <div
+        class="admin-video-confirm-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-video-title"
+        aria-describedby="delete-video-description"
+      >
+        <p id="delete-video-title">¿Eliminar vídeo?</p>
+        <p id="delete-video-description">
+          Esta acción eliminará el vídeo y su thumbnail de la biblioteca y todas sus relaciones con etiquetas. Esta acción no se puede deshacer.
+        </p>
+        <div class="search-actions">
+          <button
+            class="secondary-button"
+            data-testid="cancel-delete-video"
+            type="button"
+            :disabled="deleting"
+            @click="cancelDelete"
+          >
+            Cancelar
+          </button>
+          <button
+            class="danger-button"
+            data-testid="confirm-delete-video"
+            type="button"
+            :disabled="deleting"
+            @click="confirmDelete"
+          >
+            {{ deleting ? "Eliminando..." : "Eliminar vídeo" }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <VideoPlayer
       v-if="video && showPlayer"
@@ -58,10 +105,11 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 
-import { fetchTags, fetchVideoTags, searchVideos, updateVideoTags } from "../api/client.js";
+import { ApiRequestError, deleteVideo, fetchTags, fetchVideoTags, searchVideos, updateVideoTags } from "../api/client.js";
 import type { SearchResultItem as VideoResult } from "../api/types.js";
-import AdminNav from "../components/AdminNav.vue";
+import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 import SearchResultItem from "../components/SearchResultItem.vue";
@@ -72,15 +120,19 @@ const props = defineProps<{
   id: string;
 }>();
 
+const router = useRouter();
 const video = ref<VideoResult | null>(null);
 const availableTags = ref<string[]>([]);
 const savedTags = ref<string[]>([]);
 const draftTags = ref<string[]>([]);
 const loading = ref(true);
 const saving = ref(false);
+const deleting = ref(false);
+const confirmingDelete = ref(false);
 const showPlayer = ref(false);
 const error = ref<string | null>(null);
 const saveError = ref<string | null>(null);
+const deleteError = ref<string | null>(null);
 const saveMessage = ref<string | null>(null);
 
 const isDirty = computed(
@@ -107,37 +159,43 @@ const previewResult = computed(() => {
 watch(
   () => props.id,
   async () => {
-    loading.value = true;
-    error.value = null;
-    saveError.value = null;
-    saveMessage.value = null;
-    showPlayer.value = false;
-
-    try {
-      const [searchResponse, videoTags, catalog] = await Promise.all([
-        searchVideos([]),
-        fetchVideoTags(props.id),
-        fetchTags(),
-      ]);
-
-      video.value = searchResponse.results.find((result) => result.id === props.id) ?? {
-        id: props.id,
-        name: props.id.split("/").at(-1) ?? props.id,
-        thumbnail: `/api/thumbnail/${props.id}`,
-        video: `/api/video/${props.id}`,
-        tags: videoTags.tags,
-      };
-      savedTags.value = [...videoTags.tags];
-      draftTags.value = [...videoTags.tags];
-      availableTags.value = catalog.tags;
-    } catch (loadError: unknown) {
-      error.value = loadError instanceof Error ? loadError.message : "Unable to load video tags.";
-    } finally {
-      loading.value = false;
-    }
+    await loadVideo();
   },
   { immediate: true },
 );
+
+async function loadVideo(): Promise<void> {
+  loading.value = true;
+  error.value = null;
+  saveError.value = null;
+  deleteError.value = null;
+  saveMessage.value = null;
+  confirmingDelete.value = false;
+  showPlayer.value = false;
+
+  try {
+    const [searchResponse, videoTags, catalog] = await Promise.all([
+      searchVideos([]),
+      fetchVideoTags(props.id),
+      fetchTags(),
+    ]);
+
+    video.value = searchResponse.results.find((result) => result.id === props.id) ?? {
+      id: props.id,
+      name: props.id.split("/").at(-1) ?? props.id,
+      thumbnail: `/api/thumbnail/${props.id}`,
+      video: `/api/video/${props.id}`,
+      tags: videoTags.tags,
+    };
+    savedTags.value = [...videoTags.tags];
+    draftTags.value = [...videoTags.tags];
+    availableTags.value = catalog.tags;
+  } catch (loadError: unknown) {
+    error.value = loadError instanceof Error ? loadError.message : "Unable to load video tags.";
+  } finally {
+    loading.value = false;
+  }
+}
 
 async function saveTags(): Promise<void> {
   saving.value = true;
@@ -157,14 +215,92 @@ async function saveTags(): Promise<void> {
   }
 }
 
+function openDeleteModal(): void {
+  if (deleting.value) {
+    return;
+  }
+
+  deleteError.value = null;
+  confirmingDelete.value = true;
+}
+
+function cancelDelete(): void {
+  if (deleting.value) {
+    return;
+  }
+
+  confirmingDelete.value = false;
+}
+
+async function confirmDelete(): Promise<void> {
+  if (deleting.value) {
+    return;
+  }
+
+  deleting.value = true;
+  deleteError.value = null;
+
+  try {
+    await deleteVideo(props.id);
+    confirmingDelete.value = false;
+    await router.push({ name: "admin-videos" });
+  } catch (removeError: unknown) {
+    if (removeError instanceof ApiRequestError && removeError.status === 404) {
+      confirmingDelete.value = false;
+      await router.push({ name: "admin-videos" });
+      return;
+    }
+
+    deleteError.value = removeError instanceof Error ? removeError.message : "Unable to delete video.";
+    confirmingDelete.value = false;
+  } finally {
+    deleting.value = false;
+  }
+}
+
 function uniqueTags(tags: string[]): string[] {
   return [...new Set(tags)];
 }
 </script>
 
 <style scoped>
+.admin-video-edit {
+  align-items: start;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+}
+
 .admin-video-preview {
-  margin-bottom: 1.5rem;
   max-width: 220px;
+}
+
+.admin-video-tags {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.admin-video-confirm-modal {
+  background: #fff;
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.75rem;
+  max-width: 24rem;
+  padding: 1.25rem;
+  width: 100%;
+}
+
+.admin-video-confirm-modal p {
+  margin: 0;
+}
+
+.admin-video-confirm-modal p:first-child {
+  font-weight: 600;
+}
+
+@media (max-width: 599px) {
+  .admin-video-edit {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

@@ -1,15 +1,39 @@
 <template>
-  <div ref="tagInputWrapper" class="tag-input-wrapper">
+  <div
+    ref="tagInputWrapper"
+    class="tag-input-wrapper tag-combobox"
+    :style="{ '--tag-selector-ch': String(selectorWidthCh) }"
+  >
     <label class="visually-hidden" :for="inputId">{{ label }}</label>
-    <input
-      :id="inputId"
-      v-model="query"
-      autocomplete="off"
-      :placeholder="placeholder"
-      :type="inputType"
-      @focus="openSuggestions"
-      @keydown="handleInputKeydown"
-    />
+    <div class="tag-combobox-field" @click="focusInput">
+      <div v-if="selectedTags.length > 0" class="selected-tags" :aria-label="selectedLabel">
+        <span
+          v-for="tag in selectedTags"
+          :key="tag"
+          :class="['tag-chip', { 'is-new': isNewTag(tag) }]"
+        >
+          {{ tag }}
+          <button
+            :aria-label="`Remove ${tag}`"
+            type="button"
+            @click.stop="removeTag(tag)"
+          >
+            ×
+          </button>
+        </span>
+      </div>
+      <input
+        :id="inputId"
+        ref="tagInput"
+        v-model="query"
+        autocomplete="off"
+        class="tag-combobox-input"
+        :placeholder="selectedTags.length === 0 ? placeholder : ''"
+        :type="inputType"
+        @focus="openSuggestions"
+        @keydown="handleInputKeydown"
+      />
+    </div>
 
     <ul v-if="showSuggestions" class="tag-suggestions">
       <li v-for="(tag, index) in filteredSuggestions" :key="tag">
@@ -50,21 +74,32 @@ const props = withDefaults(
     placeholder: string;
     inputType?: "text" | "search";
     allowCreate?: boolean;
+    selectedLabel?: string;
   }>(),
   {
     inputType: "text",
     allowCreate: false,
+    selectedLabel: "Selected tags",
   },
 );
 
 const emit = defineEmits<{
   select: [tag: string];
+  remove: [tag: string];
 }>();
 
 const query = ref("");
 const showSuggestions = ref(false);
 const highlightedIndex = ref(-1);
 const tagInputWrapper = ref<HTMLElement | null>(null);
+const tagInput = ref<HTMLInputElement | null>(null);
+
+const selectorWidthCh = computed(() => {
+  const names = [...props.availableTags, ...props.selectedTags];
+  const longest = names.reduce((max, tag) => Math.max(max, tag.length), 0);
+
+  return Math.max(longest, 8);
+});
 
 const filteredSuggestions = computed(() => {
   const normalizedQuery = query.value.trim().toLowerCase();
@@ -103,6 +138,18 @@ const suggestionCount = computed(
 watch(query, () => {
   highlightedIndex.value = -1;
 });
+
+function isNewTag(tag: string): boolean {
+  if (!props.allowCreate) {
+    return false;
+  }
+
+  return !props.availableTags.some((availableTag) => availableTag.toLowerCase() === tag.toLowerCase());
+}
+
+function focusInput(): void {
+  tagInput.value?.focus();
+}
 
 function openSuggestions(): void {
   showSuggestions.value = true;
@@ -174,7 +221,14 @@ function selectTag(tag: string): void {
 
   emit("select", normalized);
   query.value = "";
-  closeSuggestions();
+  highlightedIndex.value = -1;
+  showSuggestions.value = true;
+  void nextTick(() => focusInput());
+}
+
+function removeTag(tag: string): void {
+  emit("remove", tag);
+  focusInput();
 }
 
 function confirmQuery(): void {
@@ -221,7 +275,7 @@ function handleInputKeydown(event: KeyboardEvent): void {
   }
 }
 
-function handleDocumentClick(event: MouseEvent): void {
+function handleDocumentPointerDown(event: Event): void {
   if (!showSuggestions.value) {
     return;
   }
@@ -236,11 +290,11 @@ function handleDocumentClick(event: MouseEvent): void {
 }
 
 onMounted(() => {
-  document.addEventListener("click", handleDocumentClick);
+  document.addEventListener("pointerdown", handleDocumentPointerDown);
 });
 
 onUnmounted(() => {
-  document.removeEventListener("click", handleDocumentClick);
+  document.removeEventListener("pointerdown", handleDocumentPointerDown);
 });
 </script>
 
@@ -255,5 +309,55 @@ onUnmounted(() => {
   position: absolute;
   white-space: nowrap;
   width: 1px;
+}
+
+.tag-combobox {
+  display: block;
+  width: 100%;
+}
+
+.tag-combobox-field {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 0.75rem;
+  cursor: text;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  padding: 0.375rem 0.5rem;
+  width: 100%;
+}
+
+.tag-combobox-field:focus-within {
+  border-color: #1a73e8;
+}
+
+.tag-combobox-field .selected-tags {
+  display: contents;
+}
+
+.tag-combobox-input {
+  background: transparent;
+  border: 0;
+  flex: 1 1 8ch;
+  font-size: 1rem;
+  min-width: 8ch;
+  padding: 0.375rem 0.25rem;
+}
+
+.tag-combobox-input:focus {
+  outline: none;
+}
+
+.tag-suggestions {
+  font-size: 0.875rem;
+  padding: 0.125rem;
+  width: calc(var(--tag-selector-ch, 8) * 1ch + 2.5rem);
+}
+
+.tag-suggestions button {
+  padding: 0.3125rem 0.5rem;
 }
 </style>

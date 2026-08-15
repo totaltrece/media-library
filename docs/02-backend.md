@@ -11,8 +11,10 @@ The backend is responsible for exposing the media library through an HTTP API.
 It coordinates indexing, searching and tag editing while keeping the domain
 independent from infrastructure and frameworks.
 
-The backend must never modify the original media library or any TagSpaces
-metadata. Tag edits are persisted only in SQLite.
+The backend must never modify existing media files or TagSpaces metadata.
+Tag edits are persisted only in SQLite. Admin uploads may add **new** video
+files and **new** TagSpaces-layout thumbnails; they must never overwrite
+existing library files.
 
 ---
 
@@ -27,12 +29,13 @@ The backend is responsible for:
 - managing the SQLite tag catalog (rename and delete)
 - exposing application statistics
 - managing the application lifecycle
+- receiving admin video uploads, processing them, and installing new files into the library
 
 The backend is not responsible for:
 
 - rendering the user interface
-- modifying media files
-- writing TagSpaces metadata
+- modifying existing media files
+- writing TagSpaces JSON sidecars
 - implementing business logic inside HTTP handlers
 
 ---
@@ -122,6 +125,10 @@ Examples:
 - TagSpaces filesystem reader
 - Search adapter
 - HTTP controllers
+- FFmpeg video processor
+- Filesystem processing workspace
+- Multipart upload (`@fastify/multipart`)
+- Filesystem library media installer (new videos and thumbnails only)
 - Future persistence adapters
 
 Adapters may depend on external libraries.
@@ -212,6 +219,9 @@ Examples:
 - library location (`LIBRARY_PATH`)
 - server port (`PORT`)
 - SQLite database path (`SQLITE_PATH`, required at runtime and for `pnpm import-library`)
+- FFmpeg/FFprobe executables (`FFMPEG_PATH`, `FFPROBE_PATH`; optional, default to PATH names)
+- upload temp directory (`UPLOAD_TEMP_PATH`; optional, defaults next to the SQLite file)
+- upload size limit (`UPLOAD_MAX_BYTES`; optional, default 512 MiB)
 
 Configuration should never be hardcoded.
 
@@ -257,7 +267,7 @@ Temporary sample libraries.
 
 The backend should remain:
 
-- read-only
+- non-destructive toward existing media
 - deterministic
 - modular
 - testable

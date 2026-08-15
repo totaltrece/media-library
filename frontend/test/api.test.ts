@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildApiUrl, buildSearchUrl } from "../src/api/client.js";
+import { buildApiUrl, buildSearchUrl, buildActiveUploadJobUrl, buildUploadJobUrl } from "../src/api/client.js";
 
 describe("buildApiUrl", () => {
   it("prefixes relative API paths with /api", () => {
@@ -83,6 +83,23 @@ describe("video tags API", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("deletes a video by media id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "salsa/first.mp4" }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { buildVideoUrl, deleteVideo } = await import("../src/api/client.js");
+
+    expect(buildVideoUrl("salsa/first.mp4")).toBe("/api/videos/salsa/first.mp4");
+    await expect(deleteVideo("salsa/first.mp4")).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith("/api/videos/salsa/first.mp4", { method: "DELETE" });
+
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("tag catalog API", () => {
@@ -126,6 +143,96 @@ describe("tag catalog API", () => {
       body: JSON.stringify({ name: "salsa-linea" }),
     });
     expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/admin/tags/7", { method: "DELETE" });
+
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("admin uploads API", () => {
+  it("posts the video as multipart without setting content-type", async () => {
+    const file = new File(["bytes"], "clip.mp4", { type: "video/mp4" });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 202,
+      json: async () => ({ jobId: "job-1", status: "uploading" }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { uploadVideo } = await import("../src/api/client.js");
+    await expect(uploadVideo(file)).resolves.toEqual({ jobId: "job-1", status: "uploading" });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads", {
+      method: "POST",
+      body: expect.any(FormData),
+    });
+    const body = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+    expect(body.get("video")).toBe(file);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("loads upload job status from the job URL", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        jobId: "job-1",
+        status: "processing",
+        phase: "generating_thumbnail",
+        videoId: "clip.mp4",
+        converted: true,
+        outputs: null,
+      }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { fetchUploadJob } = await import("../src/api/client.js");
+
+    expect(buildUploadJobUrl("job-1")).toBe("/api/admin/uploads/job-1");
+    await expect(fetchUploadJob("job-1")).resolves.toMatchObject({
+      jobId: "job-1",
+      status: "processing",
+      phase: "generating_thumbnail",
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads/job-1");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("loads the active upload job or null when none exists", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: { message: "No active upload job." } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          jobId: "job-1",
+          status: "processing",
+          phase: "processing",
+          videoId: "clip.mp4",
+          converted: true,
+          progress: 47,
+          outputs: null,
+        }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { fetchActiveUploadJob } = await import("../src/api/client.js");
+
+    expect(buildActiveUploadJobUrl()).toBe("/api/admin/uploads/active");
+    await expect(fetchActiveUploadJob()).resolves.toBeNull();
+    await expect(fetchActiveUploadJob()).resolves.toMatchObject({
+      jobId: "job-1",
+      progress: 47,
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/admin/uploads/active");
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/admin/uploads/active");
 
     vi.unstubAllGlobals();
   });

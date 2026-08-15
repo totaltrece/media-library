@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from "vue-router";
 
 import AdminTagsView from "../src/views/AdminTagsView.vue";
 import AdminVideoEditView from "../src/views/AdminVideoEditView.vue";
+import AdminVideoUploadView from "../src/views/AdminVideoUploadView.vue";
 import AdminVideosView from "../src/views/AdminVideosView.vue";
 import HomeView from "../src/views/HomeView.vue";
 
@@ -31,6 +32,7 @@ function createTestRouter() {
     routes: [
       { path: "/", name: "home", component: HomeView },
       { path: "/admin/videos", name: "admin-videos", component: AdminVideosView },
+      { path: "/admin/videos/upload", name: "admin-video-upload", component: AdminVideoUploadView },
       { path: "/admin/tags", name: "admin-tags", component: AdminTagsView },
       {
         path: "/admin/videos/:id(.*)",
@@ -345,15 +347,20 @@ describe("admin tag catalog", () => {
     await flushPromises();
 
     expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
-    expect(wrapper.text()).not.toContain("Refresh library");
+    expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
 
     await wrapper.get("a[href='/admin/videos']").trigger("click");
     await flushPromises();
     expect(router.currentRoute.value.name).toBe("admin-videos");
+    expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="nav-videos"]').classes()).toContain("active");
+    expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
+    expect(wrapper.text()).not.toContain("Refresh library");
 
     await wrapper.get("a[href='/admin/tags']").trigger("click");
     await flushPromises();
     expect(router.currentRoute.value.name).toBe("admin-tags");
+    expect(wrapper.get('[data-testid="nav-tags"]').classes()).toContain("active");
     expect(wrapper.text()).toContain("salsa (127)");
   });
 

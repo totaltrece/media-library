@@ -8,6 +8,7 @@ import TagEditor from "../src/components/TagEditor.vue";
 import TagSearch from "../src/components/TagSearch.vue";
 import AdminTagsView from "../src/views/AdminTagsView.vue";
 import AdminVideoEditView from "../src/views/AdminVideoEditView.vue";
+import AdminVideoUploadView from "../src/views/AdminVideoUploadView.vue";
 import AdminVideosView from "../src/views/AdminVideosView.vue";
 import HomeView from "../src/views/HomeView.vue";
 
@@ -105,6 +106,7 @@ async function addSearchTags(wrapper: VueWrapper, tags: string[]): Promise<void>
     const suggestion = wrapper.findAll(".tag-suggestions button").find((button) => button.text() === tag);
     expect(suggestion, `missing suggestion for ${tag}`).toBeDefined();
     await suggestion!.trigger("click");
+    await flushPromises();
   }
 }
 
@@ -114,6 +116,7 @@ function createTestRouter(initialPath = "/admin/videos"): Router {
     routes: [
       { path: "/", name: "home", component: HomeView },
       { path: "/admin/videos", name: "admin-videos", component: AdminVideosView },
+      { path: "/admin/videos/upload", name: "admin-video-upload", component: AdminVideoUploadView },
       { path: "/admin/tags", name: "admin-tags", component: AdminTagsView },
       {
         path: "/admin/videos/:id(.*)",
@@ -159,6 +162,47 @@ describe("admin video list", () => {
     expect(wrapper.text()).toContain("first.mp4");
   });
 
+  it("links to the upload page instead of embedding the upload zone", async () => {
+    vi.stubGlobal("fetch", createCatalogFetchMock());
+
+    const router = createTestRouter();
+    await router.push("/admin/videos");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideosView, router);
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="upload-new-video"]').text()).toBe("Upload video");
+    expect(wrapper.get('[data-testid="nav-videos"]').classes()).toContain("active");
+    expect(wrapper.find('[data-testid="upload-file-input"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
+  });
+
+  it("refreshes the library from the admin video catalog", async () => {
+    const catalogFetch = createCatalogFetchMock();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/library/refresh" && init?.method === "POST") {
+        return jsonResponse({ count: catalogVideos.length });
+      }
+
+      return catalogFetch(input, init);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    await router.push("/admin/videos");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideosView, router);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="Refresh library"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/library/refresh", { method: "POST" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/search");
+    expect(fetchMock).toHaveBeenCalledWith("/api/tags");
+    expect(wrapper.text()).toContain("4 results");
+  });
+
   it("searches by tag through the same /api/search mechanism as the consumer view", async () => {
     const zenitVideo = catalogVideos.find((video) => video.id === "tagged-zenit.mp4")!;
     const fetchMock = createCatalogFetchMock((url) => {
@@ -177,7 +221,6 @@ describe("admin video list", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["zenit"]);
-    await wrapper.get(".primary-button").trigger("click");
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=zenit");
@@ -205,7 +248,6 @@ describe("admin video list", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["salsa", "jota"]);
-    await wrapper.get(".primary-button").trigger("click");
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
@@ -228,7 +270,6 @@ describe("admin video list", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["zenit"]);
-    await wrapper.get(".primary-button").trigger("click");
     await flushPromises();
     await wrapper.get('button[aria-label="Play video tagged zenit"]').trigger("click");
     await flushPromises();
@@ -389,6 +430,22 @@ describe("tag editor", () => {
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "estela"]);
   });
 
+  it("keeps selected chips inside the compact tag input and marks new tags", () => {
+    const wrapper = mount(TagEditor, {
+      props: {
+        tags: ["salsa", "nuevo-tag"],
+        availableTags: ["salsa", "bufanda"],
+      },
+    });
+
+    const chips = wrapper.findAll(".tag-input-wrapper .tag-chip");
+    expect(chips).toHaveLength(2);
+    expect(chips[0]!.classes()).not.toContain("is-new");
+    expect(chips[1]!.classes()).toContain("is-new");
+    expect(chips[1]!.text()).toContain("nuevo-tag");
+    expect(wrapper.find(".tag-combobox").exists()).toBe(true);
+  });
+
   it("suggests existing tags and ignores duplicates", async () => {
     const wrapper = mount(TagEditor, {
       props: {
@@ -428,6 +485,27 @@ describe("tag editor", () => {
     await input.trigger("keydown", { key: "Enter" });
 
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "nuevo-tag"]);
+  });
+
+  it("keeps the suggestion list open after adding a tag while the input stays focused", async () => {
+    const wrapper = mount(TagEditor, {
+      props: {
+        tags: ["salsa"],
+        availableTags: ["salsa", "bufanda"],
+      },
+    });
+
+    const input = wrapper.get("#admin-tag-input");
+    await input.setValue("estela");
+    await input.trigger("focus");
+    await nextTick();
+
+    await wrapper.get('[data-testid="add-new-tag"]').trigger("click");
+    await wrapper.setProps({ tags: ["salsa", "estela"] } as never);
+    await nextTick();
+
+    expect(wrapper.find(".tag-suggestions").exists()).toBe(true);
+    expect(wrapper.find(".tag-suggestions").text()).toContain("bufanda");
   });
 
   it("offers to add a new tag instead of showing no matches", async () => {
@@ -481,7 +559,6 @@ describe("tag search", () => {
       props: {
         availableTags: ["salsa", "bufanda", "bachata"],
         selectedTags: [],
-        searching: false,
       },
     });
 
@@ -504,7 +581,6 @@ describe("tag search", () => {
       props: {
         availableTags: ["salsa", "bufanda", "bachata"],
         selectedTags: [],
-        searching: false,
       },
     });
 
@@ -522,7 +598,6 @@ describe("tag search", () => {
       props: {
         availableTags: ["salsa"],
         selectedTags: [],
-        searching: false,
       },
     });
 
@@ -537,6 +612,20 @@ describe("tag search", () => {
     await input.trigger("keydown", { key: "Enter" });
 
     expect(wrapper.emitted("add-tag")).toBeUndefined();
+  });
+
+  it("shows selected search chips inside the tag input", async () => {
+    const wrapper = mount(TagSearch, {
+      props: {
+        availableTags: ["salsa", "bufanda", "bachata"],
+        selectedTags: ["salsa"],
+      },
+    });
+
+    expect(wrapper.find(".tag-input-wrapper .tag-chip").text()).toContain("salsa");
+    expect(wrapper.find(".tag-combobox").exists()).toBe(true);
+    expect(wrapper.find(".tag-search .primary-button").exists()).toBe(false);
+    expect(wrapper.text()).toContain("Clear tags");
   });
 });
 
@@ -577,6 +666,8 @@ describe("admin video editor", () => {
 
     expect(wrapper.text()).toContain("first.mp4");
     expect(wrapper.find("#admin-tag-input").exists()).toBe(true);
+    expect(wrapper.get('[data-testid="nav-videos"]').classes()).toContain("active");
+    expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
 
     await wrapper.get('button[aria-label="Remove isa"]').trigger("click");
     await wrapper.get("#admin-tag-input").setValue("bufanda");
@@ -631,6 +722,219 @@ describe("admin video editor", () => {
     expect(wrapper.text()).toContain("Unable to save tags.");
     expect(wrapper.find("#admin-tag-input").exists()).toBe(true);
     expect(wrapper.text()).toContain("salsa");
+  });
+
+  it("asks for confirmation before deleting a video and reloads the catalog after success", async () => {
+    const remainingVideos = videos.filter((video) => video.id !== "salsa/first.mp4");
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/videos/salsa/first.mp4" && init?.method === "DELETE") {
+        return jsonResponse({ id: "salsa/first.mp4" });
+      }
+
+      if (url === "/api/search") {
+        return jsonResponse({
+          query: { tags: [] },
+          count: remainingVideos.length,
+          results: remainingVideos,
+        });
+      }
+
+      if (url === "/api/videos/salsa/first.mp4/tags") {
+        return jsonResponse({ tags: ["salsa", "isa"] });
+      }
+
+      if (url === "/api/tags") {
+        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    const Root = defineComponent({
+      template: "<router-view />",
+    });
+    await router.push("/admin/videos/salsa/first.mp4");
+    await router.isReady();
+    const wrapper = mount(Root, {
+      global: {
+        plugins: [router],
+      },
+    });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="delete-video"]').text()).toBe("Eliminar vídeo");
+    expect(wrapper.find(".admin-video-confirm-modal").exists()).toBe(false);
+
+    await wrapper.get('[data-testid="delete-video"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.find(".admin-video-confirm-modal").exists()).toBe(true);
+    expect(wrapper.text()).toContain("¿Eliminar vídeo?");
+    expect(wrapper.text()).toContain(
+      "Esta acción eliminará el vídeo y su thumbnail de la biblioteca y todas sus relaciones con etiquetas. Esta acción no se puede deshacer.",
+    );
+
+    await wrapper.get('[data-testid="cancel-delete-video"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.find(".admin-video-confirm-modal").exists()).toBe(false);
+    expect(
+      fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE"),
+    ).toBe(false);
+    expect(router.currentRoute.value.name).toBe("admin-video-edit");
+
+    await wrapper.get('[data-testid="delete-video"]').trigger("click");
+    await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/videos/salsa/first.mp4", { method: "DELETE" });
+    expect(router.currentRoute.value.name).toBe("admin-videos");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search");
+    expect(wrapper.text()).toContain("Sin tags (1)");
+    expect(wrapper.text()).not.toContain("first.mp4");
+  });
+
+  it("avoids a second DELETE while a deletion is in progress", async () => {
+    let resolveDelete: (() => void) | undefined;
+    const deleteGate = new Promise<void>((resolve) => {
+      resolveDelete = resolve;
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/videos/salsa/first.mp4" && init?.method === "DELETE") {
+        await deleteGate;
+        return jsonResponse({ id: "salsa/first.mp4" });
+      }
+
+      if (url === "/api/search") {
+        return jsonResponse({ query: { tags: [] }, count: 2, results: videos });
+      }
+
+      if (url === "/api/videos/salsa/first.mp4/tags") {
+        return jsonResponse({ tags: ["salsa", "isa"] });
+      }
+
+      if (url === "/api/tags") {
+        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    await router.push("/admin/videos/salsa/first.mp4");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideoEditView, router, { id: "salsa/first.mp4" });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="delete-video"]').trigger("click");
+    await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
+    await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="confirm-delete-video"]').text()).toBe("Eliminando...");
+    expect(
+      fetchMock.mock.calls.filter(([, init]) => init?.method === "DELETE"),
+    ).toHaveLength(1);
+
+    resolveDelete?.();
+    await flushPromises();
+  });
+
+  it("shows a delete error without leaving the editor", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/videos/salsa/first.mp4" && init?.method === "DELETE") {
+        return jsonResponse({ error: { message: "Unable to delete video." } }, false, 500);
+      }
+
+      if (url === "/api/search") {
+        return jsonResponse({ query: { tags: [] }, count: 2, results: videos });
+      }
+
+      if (url === "/api/videos/salsa/first.mp4/tags") {
+        return jsonResponse({ tags: ["salsa", "isa"] });
+      }
+
+      if (url === "/api/tags") {
+        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    await router.push("/admin/videos/salsa/first.mp4");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideoEditView, router, { id: "salsa/first.mp4" });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="delete-video"]').trigger("click");
+    await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Unable to delete video.");
+    expect(router.currentRoute.value.name).toBe("admin-video-edit");
+    expect(wrapper.find("#admin-tag-input").exists()).toBe(true);
+    expect(wrapper.text()).toContain("salsa");
+  });
+
+  it("returns to the catalog when the video is already gone", async () => {
+    const remainingVideos = videos.filter((video) => video.id !== "salsa/first.mp4");
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/videos/salsa/first.mp4" && init?.method === "DELETE") {
+        return jsonResponse({ error: { message: "Video not found" } }, false, 404);
+      }
+
+      if (url === "/api/search") {
+        return jsonResponse({
+          query: { tags: [] },
+          count: remainingVideos.length,
+          results: remainingVideos,
+        });
+      }
+
+      if (url === "/api/videos/salsa/first.mp4/tags") {
+        return jsonResponse({ tags: ["salsa", "isa"] });
+      }
+
+      if (url === "/api/tags") {
+        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    const Root = defineComponent({
+      template: "<router-view />",
+    });
+    await router.push("/admin/videos/salsa/first.mp4");
+    await router.isReady();
+    const wrapper = mount(Root, {
+      global: {
+        plugins: [router],
+      },
+    });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="delete-video"]').trigger("click");
+    await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("admin-videos");
+    expect(wrapper.text()).toContain("Sin tags (1)");
+    expect(wrapper.text()).not.toContain("first.mp4");
   });
 });
 
@@ -724,9 +1028,12 @@ describe("consumer search view", () => {
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
     expect(wrapper.find(".search-results").exists()).toBe(false);
     expect(wrapper.text()).toContain("Search your tagged videos and watch them from any browser.");
+    expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
+    expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
   });
 
-  it("still adds a clicked result tag to search without running a new query until Search", async () => {
+  it("searches as soon as a result tag is added", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       const url = String(input);
 
@@ -737,6 +1044,14 @@ describe("consumer search view", () => {
       if (url === "/api/search?tag=salsa") {
         return jsonResponse({
           query: { tags: ["salsa"] },
+          count: 1,
+          results: catalogVideos.filter((video) => video.id === "salsa-jota.mp4"),
+        });
+      }
+
+      if (url === "/api/search?tag=salsa&tag=jota") {
+        return jsonResponse({
+          query: { tags: ["salsa", "jota"] },
           count: 1,
           results: catalogVideos.filter((video) => video.id === "salsa-jota.mp4"),
         });
@@ -753,15 +1068,17 @@ describe("consumer search view", () => {
     await flushPromises();
 
     await addSearchTags(wrapper, ["salsa"]);
-    await wrapper.get(".primary-button").trigger("click");
     await flushPromises();
 
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa");
+    expect(wrapper.find(".tag-search .primary-button").exists()).toBe(false);
+
     await wrapper.get('button[aria-label="Add jota to search"]').trigger("click");
-    await nextTick();
+    await flushPromises();
 
     expect(wrapper.get(".selected-tags").text()).toContain("salsa");
     expect(wrapper.get(".selected-tags").text()).toContain("jota");
-    expect(fetchMock).not.toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
     expect(
       fetchMock.mock.calls.some(([, init]) => init?.method === "PUT" || init?.method === "POST"),
     ).toBe(false);

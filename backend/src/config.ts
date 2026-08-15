@@ -3,6 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 
+import { resolveUploadProcessingConfig } from "./application/resolve-upload-processing-config.js";
+
 loadBackendEnv();
 
 function loadBackendEnv(): void {
@@ -29,8 +31,11 @@ function requireEnv(name: string): string {
   return value;
 }
 
+const sqlitePath = requireEnv("SQLITE_PATH");
+
 export const config = {
   libraryPath: requireEnv("LIBRARY_PATH"),
   port: Number(process.env.PORT ?? "3000"),
-  sqlitePath: requireEnv("SQLITE_PATH"),
+  sqlitePath,
+  ...resolveUploadProcessingConfig(process.env, { sqlitePath }),
 };

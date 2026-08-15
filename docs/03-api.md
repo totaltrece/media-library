@@ -180,6 +180,38 @@ do not create videos.
 
 ---
 
+## Delete video
+
+```text
+DELETE /api/videos/:id
+```
+
+Deletes one catalog video. The media id uses the same wildcard form as video
+tags, thumbnails, and streaming, and is resolved with the same path-safety
+rules. Path traversal and other unsafe ids return **400 Bad Request**. A
+missing SQLite row returns **404 Not Found**.
+
+On success the backend:
+
+1. deletes the video file under `LIBRARY_PATH`;
+2. deletes its TagSpaces thumbnail under `LIBRARY_PATH/.ts/`;
+3. deletes the `videos` row (SQLite `ON DELETE CASCADE` removes `video_tags`);
+4. reloads the in-memory search index.
+
+Global `tags` rows are left in place. Other videos and thumbnails are not
+touched. Upload jobs are not affected.
+
+```json
+{
+  "id": "salsa/first.mp4"
+}
+```
+
+If a file cannot be removed, SQLite is left unchanged and the endpoint returns
+**500**.
+
+---
+
 ## Admin tag catalog
 
 `GET /api/tags` remains the consumer catalog: unique tag names currently used by
@@ -285,6 +317,55 @@ The endpoint supports HTTP Range requests and is compatible with the HTML5
 
 ---
 
+## Admin uploads (M6.1)
+
+The upload endpoints accept a video, process it in the background, and on
+success install it into the media library and SQLite catalog. Existing library
+files are never overwritten.
+
+```text
+POST /api/admin/uploads
+Content-Type: multipart/form-data
+```
+
+Field: `video` (exactly one file).
+
+The request returns **202 Accepted** after the file is stored in the job
+workspace. Processing and installation continue in the background.
+
+```json
+{
+  "jobId": "...",
+  "status": "uploading"
+}
+```
+
+Poll `GET /api/admin/uploads/:jobId` until `status` is `completed` or `failed`.
+When completed, the video is in `LIBRARY_PATH`, registered in SQLite without
+tags, and present in the in-memory search index.
+
+The video is then available at `GET /api/video/:id` and
+`GET /api/thumbnail/:id`, and appears in `GET /api/search` with an empty
+`tags` array (Admin → Videos → Untagged).
+
+```text
+GET /api/admin/uploads/:jobId
+```
+
+Returns the job status. Unknown jobs return **404 Not Found**.
+
+A second upload while a job is active returns **409 Conflict**.
+A video whose id already exists in SQLite or on disk returns **409 Conflict**.
+A file larger than `UPLOAD_MAX_BYTES` returns **413 Payload Too Large**.
+A missing or invalid file returns **400 Bad Request**.
+Processing and installation failures are reported on `GET` as `status: "failed"`
+with a safe error message. Internal paths and stack traces are not exposed.
+
+Jobs are stored in memory. A process restart drops any active job; it is not
+resumed.
+
+---
+
 # Media Identifier
 
 Every indexed video has a stable identifier.
@@ -330,6 +411,7 @@ Backend
 - identifier resolution
 - thumbnail serving
 - video streaming
+- admin video upload, processing, and installation of new library files
 
 Frontend
 

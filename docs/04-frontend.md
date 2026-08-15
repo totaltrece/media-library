@@ -55,11 +55,9 @@ The frontend never accesses the filesystem.
 
 The initial screen contains:
 
-- search box
-- active tag filters
-- search button (optional)
-- refresh library icon (discovers new videos on disk and reloads the SQLite index)
-- links to `/admin/videos` and `/admin/tags`
+- compact tag search box with selected tags inside the field
+- results update as soon as a tag is added or removed
+- shared header: View, Upload video, Admin videos, Admin tags, and refresh library
 - search results
 
 Searching should feel immediate and responsive.
@@ -96,11 +94,29 @@ The frontend never downloads or copies media files.
 
 ## Admin video tags
 
-Additional screens live at `/admin/videos`, `/admin/videos/:id`, and `/admin/tags`.
+Additional screens live at `/admin/videos`, `/admin/videos/upload`, `/admin/videos/:id`, and `/admin/tags`.
 
 They reuse the existing `TagSearch` component and `GET /api/search?tag=...`
 to find videos by tags, filter untagged items, and edit tags through
 `GET /api/videos/:id/tags`, `GET /api/tags`, and `PUT /api/videos/:id/tags`.
+The edit screen can also delete the video with `DELETE /api/videos/:id` after
+a confirmation modal. A successful delete returns to `/admin/videos`, which
+reloads the catalog from `GET /api/search` and `GET /api/tags`.
+
+`/admin/videos` shares the same header as `/`, `/admin/videos/upload`, and
+`/admin/tags`: **View**, **Upload video**, **Admin videos**, **Admin tags**,
+and refresh library (`POST /api/library/refresh`). The current section is
+highlighted. Upload lives at `/admin/videos/upload`: it loads
+`GET /api/admin/uploads/active` on enter. If a job is `uploading` or
+`processing`, it shows the progress zone and polls
+`GET /api/admin/uploads/:jobId`. Otherwise it shows the upload picker.
+`POST /api/admin/uploads` uses multipart field `video`. During HEVC
+conversion the processing step shows `progress` (0–100). `/admin/videos` and
+the consumer screen at `/` do not include this upload zone. After a
+successful upload, **View in Sin tags** returns to the catalog with the new
+video visible through `GET /api/search`; the upload page does not call
+`POST /api/library/refresh`.
+
 The tag catalog at `/admin/tags` is managed through `GET /api/admin/tags`,
 `PUT /api/admin/tags/:id`, and `DELETE /api/admin/tags/:id`.
 The consumer search screen at `/` is unchanged.

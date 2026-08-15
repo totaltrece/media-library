@@ -1,14 +1,16 @@
 import { readFile, stat } from "node:fs/promises";
-import { basename, join } from "node:path";
 
-import { resolveMediaPath } from "../../application/resolve-media-id.js";
+import {
+  resolveLibraryThumbnailPath,
+  resolveLibraryVideoPath,
+} from "../../application/library-media-paths.js";
 import type { ThumbnailResult, ThumbnailStore } from "../../ports/thumbnail-store.js";
 
 export class TagSpacesThumbnailStore implements ThumbnailStore {
   constructor(private readonly libraryPath: string) {}
 
   async getThumbnail(mediaId: string): Promise<ThumbnailResult | null> {
-    const videoPath = resolveMediaPath(this.libraryPath, mediaId);
+    const videoPath = resolveLibraryVideoPath(this.libraryPath, mediaId);
 
     if (videoPath === undefined) {
       return null;
@@ -18,9 +20,9 @@ export class TagSpacesThumbnailStore implements ThumbnailStore {
       return null;
     }
 
-    const thumbnailPath = join(this.libraryPath, ".ts", `${basename(videoPath)}.jpg`);
+    const thumbnailPath = resolveLibraryThumbnailPath(this.libraryPath, mediaId);
 
-    if (!(await isExistingFile(thumbnailPath))) {
+    if (thumbnailPath === undefined || !(await isExistingFile(thumbnailPath))) {
       return null;
     }
 

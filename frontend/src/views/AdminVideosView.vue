@@ -1,17 +1,10 @@
 <template>
   <div class="app-shell">
-    <header class="app-header">
-      <div class="app-header-row">
-        <div>
-          <h1>Video tags</h1>
-          <p>Find a video and edit its tags.</p>
-        </div>
-        <div class="search-actions">
-          <AdminNav />
-          <RouterLink class="secondary-button" to="/">Back to library</RouterLink>
-        </div>
-      </div>
-    </header>
+    <AppHeader
+      title="Video tags"
+      subtitle="Find a video and edit its tags."
+      @refreshed="onLibraryRefreshed"
+    />
 
     <div class="admin-filter-row" role="group" aria-label="Video filters">
       <button
@@ -38,12 +31,10 @@
 
     <TagSearch
       :available-tags="availableTags"
-      :searching="loadingSearch"
       :selected-tags="selectedTags"
       @add-tag="addTag"
       @clear-tags="clearTags"
       @remove-tag="removeTag"
-      @search="runSearch"
     />
 
     <LoadingIndicator v-if="loadingCatalog && !hasSearched" message="Loading videos..." />
@@ -74,7 +65,7 @@ import { useRoute, useRouter } from "vue-router";
 
 import { fetchTags, searchVideos } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
-import AdminNav from "../components/AdminNav.vue";
+import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 import SearchResults from "../components/SearchResults.vue";
@@ -93,6 +84,7 @@ const loadingCatalog = ref(true);
 const loadingSearch = ref(false);
 const error = ref<string | null>(null);
 const searchError = ref<string | null>(null);
+let searchGeneration = 0;
 
 const untaggedCount = computed(() => countUntaggedVideos(catalogVideos.value));
 
@@ -106,9 +98,7 @@ const emptyMessage = computed(() =>
 
 onMounted(async () => {
   try {
-    const [searchResponse, tagsResponse] = await Promise.all([searchVideos([]), fetchTags()]);
-    catalogVideos.value = searchResponse.results;
-    availableTags.value = tagsResponse.tags;
+    await loadCatalog();
   } catch (loadError: unknown) {
     error.value = loadError instanceof Error ? loadError.message : "Unable to load videos.";
   } finally {
@@ -116,11 +106,19 @@ onMounted(async () => {
   }
 });
 
+async function loadCatalog(): Promise<void> {
+  const [searchResponse, tagsResponse] = await Promise.all([searchVideos([]), fetchTags()]);
+  catalogVideos.value = searchResponse.results;
+  availableTags.value = tagsResponse.tags;
+}
+
 function resetSearch(): void {
+  searchGeneration += 1;
   selectedTags.value = [];
   searchResults.value = [];
   hasSearched.value = false;
   searchError.value = null;
+  loadingSearch.value = false;
 }
 
 function showAllVideos(): void {
@@ -133,24 +131,31 @@ function showUntaggedVideos(): void {
 }
 
 function addTag(tag: string): void {
-  if (!selectedTags.value.includes(tag)) {
-    selectedTags.value = [...selectedTags.value, tag];
+  if (selectedTags.value.includes(tag)) {
+    return;
   }
+
+  selectedTags.value = [...selectedTags.value, tag];
+  void runSearch();
 }
 
 function selectResultTag(tag: string): void {
   addTag(tag);
-  void runSearch();
 }
 
 function removeTag(tag: string): void {
   selectedTags.value = selectedTags.value.filter((selectedTag) => selectedTag !== tag);
 
   if (selectedTags.value.length === 0) {
+    searchGeneration += 1;
     searchResults.value = [];
     hasSearched.value = false;
     searchError.value = null;
+    loadingSearch.value = false;
+    return;
   }
+
+  void runSearch();
 }
 
 function clearTags(): void {
@@ -162,20 +167,32 @@ async function runSearch(): Promise<void> {
     return;
   }
 
+  const generation = ++searchGeneration;
   untaggedOnly.value = false;
   loadingSearch.value = true;
   searchError.value = null;
 
   try {
     const response = await searchVideos(selectedTags.value);
+
+    if (generation !== searchGeneration) {
+      return;
+    }
+
     searchResults.value = response.results;
     hasSearched.value = true;
   } catch (searchLoadError: unknown) {
+    if (generation !== searchGeneration) {
+      return;
+    }
+
     searchResults.value = [];
     hasSearched.value = true;
     searchError.value = searchLoadError instanceof Error ? searchLoadError.message : "Unable to search videos.";
   } finally {
-    loadingSearch.value = false;
+    if (generation === searchGeneration) {
+      loadingSearch.value = false;
+    }
   }
 }
 
@@ -190,6 +207,17 @@ function parseRouteTags(value: unknown): string[] {
 
   return [];
 }
+
+watch(
+  () => route.query.untagged,
+  (value) => {
+    if (value === "1") {
+      resetSearch();
+      untaggedOnly.value = true;
+    }
+  },
+  { immediate: true },
+);
 
 watch(
   () => route.query.tag,
@@ -209,13 +237,26 @@ watch(
 function openVideo(result: SearchResultItem): void {
   void router.push({ name: "admin-video-edit", params: { id: result.id } });
 }
+
+async function onLibraryRefreshed(): Promise<void> {
+  try {
+    await loadCatalog();
+    error.value = null;
+
+    if (hasSearched.value && selectedTags.value.length > 0) {
+      await runSearch();
+    }
+  } catch (loadError: unknown) {
+    error.value = loadError instanceof Error ? loadError.message : "Unable to load videos.";
+  }
+}
 </script>
 
 <style scoped>
 .admin-filter-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
 

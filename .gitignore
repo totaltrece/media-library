@@ -7,3 +7,5 @@ samples/indexer-library/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+.turbo/
+data/
