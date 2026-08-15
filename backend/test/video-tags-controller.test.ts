@@ -2,9 +2,23 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  parseVideoIdPath,
   parseVideoTagsCollectionPath,
   parseVideoTagsItemPath,
 } from "../src/adapters/http/video-tags-controller.js";
+
+test("parseVideoIdPath extracts a media id that contains slashes", () => {
+  assert.deepEqual(parseVideoIdPath("salsa/first.mp4"), {
+    mediaId: "salsa/first.mp4",
+  });
+});
+
+test("parseVideoIdPath rejects tag collection and item paths", () => {
+  assert.equal(parseVideoIdPath("salsa/first.mp4/tags"), undefined);
+  assert.equal(parseVideoIdPath("salsa/first.mp4/tags/"), undefined);
+  assert.equal(parseVideoIdPath("salsa/first.mp4/tags/salsa"), undefined);
+  assert.equal(parseVideoIdPath(""), undefined);
+});
 
 test("parseVideoTagsCollectionPath extracts a media id that contains slashes", () => {
   assert.deepEqual(parseVideoTagsCollectionPath("salsa/first.mp4/tags"), {

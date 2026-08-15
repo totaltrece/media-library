@@ -723,6 +723,219 @@ describe("admin video editor", () => {
     expect(wrapper.find("#admin-tag-input").exists()).toBe(true);
     expect(wrapper.text()).toContain("salsa");
   });
+
+  it("asks for confirmation before deleting a video and reloads the catalog after success", async () => {
+    const remainingVideos = videos.filter((video) => video.id !== "salsa/first.mp4");
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/videos/salsa/first.mp4" && init?.method === "DELETE") {
+        return jsonResponse({ id: "salsa/first.mp4" });
+      }
+
+      if (url === "/api/search") {
+        return jsonResponse({
+          query: { tags: [] },
+          count: remainingVideos.length,
+          results: remainingVideos,
+        });
+      }
+
+      if (url === "/api/videos/salsa/first.mp4/tags") {
+        return jsonResponse({ tags: ["salsa", "isa"] });
+      }
+
+      if (url === "/api/tags") {
+        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    const Root = defineComponent({
+      template: "<router-view />",
+    });
+    await router.push("/admin/videos/salsa/first.mp4");
+    await router.isReady();
+    const wrapper = mount(Root, {
+      global: {
+        plugins: [router],
+      },
+    });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="delete-video"]').text()).toBe("Eliminar vídeo");
+    expect(wrapper.find(".admin-video-confirm-modal").exists()).toBe(false);
+
+    await wrapper.get('[data-testid="delete-video"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.find(".admin-video-confirm-modal").exists()).toBe(true);
+    expect(wrapper.text()).toContain("¿Eliminar vídeo?");
+    expect(wrapper.text()).toContain(
+      "Esta acción eliminará el vídeo y su thumbnail de la biblioteca y todas sus relaciones con etiquetas. Esta acción no se puede deshacer.",
+    );
+
+    await wrapper.get('[data-testid="cancel-delete-video"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.find(".admin-video-confirm-modal").exists()).toBe(false);
+    expect(
+      fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE"),
+    ).toBe(false);
+    expect(router.currentRoute.value.name).toBe("admin-video-edit");
+
+    await wrapper.get('[data-testid="delete-video"]').trigger("click");
+    await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/videos/salsa/first.mp4", { method: "DELETE" });
+    expect(router.currentRoute.value.name).toBe("admin-videos");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search");
+    expect(wrapper.text()).toContain("Sin tags (1)");
+    expect(wrapper.text()).not.toContain("first.mp4");
+  });
+
+  it("avoids a second DELETE while a deletion is in progress", async () => {
+    let resolveDelete: (() => void) | undefined;
+    const deleteGate = new Promise<void>((resolve) => {
+      resolveDelete = resolve;
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/videos/salsa/first.mp4" && init?.method === "DELETE") {
+        await deleteGate;
+        return jsonResponse({ id: "salsa/first.mp4" });
+      }
+
+      if (url === "/api/search") {
+        return jsonResponse({ query: { tags: [] }, count: 2, results: videos });
+      }
+
+      if (url === "/api/videos/salsa/first.mp4/tags") {
+        return jsonResponse({ tags: ["salsa", "isa"] });
+      }
+
+      if (url === "/api/tags") {
+        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    await router.push("/admin/videos/salsa/first.mp4");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideoEditView, router, { id: "salsa/first.mp4" });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="delete-video"]').trigger("click");
+    await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
+    await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="confirm-delete-video"]').text()).toBe("Eliminando...");
+    expect(
+      fetchMock.mock.calls.filter(([, init]) => init?.method === "DELETE"),
+    ).toHaveLength(1);
+
+    resolveDelete?.();
+    await flushPromises();
+  });
+
+  it("shows a delete error without leaving the editor", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/videos/salsa/first.mp4" && init?.method === "DELETE") {
+        return jsonResponse({ error: { message: "Unable to delete video." } }, false, 500);
+      }
+
+      if (url === "/api/search") {
+        return jsonResponse({ query: { tags: [] }, count: 2, results: videos });
+      }
+
+      if (url === "/api/videos/salsa/first.mp4/tags") {
+        return jsonResponse({ tags: ["salsa", "isa"] });
+      }
+
+      if (url === "/api/tags") {
+        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    await router.push("/admin/videos/salsa/first.mp4");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideoEditView, router, { id: "salsa/first.mp4" });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="delete-video"]').trigger("click");
+    await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Unable to delete video.");
+    expect(router.currentRoute.value.name).toBe("admin-video-edit");
+    expect(wrapper.find("#admin-tag-input").exists()).toBe(true);
+    expect(wrapper.text()).toContain("salsa");
+  });
+
+  it("returns to the catalog when the video is already gone", async () => {
+    const remainingVideos = videos.filter((video) => video.id !== "salsa/first.mp4");
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/videos/salsa/first.mp4" && init?.method === "DELETE") {
+        return jsonResponse({ error: { message: "Video not found" } }, false, 404);
+      }
+
+      if (url === "/api/search") {
+        return jsonResponse({
+          query: { tags: [] },
+          count: remainingVideos.length,
+          results: remainingVideos,
+        });
+      }
+
+      if (url === "/api/videos/salsa/first.mp4/tags") {
+        return jsonResponse({ tags: ["salsa", "isa"] });
+      }
+
+      if (url === "/api/tags") {
+        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    const Root = defineComponent({
+      template: "<router-view />",
+    });
+    await router.push("/admin/videos/salsa/first.mp4");
+    await router.isReady();
+    const wrapper = mount(Root, {
+      global: {
+        plugins: [router],
+      },
+    });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="delete-video"]').trigger("click");
+    await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("admin-videos");
+    expect(wrapper.text()).toContain("Sin tags (1)");
+    expect(wrapper.text()).not.toContain("first.mp4");
+  });
 });
 
 describe("admin untagged flow", () => {

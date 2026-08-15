@@ -49,6 +49,14 @@ export class SqliteLibraryStore implements LibraryStore {
     return rows.filter(isVideoRow).map((row) => ({ id: row.id }));
   }
 
+  deleteVideo(id: string): void {
+    const result = this.database.prepare("DELETE FROM videos WHERE id = ?").run(id);
+
+    if (result.changes === 0) {
+      throw new Error(`Video not found: ${id}`);
+    }
+  }
+
   upsertTag(name: string): LibraryTag {
     const tagName = requireNonEmpty(name, "Tag name");
 

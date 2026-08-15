@@ -24,6 +24,7 @@ export interface LibraryStore {
   upsertVideo(id: string): LibraryVideo;
   findVideo(id: string): LibraryVideo | null;
   listVideos(): LibraryVideo[];
+  deleteVideo(id: string): void;
   upsertTag(name: string): LibraryTag;
   findTagById(id: number): LibraryTag | null;
   findTagByName(name: string): LibraryTag | null;

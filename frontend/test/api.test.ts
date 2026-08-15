@@ -83,6 +83,23 @@ describe("video tags API", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("deletes a video by media id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "salsa/first.mp4" }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { buildVideoUrl, deleteVideo } = await import("../src/api/client.js");
+
+    expect(buildVideoUrl("salsa/first.mp4")).toBe("/api/videos/salsa/first.mp4");
+    await expect(deleteVideo("salsa/first.mp4")).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith("/api/videos/salsa/first.mp4", { method: "DELETE" });
+
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("tag catalog API", () => {

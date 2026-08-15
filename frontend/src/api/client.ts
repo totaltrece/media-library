@@ -95,8 +95,20 @@ export async function refreshLibrary(): Promise<RefreshLibraryResponse> {
   return readJsonResponse<RefreshLibraryResponse>(response);
 }
 
+export function buildVideoUrl(mediaId: string): string {
+  return buildApiUrl(`/videos/${mediaId}`);
+}
+
 export function buildVideoTagsUrl(mediaId: string): string {
   return buildApiUrl(`/videos/${mediaId}/tags`);
+}
+
+export async function deleteVideo(mediaId: string): Promise<void> {
+  const response = await fetch(buildVideoUrl(mediaId), {
+    method: "DELETE",
+  });
+
+  await readJsonResponse<{ id: string }>(response);
 }
 
 export async function fetchVideoTags(mediaId: string): Promise<VideoTagsResponse> {

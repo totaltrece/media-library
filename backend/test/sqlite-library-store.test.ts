@@ -175,6 +175,31 @@ test("video_tags reject duplicate video/tag pairs", () => {
   database.close();
 });
 
+test("deleteVideo removes the video and its tag relations without deleting tags", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    store.upsertVideo("salsa/first.mp4");
+    store.upsertVideo("salsa/second.mp4");
+    store.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
+    store.setVideoTags("salsa/second.mp4", ["salsa"]);
+    store.upsertTag("bufanda");
+
+    store.deleteVideo("salsa/first.mp4");
+
+    assert.equal(store.findVideo("salsa/first.mp4"), null);
+    assert.deepEqual(store.listVideos().map((video) => video.id), ["salsa/second.mp4"]);
+    assert.deepEqual(store.getVideoTags("salsa/second.mp4"), ["salsa"]);
+    assert.deepEqual(
+      store.listTags().map((tag) => tag.name),
+      ["bufanda", "jota", "salsa"],
+    );
+    assert.throws(() => store.deleteVideo("salsa/first.mp4"), /Video not found: salsa\/first.mp4/);
+  } finally {
+    store.close();
+  }
+});
+
 test("deleting a video removes its tag relations", () => {
   const database = new DatabaseSync(":memory:");
   applySqliteMigrations(database);

@@ -197,7 +197,8 @@
 }
 
 .primary-button,
-.secondary-button {
+.secondary-button,
+.danger-button {
   align-items: center;
   border: 0;
   border-radius: 999px;
@@ -214,7 +215,8 @@
 }
 
 .primary-button:disabled,
-.secondary-button:disabled {
+.secondary-button:disabled,
+.danger-button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -222,6 +224,11 @@
 .secondary-button {
   background: #f1f3f4;
   color: #202124;
+}
+
+.danger-button {
+  background: #d93025;
+  color: #fff;
 }
 
 .search-results {

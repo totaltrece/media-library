@@ -1,7 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import type { AddVideoTagUseCase } from "../../application/add-video-tag.js";
+import type { DeleteVideoUseCase } from "../../application/delete-video.js";
 import type { GetVideoTagsUseCase } from "../../application/get-video-tags.js";
+import { InvalidMediaIdError } from "../../application/invalid-media-id-error.js";
 import type { RemoveVideoTagUseCase } from "../../application/remove-video-tag.js";
 import type { SetVideoTagsUseCase } from "../../application/set-video-tags.js";
 import { VideoNotFoundError } from "../../application/video-not-found-error.js";
@@ -11,6 +13,7 @@ export interface VideoTagsControllerOptions {
   addVideoTagUseCase: AddVideoTagUseCase;
   removeVideoTagUseCase: RemoveVideoTagUseCase;
   setVideoTagsUseCase: SetVideoTagsUseCase;
+  deleteVideoUseCase: DeleteVideoUseCase;
 }
 
 export function registerVideoTagsRoutes(
@@ -60,16 +63,36 @@ export function registerVideoTagsRoutes(
   });
 
   app.delete("/videos/*", async (request, reply) => {
-    const parsed = parseVideoTagsItemPath(getWildcardPath(request));
+    const wildcardPath = getWildcardPath(request);
+    const tagItem = parseVideoTagsItemPath(wildcardPath);
 
-    if (parsed === undefined) {
-      return sendBadRequest(reply, "Invalid video tags path");
+    if (tagItem !== undefined) {
+      return executeVideoTags(reply, () =>
+        options.removeVideoTagUseCase.execute(tagItem.mediaId, tagItem.tagName),
+      );
     }
 
-    return executeVideoTags(reply, () =>
-      options.removeVideoTagUseCase.execute(parsed.mediaId, parsed.tagName),
-    );
+    const video = parseVideoIdPath(wildcardPath);
+
+    if (video === undefined) {
+      return sendBadRequest(reply, "Invalid video path");
+    }
+
+    return executeDeleteVideo(reply, () => options.deleteVideoUseCase.execute(video.mediaId));
   });
+}
+
+export function parseVideoIdPath(wildcardPath: string): { mediaId: string } | undefined {
+  if (
+    wildcardPath.length === 0 ||
+    wildcardPath.endsWith("/tags") ||
+    wildcardPath.endsWith("/tags/") ||
+    wildcardPath.includes("/tags/")
+  ) {
+    return undefined;
+  }
+
+  return { mediaId: wildcardPath };
 }
 
 export function parseVideoTagsCollectionPath(wildcardPath: string): { mediaId: string } | undefined {
@@ -159,6 +182,32 @@ function executeVideoTags(reply: FastifyReply, execute: () => { tags: string[] }
     if (message.includes("Tag name must not be empty")) {
       return sendBadRequest(reply, message);
     }
+
+    return reply.status(500).send({
+      error: {
+        message,
+      },
+    });
+  }
+}
+
+async function executeDeleteVideo(reply: FastifyReply, execute: () => Promise<{ id: string }>) {
+  try {
+    return await execute();
+  } catch (error: unknown) {
+    if (error instanceof VideoNotFoundError) {
+      return reply.status(404).send({
+        error: {
+          message: error.message,
+        },
+      });
+    }
+
+    if (error instanceof InvalidMediaIdError) {
+      return sendBadRequest(reply, error.message);
+    }
+
+    const message = error instanceof Error ? error.message : "Unable to delete video";
 
     return reply.status(500).send({
       error: {

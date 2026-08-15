@@ -180,6 +180,38 @@ do not create videos.
 
 ---
 
+## Delete video
+
+```text
+DELETE /api/videos/:id
+```
+
+Deletes one catalog video. The media id uses the same wildcard form as video
+tags, thumbnails, and streaming, and is resolved with the same path-safety
+rules. Path traversal and other unsafe ids return **400 Bad Request**. A
+missing SQLite row returns **404 Not Found**.
+
+On success the backend:
+
+1. deletes the video file under `LIBRARY_PATH`;
+2. deletes its TagSpaces thumbnail under `LIBRARY_PATH/.ts/`;
+3. deletes the `videos` row (SQLite `ON DELETE CASCADE` removes `video_tags`);
+4. reloads the in-memory search index.
+
+Global `tags` rows are left in place. Other videos and thumbnails are not
+touched. Upload jobs are not affected.
+
+```json
+{
+  "id": "salsa/first.mp4"
+}
+```
+
+If a file cannot be removed, SQLite is left unchanged and the endpoint returns
+**500**.
+
+---
+
 ## Admin tag catalog
 
 `GET /api/tags` remains the consumer catalog: unique tag names currently used by

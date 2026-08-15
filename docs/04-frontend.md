@@ -99,6 +99,9 @@ Additional screens live at `/admin/videos`, `/admin/videos/upload`, `/admin/vide
 They reuse the existing `TagSearch` component and `GET /api/search?tag=...`
 to find videos by tags, filter untagged items, and edit tags through
 `GET /api/videos/:id/tags`, `GET /api/tags`, and `PUT /api/videos/:id/tags`.
+The edit screen can also delete the video with `DELETE /api/videos/:id` after
+a confirmation modal. A successful delete returns to `/admin/videos`, which
+reloads the catalog from `GET /api/search` and `GET /api/tags`.
 
 `/admin/videos` shares the same header as `/`, `/admin/videos/upload`, and
 `/admin/tags`: **View**, **Upload video**, **Admin videos**, **Admin tags**,

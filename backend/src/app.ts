@@ -2,6 +2,7 @@ import Fastify from "fastify";
 
 import { AddVideoTagUseCase } from "./application/add-video-tag.js";
 import { DeleteTagUseCase } from "./application/delete-tag.js";
+import { DeleteVideoUseCase } from "./application/delete-video.js";
 import { BackgroundUploadJobRunner, type BackgroundUploadErrorLogger } from "./application/background-upload-job-runner.js";
 import { CompleteUploadUseCase } from "./application/complete-upload.js";
 import { GetTagsUseCase } from "./application/get-tags.js";
@@ -92,6 +93,9 @@ export async function createApp(dependencies: AppDependencies) {
     }
 
     if (dependencies.libraryStore !== undefined && isMutableVideoIndex(dependencies.videoIndex)) {
+      const installer = dependencies.libraryMediaInstaller
+        ?? new FilesystemLibraryMediaInstaller(dependencies.libraryPath);
+
       registerVideoTagsRoutes(api, {
         getVideoTagsUseCase: new GetVideoTagsUseCase(dependencies.libraryStore),
         addVideoTagUseCase: new AddVideoTagUseCase(
@@ -105,6 +109,12 @@ export async function createApp(dependencies: AppDependencies) {
           dependencies.libraryPath,
         ),
         setVideoTagsUseCase: new SetVideoTagsUseCase(
+          dependencies.libraryStore,
+          dependencies.videoIndex,
+          dependencies.libraryPath,
+        ),
+        deleteVideoUseCase: new DeleteVideoUseCase(
+          installer,
           dependencies.libraryStore,
           dependencies.videoIndex,
           dependencies.libraryPath,
