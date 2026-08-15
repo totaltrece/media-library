@@ -30,9 +30,11 @@ El resultado permanece en el workspace temporal. Sin instalación en
 
 ## M5 — Integración con biblioteca
 Implementado: tras un procesamiento correcto, el vídeo y el thumbnail se
-instalan en `LIBRARY_PATH` / `.ts/`, se registra `upsertVideo` sin tags y se
-recarga el índice. Un id o fichero existente se rechaza con `409`.
-Sin cola, sin UI de upload y sin persistencia de jobs.
+instalan en `LIBRARY_PATH` / `.ts/`, se registra `upsertVideo` sin tags (con
+`recorded_at` desde ffprobe o `NULL`) y se recarga el índice. Un id o fichero
+existente se rechaza con `409`. Sin cola, sin UI de upload y sin persistencia
+de jobs. Los vídeos ya instalados se rellenan con `backfill-recorded-at`
+(ffprobe; fallback `YYYYMMDD` del nombre solo si no hay metadata).
 
 ## M6.1 — Upload HTTP asíncrono
 Implementado: `POST /api/admin/uploads` responde `202` tras persistir el

@@ -140,8 +140,34 @@ M5 es el primer hito que escribe en `LIBRARY_PATH`.
 - Copia con `fs.copyFile(..., COPYFILE_EXCL)`; no se usa shell.
 - Si SQLite o el destino ya existen → `409`, sin sobrescribir.
 - SQLite (`upsertVideo`) solo después de vídeo + thumbnail instalados.
+  `recorded_at` sale de ffprobe (`VideoProbeResult.recordingTime`), no del
+  nombre ni de la fecha de subida.
 - Recarga del índice con `reloadVideoIndex`, no con `POST /api/library/refresh`.
 - Compensación: borrar solo ficheros creados por este job. Nunca borrar
   preexistentes. Si falla SQLite tras copiar, se eliminan los ficheros nuevos.
   Si falla la compensación, se conserva el workspace y el job queda `failed`.
 - El thumbnail instalado es el de M3; no se vuelve a ejecutar FFmpeg.
+
+## Fecha de grabación (`recorded_at`)
+La fecha mostrada en el catálogo vive en SQLite, no en el nombre del fichero.
+
+- Columna: `videos.recorded_at` TEXT ISO-8601 UTC, nullable, ordenable.
+- Origen en el alta: `ffprobe -show_format -show_streams` sobre el original,
+  **antes** de convertir. El adapter lee tags en este orden:
+  1. `format.tags.creation_time`
+  2. `format.tags.com.apple.quicktime.creationdate`
+  3. video stream `tags.creation_time`
+  4. video stream `tags.com.apple.quicktime.creationdate`
+- Se descartan valores ilegibles y fechas no plausibles (p. ej. epoch 1970).
+- En el **alta** no se usa mtime, fecha de upload ni el nombre del fichero.
+- Vídeos antiguos: CLI `backfill-recorded-at` (con `--dry-run` primero).
+  Probe del fichero en `LIBRARY_PATH`; no convierte ni toca tags/thumbnails.
+- Prioridad en el backfill:
+  1. ffprobe (misma metadata que el alta)
+  2. fallback **solo** si hay un `YYYYMMDD` válido en el nombre y no hay fecha
+     de ffprobe: ese día a las **20:00 Europe/Madrid**, guardado en UTC.
+     Es una fecha aproximada (día conocido, hora convencional).
+     Ejemplos: `VID-20251227-WA0005.mp4`, `20241016-WA0010-mariposas.mp4`.
+  3. si no hay fuente válida: `NULL`
+- El dry-run imprime `source: ffprobe | filename-fallback | none`.
+- Si no hay fecha fiable: `NULL`. El frontend oculta el overlay.

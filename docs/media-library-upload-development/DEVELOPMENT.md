@@ -155,6 +155,29 @@ No usar `POST /api/library/refresh` para ver el vídeo nuevo: la UI recarga
 
 No usar rsync durante esta prueba.
 
+## Backfill de `recorded_at`
+
+Primero, solo inspección (no escribe SQLite):
+
+```powershell
+pnpm --filter @media-library/backend backfill-recorded-at -- --dry-run
+```
+
+Linux:
+
+```bash
+pnpm --filter @media-library/backend backfill-recorded-at -- --dry-run
+```
+
+Cada vídeo muestra `source`:
+
+- `ffprobe`: metadata del fichero
+- `filename-fallback`: `YYYYMMDD` en el nombre (día conocido,
+  hora convencional 20:00 Europe/Madrid → UTC)
+- `none`: sin fecha válida
+
+No ejecutar el backfill real hasta revisar las fechas detectadas.
+
 ## Despliegue remoto
 
 1. actualizar código;

@@ -34,6 +34,7 @@ test("GET /search returns videos matching every requested tag", async () => {
         thumbnail: "/api/thumbnail/salsa/first.mp4",
         video: "/api/video/salsa/first.mp4",
         tags: ["salsa", "bea", "linea"],
+        recordedAt: null,
       },
     ],
   });
@@ -83,6 +84,7 @@ test("GET /search without tags returns all indexed videos", async () => {
         thumbnail: "/api/thumbnail/salsa/first.mp4",
         video: "/api/video/salsa/first.mp4",
         tags: ["salsa", "bea", "linea"],
+        recordedAt: null,
       },
       {
         id: "salsa/second.mp4",
@@ -90,6 +92,7 @@ test("GET /search without tags returns all indexed videos", async () => {
         thumbnail: "/api/thumbnail/salsa/second.mp4",
         video: "/api/video/salsa/second.mp4",
         tags: ["salsa", "damian"],
+        recordedAt: null,
       },
       {
         id: "bachata/third.mp4",
@@ -97,6 +100,7 @@ test("GET /search without tags returns all indexed videos", async () => {
         thumbnail: "/api/thumbnail/bachata/third.mp4",
         video: "/api/video/bachata/third.mp4",
         tags: ["bachata", "bea"],
+        recordedAt: null,
       },
     ],
   });

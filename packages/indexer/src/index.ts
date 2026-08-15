@@ -8,6 +8,7 @@ export interface IndexedVideo {
     metadataPath?: string;
     thumbnailPath?: string;
     tags: string[];
+    recordedAt?: string | null;
 }
 
 /**

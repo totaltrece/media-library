@@ -26,6 +26,7 @@ test("toSearchResult maps indexed videos to the public search item shape", () =>
     thumbnail: "/api/thumbnail/salsa/first.mp4",
     video: "/api/video/salsa/first.mp4",
     tags: ["salsa", "bea", "linea"],
+    recordedAt: null,
   });
 });
 
@@ -42,6 +43,7 @@ test("buildSearchResponse includes query, count, and mapped results", () => {
         thumbnail: "/api/thumbnail/salsa/first.mp4",
         video: "/api/video/salsa/first.mp4",
         tags: ["salsa", "bea", "linea"],
+        recordedAt: null,
       },
     ],
   });

@@ -19,7 +19,7 @@ import { SyncNewVideosUseCase } from "../src/application/sync-new-videos.js";
 import { toIndexedVideos } from "../src/application/to-indexed-videos.js";
 import { PUBLIC_PROCESSING_FAILED_MESSAGE } from "../src/application/to-upload-job-view.js";
 import { PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE } from "../src/application/video-already-exists-error.js";
-import { toCanonicalPxlFileName } from "../src/application/resolve-canonical-upload-name.js";
+import { toCanonicalPxlFileName, toStoredRecordedAt } from "../src/application/resolve-canonical-upload-name.js";
 import type { LibraryMediaInstaller } from "../src/ports/library-media-installer.js";
 import type { LibraryStore } from "../src/ports/library-store.js";
 import type { ProcessingJob, ProcessingPhase } from "../src/ports/processing-job-store.js";
@@ -89,6 +89,7 @@ test("POST /api/admin/uploads returns 202 and finishes HEVC install asynchronous
       thumbnail: "/api/thumbnail/PXL_clip.mp4",
       video: "/api/video/PXL_clip.mp4",
       tags: [],
+      recordedAt: null,
     });
 
     const tagged = await context.app.inject({ method: "GET", url: "/api/search?tag=salsa" });
@@ -161,6 +162,7 @@ test("POST /api/admin/uploads names an Android MediaStore file from video metada
     assert.match(expected, /^PXL_\d{8}_\d{9}\.mp4$/);
     assert.equal(context.libraryStore.findVideo("1000141506.mp4"), null);
     assert.equal(context.libraryStore.findVideo(expected)?.id, expected);
+    assert.equal(context.libraryStore.findVideo(expected)?.recordedAt, toStoredRecordedAt(recordingTime));
     assert.equal(await readFile(join(context.libraryPath, expected), "utf8"), VIDEO_BYTES.toString());
     assert.deepEqual(await readFile(join(context.libraryPath, ".ts", `${expected}.jpg`)), THUMBNAIL_BYTES);
 
@@ -191,6 +193,7 @@ test("POST /api/admin/uploads keeps a MediaStore name when metadata has no relia
       assert.equal(job.state.videoId, "1000141506.mp4");
     }
     assert.equal(context.libraryStore.findVideo("1000141506.mp4")?.id, "1000141506.mp4");
+    assert.equal(context.libraryStore.findVideo("1000141506.mp4")?.recordedAt, null);
     assert.equal((await readdir(context.libraryPath)).some((name) => name.startsWith("PXL_")), false);
   });
 });
@@ -837,12 +840,12 @@ function wrapLibraryStore(inner: LibraryStore, failUpsert: { current: boolean })
   return new Proxy(inner, {
     get(target, property, receiver) {
       if (property === "upsertVideo") {
-        return (id: string) => {
+        return (id: string, recordedAt?: string | null) => {
           if (failUpsert.current) {
             throw new Error("sqlite down");
           }
 
-          return target.upsertVideo(id);
+          return target.upsertVideo(id, recordedAt);
         };
       }
 

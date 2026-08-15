@@ -1,8 +1,8 @@
 import { extname } from "node:path";
 
 /**
- * Same YYYYMMDD segment used by the frontend overlay (`formatVideoDateFromName`).
- * A filename that matches can supply the library date without probing metadata.
+ * Same YYYYMMDD segment used when deciding whether an upload already has a
+ * dated library name. Display dates come from SQLite `recorded_at`, not the filename.
  */
 export const VIDEO_DATE_IN_NAME_PATTERN = /(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])/;
 
@@ -46,6 +46,16 @@ export function parseRecordingTime(value: string | null | undefined): Date | nul
   }
 
   return recordedAt;
+}
+
+/**
+ * Canonical UTC ISO-8601 value stored in SQLite `recorded_at`.
+ * Returns null when ffprobe metadata is missing or not a reliable recording date.
+ */
+export function toStoredRecordedAt(value: string | null | undefined): string | null {
+  const recordedAt = parseRecordingTime(value);
+
+  return recordedAt === null ? null : recordedAt.toISOString();
 }
 
 export function toCanonicalPxlFileName(recordedAt: Date, extension: string): string {

@@ -7,6 +7,7 @@ import {
   parseRecordingTime,
   resolveCanonicalUploadName,
   toCanonicalPxlFileName,
+  toStoredRecordedAt,
 } from "../src/application/resolve-canonical-upload-name.js";
 
 test("filenameHasVideoDate accepts Pixel and dated library names", () => {
@@ -71,4 +72,10 @@ test("parseRecordingTime accepts ISO timestamps and rejects epoch or invalid val
   assert.equal(parseRecordingTime("   "), null);
   assert.equal(parseRecordingTime("yesterday"), null);
   assert.equal(parseRecordingTime("1970-01-01T00:00:00.000000Z"), null);
+});
+
+test("toStoredRecordedAt stores reliable timestamps as UTC ISO-8601", () => {
+  assert.equal(toStoredRecordedAt("2026-03-14T19:04:31.123Z"), "2026-03-14T19:04:31.123Z");
+  assert.equal(toStoredRecordedAt("1970-01-01T00:00:00.000000Z"), null);
+  assert.equal(toStoredRecordedAt(null), null);
 });

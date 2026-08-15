@@ -222,6 +222,7 @@ test("searching several tags still requires every requested tag", async () => {
           thumbnail: "/api/thumbnail/salsa/first.mp4",
           video: "/api/video/salsa/first.mp4",
           tags: ["salsa", "bea", "linea"],
+          recordedAt: null,
         },
       ],
     });
@@ -297,6 +298,7 @@ test("SQLite-backed search keeps the existing search endpoint contract", async (
           thumbnail: "/api/thumbnail/salsa/first.mp4",
           video: "/api/video/salsa/first.mp4",
           tags: ["salsa", "bea", "linea"],
+          recordedAt: null,
         },
       ],
     });

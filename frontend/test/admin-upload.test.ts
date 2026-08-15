@@ -20,6 +20,7 @@ const catalogVideos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/untagged.mp4",
     video: "/api/video/untagged.mp4",
     tags: [],
+    recordedAt: null,
   },
   {
     id: "salsa/first.mp4",
@@ -27,6 +28,7 @@ const catalogVideos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/salsa/first.mp4",
     video: "/api/video/salsa/first.mp4",
     tags: ["salsa"],
+    recordedAt: null,
   },
 ];
 
@@ -570,6 +572,7 @@ describe("admin video upload", () => {
       thumbnail: "/api/thumbnail/clip.mp4",
       video: "/api/video/clip.mp4",
       tags: [],
+      recordedAt: null,
     };
     let catalog = [...catalogVideos];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -761,7 +764,19 @@ describe("admin video upload", () => {
   });
 
   it("does not add the upload zone to the consumer view", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ count: 1, tags: ["salsa"] }));
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === "/api/tags") {
+        return jsonResponse({ count: 1, tags: ["salsa"] });
+      }
+
+      if (url === "/api/search") {
+        return jsonResponse({ query: { tags: [] }, count: 0, results: [] });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const router = createUploadRouter();
@@ -779,7 +794,7 @@ describe("admin video upload", () => {
     expect(wrapper.text()).not.toContain("Select video");
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
     expect(fetchMock).toHaveBeenCalledWith("/api/tags");
-    expect(fetchMock).not.toHaveBeenCalledWith("/api/search");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search");
     expect(
       fetchMock.mock.calls.some(([, init]) => init?.method === "POST"),
     ).toBe(false);

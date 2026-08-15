@@ -151,6 +151,7 @@ const previewResult = computed(() => {
       thumbnail: `/api/thumbnail/${props.id}`,
       video: `/api/video/${props.id}`,
       tags: draftTags.value,
+      recordedAt: null,
     };
   }
 
@@ -190,6 +191,7 @@ async function loadVideo(): Promise<void> {
       thumbnail: `/api/thumbnail/${props.id}`,
       video: `/api/video/${props.id}`,
       tags: videoTags.tags,
+      recordedAt: null,
     };
     savedTags.value = [...videoTags.tags];
     draftTags.value = [...videoTags.tags];

@@ -10,6 +10,7 @@ const videos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/untagged-a.mp4",
     video: "/api/video/untagged-a.mp4",
     tags: [],
+    recordedAt: null,
   },
   {
     id: "salsa/first.mp4",
@@ -17,6 +18,7 @@ const videos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/salsa/first.mp4",
     video: "/api/video/salsa/first.mp4",
     tags: ["salsa", "isa"],
+    recordedAt: null,
   },
   {
     id: "untagged-b.mp4",
@@ -24,6 +26,7 @@ const videos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/untagged-b.mp4",
     video: "/api/video/untagged-b.mp4",
     tags: [],
+    recordedAt: null,
   },
 ];
 

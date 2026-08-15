@@ -14,27 +14,28 @@
       @remove-tag="removeTag"
     />
 
-    <LoadingIndicator v-if="loadingTags" message="Loading tags..." />
+    <LoadingIndicator v-if="loadingCatalog" message="Loading videos..." />
 
-    <ErrorMessage v-else-if="tagsError" :message="tagsError" />
+    <ErrorMessage v-else-if="error" :message="error" />
 
-    <p v-else-if="availableTags.length === 0" class="status-message info">
-      No tags are available in the indexed library.
-    </p>
+    <template v-else>
+      <p v-if="availableTags.length === 0" class="status-message info">
+        No tags are available in the indexed library.
+      </p>
 
-    <LoadingIndicator v-if="loadingSearch" message="Searching videos..." />
+      <LoadingIndicator v-if="loadingSearch" message="Searching videos..." />
+      <ErrorMessage v-if="searchError" :message="searchError" />
 
-    <ErrorMessage v-if="searchError" :message="searchError" />
-
-    <div class="content-layout">
-      <SearchResults
-        :results="searchResults"
-        :searched="hasSearched"
-        :selected-video-id="selectedVideo?.id ?? null"
-        @select-tag="addTag"
-        @select-video="selectVideo"
-      />
-    </div>
+      <div class="content-layout">
+        <SearchResults
+          :results="visibleVideos"
+          :searched="true"
+          :selected-video-id="selectedVideo?.id ?? null"
+          @select-tag="addTag"
+          @select-video="selectVideo"
+        />
+      </div>
+    </template>
 
     <VideoPlayer
       v-if="selectedVideo"
@@ -46,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 import { fetchTags, searchVideos } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
@@ -59,27 +60,34 @@ import VideoPlayer from "../components/VideoPlayer.vue";
 
 const availableTags = ref<string[]>([]);
 const selectedTags = ref<string[]>([]);
+const catalogVideos = ref<SearchResultItem[]>([]);
 const searchResults = ref<SearchResultItem[]>([]);
 const selectedVideo = ref<SearchResultItem | null>(null);
-
-const loadingTags = ref(true);
-const loadingSearch = ref(false);
 const hasSearched = ref(false);
 
-const tagsError = ref<string | null>(null);
+const loadingCatalog = ref(true);
+const loadingSearch = ref(false);
+const error = ref<string | null>(null);
 const searchError = ref<string | null>(null);
 let searchGeneration = 0;
 
+const visibleVideos = computed(() => (hasSearched.value ? searchResults.value : catalogVideos.value));
+
 onMounted(async () => {
   try {
-    const response = await fetchTags();
-    availableTags.value = response.tags;
-  } catch (error: unknown) {
-    tagsError.value = error instanceof Error ? error.message : "Unable to load tags.";
+    await loadCatalog();
+  } catch (loadError: unknown) {
+    error.value = loadError instanceof Error ? loadError.message : "Unable to load videos.";
   } finally {
-    loadingTags.value = false;
+    loadingCatalog.value = false;
   }
 });
+
+async function loadCatalog(): Promise<void> {
+  const [searchResponse, tagsResponse] = await Promise.all([searchVideos([]), fetchTags()]);
+  catalogVideos.value = searchResponse.results;
+  availableTags.value = tagsResponse.tags;
+}
 
 function addTag(tag: string): void {
   if (selectedTags.value.includes(tag)) {
@@ -94,37 +102,36 @@ function removeTag(tag: string): void {
   selectedTags.value = selectedTags.value.filter((selectedTag) => selectedTag !== tag);
 
   if (selectedTags.value.length === 0) {
-    clearSearchResults();
+    resetSearch();
     return;
   }
 
   void runSearch();
 }
 
-function clearSearchResults(): void {
+function resetSearch(): void {
   searchGeneration += 1;
   searchResults.value = [];
-  selectedVideo.value = null;
   hasSearched.value = false;
   searchError.value = null;
   loadingSearch.value = false;
+  syncSelectedVideo();
 }
 
 function clearTags(): void {
   selectedTags.value = [];
-  clearSearchResults();
+  resetSearch();
 }
 
 async function runSearch(): Promise<void> {
   if (selectedTags.value.length === 0) {
-    clearSearchResults();
+    resetSearch();
     return;
   }
 
   const generation = ++searchGeneration;
   loadingSearch.value = true;
   searchError.value = null;
-  selectedVideo.value = null;
 
   try {
     const response = await searchVideos(selectedTags.value);
@@ -135,18 +142,30 @@ async function runSearch(): Promise<void> {
 
     searchResults.value = response.results;
     hasSearched.value = true;
-  } catch (error: unknown) {
+    syncSelectedVideo();
+  } catch (searchLoadError: unknown) {
     if (generation !== searchGeneration) {
       return;
     }
 
     searchResults.value = [];
     hasSearched.value = true;
-    searchError.value = error instanceof Error ? error.message : "Unable to search videos.";
+    searchError.value = searchLoadError instanceof Error ? searchLoadError.message : "Unable to search videos.";
+    syncSelectedVideo();
   } finally {
     if (generation === searchGeneration) {
       loadingSearch.value = false;
     }
+  }
+}
+
+function syncSelectedVideo(): void {
+  if (selectedVideo.value === null) {
+    return;
+  }
+
+  if (!visibleVideos.value.some((video) => video.id === selectedVideo.value?.id)) {
+    selectedVideo.value = null;
   }
 }
 
@@ -160,15 +179,14 @@ function closeVideo(): void {
 
 async function onLibraryRefreshed(): Promise<void> {
   try {
-    const response = await fetchTags();
-    availableTags.value = response.tags;
-    tagsError.value = null;
+    await loadCatalog();
+    error.value = null;
 
     if (hasSearched.value && selectedTags.value.length > 0) {
       await runSearch();
     }
-  } catch (error: unknown) {
-    tagsError.value = error instanceof Error ? error.message : "Unable to load tags.";
+  } catch (loadError: unknown) {
+    error.value = loadError instanceof Error ? loadError.message : "Unable to load videos.";
   }
 }
 </script>

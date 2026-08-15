@@ -19,6 +19,7 @@ const videos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/untagged.mp4",
     video: "/api/video/untagged.mp4",
     tags: [],
+    recordedAt: null,
   },
   {
     id: "salsa/first.mp4",
@@ -26,6 +27,7 @@ const videos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/salsa/first.mp4",
     video: "/api/video/salsa/first.mp4",
     tags: ["salsa", "isa"],
+    recordedAt: null,
   },
 ];
 
@@ -36,6 +38,7 @@ const catalogVideos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/untagged.mp4",
     video: "/api/video/untagged.mp4",
     tags: [],
+    recordedAt: null,
   },
   {
     id: "name-only-zenit.mp4",
@@ -43,6 +46,7 @@ const catalogVideos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/name-only-zenit.mp4",
     video: "/api/video/name-only-zenit.mp4",
     tags: ["salsa"],
+    recordedAt: null,
   },
   {
     id: "tagged-zenit.mp4",
@@ -50,6 +54,7 @@ const catalogVideos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/tagged-zenit.mp4",
     video: "/api/video/tagged-zenit.mp4",
     tags: ["zenit"],
+    recordedAt: null,
   },
   {
     id: "salsa-jota.mp4",
@@ -57,6 +62,7 @@ const catalogVideos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/salsa-jota.mp4",
     video: "/api/video/salsa-jota.mp4",
     tags: ["salsa", "jota"],
+    recordedAt: null,
   },
 ];
 
@@ -1015,8 +1021,8 @@ describe("consumer search view", () => {
     vi.unstubAllGlobals();
   });
 
-  it("still loads the existing tag search screen", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ count: 1, tags: ["salsa"] }));
+  it("shows every video on the first load", async () => {
+    const fetchMock = createCatalogFetchMock();
     vi.stubGlobal("fetch", fetchMock);
 
     const router = createTestRouter("/");
@@ -1026,13 +1032,72 @@ describe("consumer search view", () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/tags");
-    expect(fetchMock).not.toHaveBeenCalledWith("/api/search");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search");
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
-    expect(wrapper.find(".search-results").exists()).toBe(false);
+    expect(wrapper.find(".search-results").exists()).toBe(true);
+    expect(wrapper.text()).toContain("4 results");
     expect(wrapper.text()).toContain("Search your tagged videos and watch them from any browser.");
     expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
     expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
+  });
+
+  it("shows the full catalog again when every tag is cleared", async () => {
+    const fetchMock = createCatalogFetchMock((url) => {
+      if (url === "/api/search?tag=salsa") {
+        return catalogVideos.filter((video) => video.tags.includes("salsa"));
+      }
+
+      return null;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter("/");
+    await router.push("/");
+    await router.isReady();
+    const wrapper = mountWithRouter(HomeView, router);
+    await flushPromises();
+
+    await addSearchTags(wrapper, ["salsa"]);
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa");
+    expect(wrapper.text()).toContain("2 results");
+
+    const clearButton = wrapper.findAll("button").find((button) => button.text() === "Clear tags");
+    expect(clearButton).toBeDefined();
+    await clearButton!.trigger("click");
+    await nextTick();
+
+    expect(wrapper.text()).toContain("4 results");
+    expect(wrapper.find(".selected-tags").exists()).toBe(false);
+  });
+
+  it("shows the full catalog when the last selected tag is removed", async () => {
+    const fetchMock = createCatalogFetchMock((url) => {
+      if (url === "/api/search?tag=salsa") {
+        return catalogVideos.filter((video) => video.tags.includes("salsa"));
+      }
+
+      return null;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter("/");
+    await router.push("/");
+    await router.isReady();
+    const wrapper = mountWithRouter(HomeView, router);
+    await flushPromises();
+
+    await addSearchTags(wrapper, ["salsa"]);
+    await flushPromises();
+    expect(wrapper.text()).toContain("2 results");
+
+    await wrapper.get('button[aria-label="Remove salsa"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.text()).toContain("4 results");
+    expect(wrapper.find(".selected-tags").exists()).toBe(false);
   });
 
   it("searches as soon as a result tag is added", async () => {
@@ -1041,6 +1106,10 @@ describe("consumer search view", () => {
 
       if (url === "/api/tags") {
         return jsonResponse({ count: catalogTags.length, tags: catalogTags });
+      }
+
+      if (url === "/api/search") {
+        return jsonResponse({ query: { tags: [] }, count: catalogVideos.length, results: catalogVideos });
       }
 
       if (url === "/api/search?tag=salsa") {

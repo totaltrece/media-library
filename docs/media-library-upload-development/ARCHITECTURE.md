@@ -217,6 +217,15 @@ Reutilizar el comportamiento actual:
 
 Al finalizar:
 
-`upsertVideo(mediaId)` → tags vacíos.
+`upsertVideo(mediaId, recordedAt)` → tags vacíos.
 
-No crear una segunda fuente de verdad.
+`recorded_at` es TEXT ISO-8601 UTC nullable (`2026-03-14T19:04:31.123Z`).
+En el alta se obtiene del probe ffprobe del vídeo **original** (antes de convertir).
+Si no hay metadata fiable, queda `NULL`; el alta no lee el nombre del fichero.
+
+El backfill de vídeos existentes usa el mismo probe. Si ffprobe no da fecha
+y el nombre contiene un `YYYYMMDD` válido, rellena ese día a las 20:00
+Europe/Madrid (hora convencional; el instante se guarda en UTC). Nombres
+sin fecha válida ni metadata quedan `NULL`.
+
+No crear una segunda fuente de verdad en el pipeline de upload.

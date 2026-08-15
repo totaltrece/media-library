@@ -5,6 +5,7 @@ import type { MutableVideoIndex } from "../ports/video-index.js";
 
 import { transitionProcessingJob, type ProcessingJob } from "./processing-job.js";
 import type { ProcessedVideoJob } from "./process-video-job.js";
+import { toStoredRecordedAt } from "./resolve-canonical-upload-name.js";
 import { reloadVideoIndex } from "./reload-video-index.js";
 import {
   PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE,
@@ -83,7 +84,7 @@ export class InstallProcessedUploadUseCase {
       }
 
       try {
-        this.libraryStore.upsertVideo(videoId);
+        this.libraryStore.upsertVideo(videoId, toStoredRecordedAt(processed.probe.recordingTime));
       } catch (error: unknown) {
         await this.compensate(videoId, createdVideo, createdThumbnail);
         throw error;

@@ -39,13 +39,16 @@ Cuando el job termina, el resultado de M5 sigue siendo el mismo:
 
 - vídeo en `LIBRARY_PATH/<videoId>`
 - thumbnail en `LIBRARY_PATH/.ts/<videoId>.jpg`
-- fila SQLite sin tags
+- fila SQLite sin tags, con `recorded_at` ISO-8601 UTC o `null`
 - índice en memoria actualizado
 
 `videoId` conserva un nombre que ya incluye `YYYYMMDD` (p. ej. `PXL_20260314_200431123.mp4`).
 Si el navegador envía un nombre MediaStore de Android sin fecha (`1000141506.mp4`),
 el job usa `creation_time` de ffprobe para generar `PXL_YYYYMMDD_HHMMSSmmm.mp4`.
 Sin una fecha fiable en metadatos, se conserva el nombre sanitizado.
+
+`GET /api/search` incluye `recordedAt` (ISO-8601 UTC o `null`) en cada resultado.
+No hay filtro por fecha todavía.
 
 ## Estado
 

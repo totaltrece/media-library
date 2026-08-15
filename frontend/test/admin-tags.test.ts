@@ -440,6 +440,7 @@ describe("admin tag catalog", () => {
               thumbnail: "/api/thumbnail/jota.mp4",
               video: "/api/video/jota.mp4",
               tags: ["jota"],
+              recordedAt: null,
             },
           ],
         });
@@ -456,6 +457,7 @@ describe("admin tag catalog", () => {
               thumbnail: "/api/thumbnail/jota.mp4",
               video: "/api/video/jota.mp4",
               tags: ["jota"],
+              recordedAt: null,
             },
           ],
         });

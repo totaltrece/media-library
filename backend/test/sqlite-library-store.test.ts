@@ -9,6 +9,7 @@ import {
   applySqliteMigrations,
   openSqliteLibraryStore,
 } from "../src/adapters/sqlite/sqlite-library-store.js";
+import { sqliteMigrations } from "../src/adapters/sqlite/migrations.js";
 
 test("openSqliteLibraryStore initializes the schema on a file database", async () => {
   const directory = await mkdtemp(join(tmpdir(), "media-library-sqlite-"));
@@ -19,7 +20,7 @@ test("openSqliteLibraryStore initializes the schema on a file database", async (
     store.upsertVideo("salsa/first.mp4");
     store.upsertTag("salsa");
 
-    assert.deepEqual(store.listVideos(), [{ id: "salsa/first.mp4" }]);
+    assert.deepEqual(store.listVideos(), [{ id: "salsa/first.mp4", recordedAt: null }]);
     assert.deepEqual(store.listTags().map((tag) => tag.name), ["salsa"]);
   } finally {
     store.close();
@@ -38,7 +39,7 @@ test("schema migrations are idempotent", () => {
     .all()
     .map((row) => (row as { version: number }).version);
 
-  assert.deepEqual(versions, [1]);
+  assert.deepEqual(versions, [1, 2]);
 
   database.close();
 });
@@ -51,7 +52,7 @@ test("videos can be upserted without creating duplicates", () => {
     const second = store.upsertVideo("salsa/first.mp4");
 
     assert.deepEqual(first, second);
-    assert.deepEqual(store.listVideos(), [{ id: "salsa/first.mp4" }]);
+    assert.deepEqual(store.listVideos(), [{ id: "salsa/first.mp4", recordedAt: null }]);
   } finally {
     store.close();
   }
@@ -88,6 +89,7 @@ test("video tags preserve order and replace previous assignments", () => {
     assert.deepEqual(store.listVideosWithTags(), [
       {
         id: "salsa/first.mp4",
+        recordedAt: null,
         tags: ["bea", "salsa"],
       },
     ]);
@@ -386,4 +388,53 @@ test("deleteTag removes the catalog entry and its video relations", () => {
   } finally {
     store.close();
   }
+});
+
+test("videos store a nullable recorded_at timestamp", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    const created = store.upsertVideo("clip.mp4", "2026-03-14T19:04:31.123Z");
+    assert.deepEqual(created, { id: "clip.mp4", recordedAt: "2026-03-14T19:04:31.123Z" });
+    assert.deepEqual(store.findVideo("clip.mp4"), created);
+
+    const duplicate = store.upsertVideo("clip.mp4", "2020-01-01T00:00:00.000Z");
+    assert.equal(duplicate.recordedAt, "2026-03-14T19:04:31.123Z");
+
+    const updated = store.setVideoRecordedAt("clip.mp4", "2026-03-14T19:04:31.123Z");
+    assert.equal(updated.recordedAt, "2026-03-14T19:04:31.123Z");
+    assert.throws(() => store.setVideoRecordedAt("missing.mp4", "2026-03-14T19:04:31.123Z"), /Video not found/);
+  } finally {
+    store.close();
+  }
+});
+
+test("migration v2 adds recorded_at without dropping existing videos", () => {
+  const database = new DatabaseSync(":memory:");
+
+  database.exec(`
+    CREATE TABLE schema_migrations (
+      version INTEGER PRIMARY KEY,
+      applied_at TEXT NOT NULL
+    ) STRICT;
+  `);
+  database.exec(sqliteMigrations[0]!.sql);
+  database.prepare("INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(1, "2026-01-01T00:00:00.000Z");
+  database.prepare("INSERT INTO videos (id) VALUES (?)").run("clip.mp4");
+
+  applySqliteMigrations(database);
+
+  const versions = database
+    .prepare("SELECT version FROM schema_migrations ORDER BY version")
+    .all()
+    .map((row) => Number((row as { version: number }).version));
+  const row = database.prepare("SELECT id, recorded_at FROM videos WHERE id = ?").get("clip.mp4") as {
+    id: string;
+    recorded_at: string | null;
+  };
+
+  assert.deepEqual(versions, [1, 2]);
+  assert.equal(row.id, "clip.mp4");
+  assert.equal(row.recorded_at, null);
+  database.close();
 });

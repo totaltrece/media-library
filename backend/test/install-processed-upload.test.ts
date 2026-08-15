@@ -11,6 +11,7 @@ import {
   type ProcessingJob,
 } from "../src/application/processing-job.js";
 import type { ProcessedVideoJob } from "../src/application/process-video-job.js";
+import { toStoredRecordedAt } from "../src/application/resolve-canonical-upload-name.js";
 import { VideoAlreadyExistsError } from "../src/application/video-already-exists-error.js";
 import type { LibraryMediaInstaller, LibraryMediaPresence } from "../src/ports/library-media-installer.js";
 import type { LibraryStore } from "../src/ports/library-store.js";
@@ -33,8 +34,22 @@ test("installs processed video and thumbnail, then registers SQLite without tags
   assert.equal(installer.installedVideo, "clip.mp4");
   assert.equal(installer.installedThumbnail, "clip.mp4");
   assert.equal(libraryStore.findVideo("clip.mp4")?.id, "clip.mp4");
+  assert.equal(libraryStore.findVideo("clip.mp4")?.recordedAt, null);
   assert.deepEqual(libraryStore.getVideoTags("clip.mp4"), []);
   assert.deepEqual(result.job.state, { status: "completed", videoId: "clip.mp4" });
+});
+
+test("install stores recorded_at from ffprobe metadata", async () => {
+  const { useCase, libraryStore, jobs } = createHarness();
+  const processed = stagedJob(jobs, "clip.mp4", "job-date", "2026-03-14T19:04:31.123Z");
+
+  const result = await useCase.execute(processed);
+
+  assert.equal(result.status, "completed");
+  assert.equal(
+    libraryStore.findVideo("clip.mp4")?.recordedAt,
+    toStoredRecordedAt("2026-03-14T19:04:31.123Z"),
+  );
 });
 
 test("rejects a video id that already exists in SQLite", async () => {
@@ -132,7 +147,12 @@ test("keeps pre-existing files when compensation would otherwise run", async () 
   assert.deepEqual(installer.presence, { video: true, thumbnail: true });
 });
 
-function stagedJob(jobs: InMemoryProcessingJobStore, originalName: string, jobId: string): ProcessedVideoJob {
+function stagedJob(
+  jobs: InMemoryProcessingJobStore,
+  originalName: string,
+  jobId: string,
+  recordingTime: string | null = null,
+): ProcessedVideoJob {
   let job: ProcessingJob = createProcessingJob({ originalName, id: jobId });
   job = transitionProcessingJob(job, { status: "uploading" });
   job = transitionProcessingJob(job, { status: "processing", phase: "processing" });
@@ -151,7 +171,7 @@ function stagedJob(jobs: InMemoryProcessingJobStore, originalName: string, jobId
       height: 240,
       videoCodec: "hevc",
       audioCodec: "aac",
-      recordingTime: null,
+      recordingTime,
     },
     outputVideoPath: "/tmp/source-or-converted",
     thumbnailPath: "/tmp/thumbnail.jpg",
@@ -187,12 +207,12 @@ function wrapLibraryStore(inner: LibraryStore, failUpsert: { current: boolean })
   return new Proxy(inner, {
     get(target, property, receiver) {
       if (property === "upsertVideo") {
-        return (id: string) => {
+        return (id: string, recordedAt?: string | null) => {
           if (failUpsert.current) {
             throw new Error("sqlite down");
           }
 
-          return target.upsertVideo(id);
+          return target.upsertVideo(id, recordedAt);
         };
       }
 

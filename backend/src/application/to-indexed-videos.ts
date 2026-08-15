@@ -14,6 +14,7 @@ export function toIndexedVideo(video: LibraryVideoWithTags, libraryPath: string)
   return {
     videoPath,
     tags: video.tags,
+    recordedAt: video.recordedAt,
   };
 }
 
