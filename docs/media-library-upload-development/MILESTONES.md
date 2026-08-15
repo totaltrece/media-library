@@ -17,11 +17,13 @@ Implementado: adapter FFmpeg/FFprobe mediante `spawn` (sin shell), workspace
 temporal de filesystem y CLI `ffmpeg-test` para pruebas locales.
 Sin upload HTTP, sin jobs reales y sin cambios en el flujo actual.
 
-## M3 — Upload local
-Recibir un único vídeo y almacenarlo temporalmente.
+## M3 — Pipeline de procesamiento
+Implementado: `ProcessVideoJobUseCase` orquesta job, workspace, probe,
+conversión HEVC y thumbnail. CLI `process-video` para prueba local.
+Sin upload HTTP, sin SQLite de jobs y sin escritura en `LIBRARY_PATH`.
 
-## M4 — Procesamiento local
-Upload → conversión → thumbnail → resultado, todavía sin catálogo definitivo.
+## M4 — Upload local
+Recibir un único vídeo por HTTP y ejecutar el pipeline de M3.
 
 ## M5 — Integración con biblioteca
 Tras éxito, mover vídeo/thumbnail a ubicaciones definitivas y crear el vídeo en SQLite sin tags.

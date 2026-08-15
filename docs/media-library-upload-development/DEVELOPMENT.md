@@ -51,6 +51,29 @@ pnpm --filter @media-library/backend ffmpeg-test -- /ruta/al/h264.mp4 --convert
 El original no se modifica. `--keep` deja `converted.mp4` y `thumbnail.jpg` en
 el directorio del job bajo `UPLOAD_TEMP_PATH`.
 
+## Prueba manual de M3
+
+Ejecuta el pipeline completo (job + workspace + probe + conversión + thumbnail).
+
+Windows:
+
+```powershell
+pnpm --filter @media-library/backend process-video -- "C:\ruta\al\hevc.mp4"
+pnpm --filter @media-library/backend process-video -- "C:\ruta\al\h264.mp4"
+pnpm --filter @media-library/backend process-video -- "C:\ruta\al\hevc.mp4" --discard
+```
+
+Linux:
+
+```bash
+pnpm --filter @media-library/backend process-video -- /ruta/al/hevc.mp4
+pnpm --filter @media-library/backend process-video -- /ruta/al/h264.mp4
+pnpm --filter @media-library/backend process-video -- /ruta/al/hevc.mp4 --discard
+```
+
+El resultado queda en `UPLOAD_TEMP_PATH/<jobId>/`. El original no se modifica.
+`--discard` borra el workspace después de un éxito.
+
 ## Prueba local
 
 1. upload;

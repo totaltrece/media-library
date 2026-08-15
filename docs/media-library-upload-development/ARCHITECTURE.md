@@ -43,6 +43,26 @@ biblioteca. El workspace temporal de un job es un port aparte:
 `ProcessingWorkspace`, implementado por `FilesystemProcessingWorkspace` bajo
 `UPLOAD_TEMP_PATH`.
 
+## Use case de procesamiento (M3)
+
+`ProcessVideoJobUseCase` orquesta un job a través de los ports:
+
+`ProcessingJobStore` → `ProcessingWorkspace` → `VideoProcessor`
+
+No importa FFmpeg ni el filesystem concreto. Flujo:
+
+1. Rechaza si ya hay un job activo.
+2. Crea el job (`idle` → `uploading`) y prepara el workspace.
+3. Copia el vídeo de entrada a `sourcePath` (`stageSource`). El original no se modifica.
+4. `processing`: probe; convierte solo si el codec es `hevc`.
+5. `generating_thumbnail`: thumbnail del vídeo de salida (convertido o source).
+6. `finalizing` → `completed`. El resultado permanece en el workspace.
+
+M3 no escribe en `LIBRARY_PATH` ni en SQLite. M4 añadirá el upload HTTP.
+M5 instalará vídeo/thumbnail en la biblioteca y registrará el catálogo.
+
+En error: `failed`, se descarta el workspace y se conserva el mensaje.
+
 ## Compatibilidad
 
 No asumir `/bin/bash`, `/usr/bin/ffmpeg`, PowerShell, WSL ni paths Unix.
@@ -79,6 +99,17 @@ pnpm --filter @media-library/backend ffmpeg-test -- "<ruta-al-video>"
 
 Opciones: `--convert` (fuerza la conversión), `--skip-convert`, `--keep`
 (deja el workspace temporal). El archivo original no se modifica.
+
+## Prueba manual de M3
+
+Sin upload HTTP. Desde la raíz del monorepo:
+
+```bash
+pnpm --filter @media-library/backend process-video -- "<ruta-al-video>"
+```
+
+El workspace queda en `UPLOAD_TEMP_PATH/<jobId>/` (`source`, `converted.mp4`,
+`thumbnail.jpg`). `--discard` lo elimina tras un éxito. El original no se modifica.
 
 ## Estados
 

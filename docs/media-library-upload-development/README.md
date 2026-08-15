@@ -13,8 +13,8 @@ Documentos:
 Orden:
 1. M1 Arquitectura y contratos
 2. M2 Adapter FFmpeg multiplataforma
-3. M3 Upload local
-4. M4 Procesamiento local
+3. M3 Pipeline de procesamiento
+4. M4 Upload HTTP local
 5. M5 Integración SQLite
 6. M6 UI de estado
 7. M7 Despliegue remoto

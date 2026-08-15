@@ -60,11 +60,23 @@ el ancho impar a 280. No cambia seek, calidad ni el filtro de escala/recorte.
 no depender del idioma de la salida.
 
 `VideoProcessor.convert` siempre convierte. La decisión de cuándo hacerlo
-(solo HEVC) sigue siendo lógica de negocio para M4. El CLI de M2 omite la
-conversión si el codec no es `hevc`, salvo `--convert`.
+pertenece al use case: solo `hevc` se convierte a H.264. H.264 y el resto de
+codecs conservan la copia staged y no llaman a `convert()`.
 
-El layout TagSpaces `.ts/<filename>.jpg` se aplaza a M5. M2 escribe
+El layout TagSpaces `.ts/<filename>.jpg` se aplaza a M5. M2/M3 escriben
 `thumbnail.jpg` en el workspace temporal.
+
+## ProcessVideoJobUseCase
+M3 orquesta un job completo sin HTTP. Dependencias: `VideoProcessor`,
+`ProcessingWorkspace`, `ProcessingJobStore` (en memoria).
+
+- Éxito: el workspace se conserva para que M4/M5 instalen el resultado.
+- Error: `failed` y se descarta el workspace.
+- Un segundo job activo se rechaza con `ActiveProcessingJobError` (HTTP 409 en M4).
+- `completed.videoId` es el nombre original, no un id de catálogo. M5 usará las
+  rutas del resultado para instalar y registrar SQLite.
+- `ProcessingWorkspace.stageSource` copia el input a `sourcePath` sin modificar
+  el original. Así un H.264 también queda en el workspace.
 
 ## VideoStore y ThumbnailStore siguen siendo de lectura
 No se amplían para escribir temporales ni archivos nuevos. El workspace de un
@@ -85,4 +97,4 @@ actuales.
 `upload-temp` al lado de `SQLITE_PATH`, fuera de `LIBRARY_PATH`.
 
 ## Límite de upload configurable
-`UPLOAD_MAX_BYTES` por defecto es 512 MiB. Se validará de verdad en M3.
+`UPLOAD_MAX_BYTES` por defecto es 512 MiB. Se validará de verdad en el upload HTTP (M4).

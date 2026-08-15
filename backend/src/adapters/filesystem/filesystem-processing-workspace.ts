@@ -1,4 +1,4 @@
-import { mkdir, rm } from "node:fs/promises";
+import { copyFile, mkdir, rm } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 
 import { buildProcessingJobPaths } from "../../application/processing-job-paths.js";
@@ -14,6 +14,18 @@ export class FilesystemProcessingWorkspace implements ProcessingWorkspace {
   async prepareJob(jobId: string): Promise<ProcessingJobPaths> {
     const paths = this.pathsFor(jobId);
     await mkdir(paths.directory, { recursive: true });
+    return paths;
+  }
+
+  async stageSource(jobId: string, inputPath: string): Promise<ProcessingJobPaths> {
+    const paths = await this.prepareJob(jobId);
+    const resolvedInput = resolve(inputPath);
+    const resolvedSource = resolve(paths.sourcePath);
+
+    if (resolvedInput !== resolvedSource) {
+      await copyFile(resolvedInput, resolvedSource);
+    }
+
     return paths;
   }
 

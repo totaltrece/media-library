@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -55,5 +55,22 @@ test("FilesystemProcessingWorkspace rejects unsafe job ids instead of deleting o
   } finally {
     await rm(tempRoot, { recursive: true, force: true });
     await rm(outside, { force: true });
+  }
+});
+
+test("FilesystemProcessingWorkspace copies a source without modifying the original", async () => {
+  const tempRoot = await mkdtemp(join(tmpdir(), "media-library-workspace-stage-"));
+  const workspace = new FilesystemProcessingWorkspace(tempRoot);
+  const originalPath = join(tempRoot, "original clip.mp4");
+
+  try {
+    await writeFile(originalPath, "original-bytes");
+    const paths = await workspace.prepareJob("job-1");
+    await workspace.stageSource("job-1", originalPath);
+
+    assert.equal(await readFile(originalPath, "utf8"), "original-bytes");
+    assert.equal(await readFile(paths.sourcePath, "utf8"), "original-bytes");
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
   }
 });

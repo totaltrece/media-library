@@ -11,5 +11,10 @@ export interface ProcessingJobPaths {
  */
 export interface ProcessingWorkspace {
   prepareJob(jobId: string): Promise<ProcessingJobPaths>;
+  /**
+   * Copies the input video into the job workspace as `sourcePath`.
+   * Must not modify or delete the original file.
+   */
+  stageSource(jobId: string, inputPath: string): Promise<ProcessingJobPaths>;
   discardJob(jobId: string): Promise<void>;
 }
