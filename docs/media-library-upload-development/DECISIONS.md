@@ -73,8 +73,9 @@ M3 orquesta un job completo sin HTTP. Dependencias: `VideoProcessor`,
 - Éxito: el workspace se conserva para que M5 instale el resultado.
 - Error: `failed` y se descarta el workspace.
 - Un segundo job activo se rechaza con `ActiveProcessingJobError` (HTTP 409 en M4).
-- `completed.videoId` es el nombre original, no un id de catálogo. M5 usará las
-  rutas del resultado para instalar y registrar SQLite.
+- `completed.videoId` es el id de biblioteca: el nombre original si ya incluye
+  fecha, o el `PXL_YYYYMMDD_HHMMSSmmm` generado desde metadatos cuando el
+  selector no entrega esa fecha. M5 instala con ese id.
 - `ProcessingWorkspace.stageSource` copia el input a `sourcePath` sin modificar
   el original. Así un H.264 también queda en el workspace.
 - HTTP (M4) no copia: `begin()` prepara el workspace, el adapter escribe el
@@ -130,7 +131,11 @@ actuales.
 ## Instalación en la biblioteca (M5)
 M5 es el primer hito que escribe en `LIBRARY_PATH`.
 
-- `videoId` = nombre original sanitizado (media id existente).
+- `videoId` = nombre de biblioteca. Se conserva un nombre sanitizado que ya
+  incluye fecha `YYYYMMDD` (p. ej. `PXL_YYYYMMDD_HHMMSSmmm`). Si el selector
+  de Android entrega un id MediaStore sin fecha, se genera el nombre canónico
+  `PXL_YYYYMMDD_HHMMSSmmm` a partir de `creation_time` de ffprobe. Sin fecha
+  fiable en metadatos, se conserva el nombre sanitizado; no se inventa una fecha.
 - Vídeo: `LIBRARY_PATH/<videoId>`. Thumbnail: `LIBRARY_PATH/.ts/<videoId>.jpg`.
 - Copia con `fs.copyFile(..., COPYFILE_EXCL)`; no se usa shell.
 - Si SQLite o el destino ya existen → `409`, sin sobrescribir.

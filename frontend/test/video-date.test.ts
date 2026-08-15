@@ -11,5 +11,6 @@ describe("formatVideoDateFromName", () => {
   it("returns a placeholder when the filename has no valid date segment", () => {
     expect(formatVideoDateFromName("salsa/first.mp4")).toBe(VIDEO_DATE_PLACEHOLDER);
     expect(formatVideoDateFromName("video-without-date.mp4")).toBe(VIDEO_DATE_PLACEHOLDER);
+    expect(formatVideoDateFromName("1000141506.mp4")).toBe(VIDEO_DATE_PLACEHOLDER);
   });
 });

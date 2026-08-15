@@ -4,6 +4,7 @@ import type { VideoProbeResult, VideoProcessor } from "../ports/video-processor.
 import { ActiveProcessingJobError } from "./active-processing-job-error.js";
 import { clampConversionProgress } from "./conversion-progress.js";
 import { needsH264Conversion } from "./needs-h264-conversion.js";
+import { resolveCanonicalUploadName } from "./resolve-canonical-upload-name.js";
 import {
   createProcessingJob,
   transitionProcessingJob,
@@ -136,6 +137,12 @@ export class ProcessVideoJobUseCase {
       job = this.save(transitionProcessingJob(job, { status: "processing", phase: "processing" }));
       const probe = await this.processor.probe(paths.sourcePath);
       options?.onProgress?.({ step: "probe", outcome: "ok", probe });
+
+      const canonicalName = resolveCanonicalUploadName(job.originalName, probe.recordingTime);
+
+      if (canonicalName !== job.originalName) {
+        job = this.save({ ...job, originalName: canonicalName });
+      }
 
       const converted = needsH264Conversion(probe.videoCodec);
       job = this.save({ ...job, converted });

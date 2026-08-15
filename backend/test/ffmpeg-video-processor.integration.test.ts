@@ -8,6 +8,7 @@ import { test } from "node:test";
 import { FfmpegVideoProcessor } from "../src/adapters/ffmpeg/ffmpeg-video-processor.js";
 import { FilesystemProcessingWorkspace } from "../src/adapters/filesystem/filesystem-processing-workspace.js";
 import { runProcess } from "../src/adapters/ffmpeg/run-process.js";
+import { resolveCanonicalUploadName, toCanonicalPxlFileName } from "../src/application/resolve-canonical-upload-name.js";
 
 const ffmpegPath = process.env.FFMPEG_PATH?.trim() || "ffmpeg";
 const ffprobePath = process.env.FFPROBE_PATH?.trim() || "ffprobe";
@@ -60,6 +61,31 @@ test("FfmpegVideoProcessor converts a generated clip and writes a 281x500 JPEG",
   }
 });
 
+test("FfmpegVideoProcessor.probe reads creation_time so MediaStore names can become PXL_", {
+  skip: ffmpegAvailable ? false : "ffmpeg/ffprobe are not available",
+}, async () => {
+  const directory = await mkdtemp(join(tmpdir(), "media-library-creation-time-"));
+  const sourcePath = join(directory, "1000141506.mp4");
+  const processor = new FfmpegVideoProcessor({ ffmpegPath, ffprobePath });
+
+  try {
+    await createClipWithCreationTime(sourcePath, "2026-03-14T19:04:31.123000Z");
+    const probe = await processor.probe(sourcePath);
+    assert.ok(probe.recordingTime);
+    const recordedAt = new Date(probe.recordingTime);
+    assert.equal(Number.isFinite(recordedAt.getTime()), true);
+    assert.equal(recordedAt.getUTCFullYear(), 2026);
+    assert.equal(recordedAt.getUTCMonth(), 2);
+    assert.equal(recordedAt.getUTCDate(), 14);
+
+    const videoId = resolveCanonicalUploadName("1000141506.mp4", probe.recordingTime);
+    assert.equal(videoId, toCanonicalPxlFileName(recordedAt, ".mp4"));
+    assert.match(videoId, /^PXL_\d{8}_\d{9}\.mp4$/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 async function readImageSize(imagePath: string): Promise<{ width: number; height: number }> {
   const result = await runProcess(ffprobePath, [
     "-v",
@@ -104,6 +130,28 @@ async function tryCreateHevcClip(outputPath: string): Promise<boolean> {
   ]);
 
   return result.exitCode === 0;
+}
+
+async function createClipWithCreationTime(outputPath: string, creationTime: string): Promise<void> {
+  const result = await runProcess(ffmpegPath, [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-f",
+    "lavfi",
+    "-i",
+    "testsrc=duration=1:size=320x240:rate=1",
+    "-c:v",
+    "libx264",
+    "-t",
+    "1",
+    "-metadata",
+    `creation_time=${creationTime}`,
+    "-y",
+    outputPath,
+  ]);
+
+  assert.equal(result.exitCode, 0, result.stderr);
 }
 
 async function createTestClip(outputPath: string): Promise<void> {

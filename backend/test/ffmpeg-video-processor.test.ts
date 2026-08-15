@@ -34,6 +34,7 @@ test("FfmpegVideoProcessor.probe parses ffprobe JSON from the configured executa
     height: 1920,
     videoCodec: "hevc",
     audioCodec: null,
+    recordingTime: null,
   });
   assert.equal(calls[0]?.executable, join("C:", "tools", "ffprobe.exe"));
   assert.equal(calls[0]?.args.at(-1), inputPath);

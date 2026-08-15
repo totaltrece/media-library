@@ -20,6 +20,7 @@ test("parseFfprobeJson reads codec, duration, and resolution from JSON", () => {
       height: 1080,
       videoCodec: "hevc",
       audioCodec: "aac",
+      recordingTime: null,
     },
   );
 });
@@ -37,7 +38,71 @@ test("parseFfprobeJson falls back to stream duration and allows missing audio", 
       height: 360,
       videoCodec: "h264",
       audioCodec: null,
+      recordingTime: null,
     },
+  );
+});
+
+test("parseFfprobeJson reads creation_time from format tags", () => {
+  assert.equal(
+    parseFfprobeJson(
+      JSON.stringify({
+        streams: [{ codec_type: "video", codec_name: "h264", width: 1080, height: 1920, duration: "1" }],
+        format: {
+          duration: "1",
+          tags: { creation_time: "2026-03-14T19:04:31.123000Z", "com.android.version": "16" },
+        },
+      }),
+    ).recordingTime,
+    "2026-03-14T19:04:31.123000Z",
+  );
+});
+
+test("parseFfprobeJson prefers format creation_time over stream tags", () => {
+  assert.equal(
+    parseFfprobeJson(
+      JSON.stringify({
+        streams: [{
+          codec_type: "video",
+          codec_name: "h264",
+          width: 8,
+          height: 8,
+          duration: "1",
+          tags: { creation_time: "2020-01-01T00:00:00.000000Z" },
+        }],
+        format: { duration: "1", tags: { creation_time: "2026-03-14T19:04:31.000000Z" } },
+      }),
+    ).recordingTime,
+    "2026-03-14T19:04:31.000000Z",
+  );
+});
+
+test("parseFfprobeJson falls back to QuickTime and video stream creation tags", () => {
+  assert.equal(
+    parseFfprobeJson(
+      JSON.stringify({
+        streams: [{ codec_type: "video", codec_name: "h264", width: 8, height: 8, duration: "1" }],
+        format: { duration: "1", tags: { "com.apple.quicktime.creationdate": "2026-03-14T20:04:31+0100" } },
+      }),
+    ).recordingTime,
+    "2026-03-14T20:04:31+0100",
+  );
+
+  assert.equal(
+    parseFfprobeJson(
+      JSON.stringify({
+        streams: [{
+          codec_type: "video",
+          codec_name: "h264",
+          width: 8,
+          height: 8,
+          duration: "1",
+          tags: { creation_time: "2026-03-14T19:04:31.000000Z" },
+        }],
+        format: { duration: "1" },
+      }),
+    ).recordingTime,
+    "2026-03-14T19:04:31.000000Z",
   );
 });
 

@@ -151,6 +151,7 @@ function stagedJob(jobs: InMemoryProcessingJobStore, originalName: string, jobId
       height: 240,
       videoCodec: "hevc",
       audioCodec: "aac",
+      recordingTime: null,
     },
     outputVideoPath: "/tmp/source-or-converted",
     thumbnailPath: "/tmp/thumbnail.jpg",

@@ -154,7 +154,13 @@ Ubicaciones definitivas tras `completed`:
 - vídeo: `LIBRARY_PATH/<videoId>`
 - thumbnail: `LIBRARY_PATH/.ts/<videoId>.jpg`
 
-`videoId` es el nombre original sanitizado (el mismo media id de la aplicación).
+`videoId` es el nombre de biblioteca. Si el fichero subido ya incluye una fecha
+`YYYYMMDD` (incluido `PXL_YYYYMMDD_HHMMSSmmm`), se conserva el nombre sanitizado.
+Si Chrome/Android entrega un nombre MediaStore sin fecha (`1000141506.mp4`), el
+pipeline lee `creation_time` con ffprobe y genera el nombre canónico
+`PXL_YYYYMMDD_HHMMSSmmm.mp4` en la zona horaria local del servidor. Si los
+metadatos no tienen una fecha fiable, se conserva el nombre sanitizado; no se
+inventa una fecha.
 No se sobrescriben ficheros ni filas existentes. No se escribe JSON sidecar.
 No se usa `POST /api/library/refresh` internamente.
 

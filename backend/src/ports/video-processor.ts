@@ -4,6 +4,11 @@ export interface VideoProbeResult {
   height: number;
   videoCodec: string | null;
   audioCodec: string | null;
+  /**
+   * Container/stream creation timestamp from ffprobe tags, if present.
+   * Raw tag value (typically ISO-8601). Reliability is decided by application code.
+   */
+  recordingTime: string | null;
 }
 
 export interface ThumbnailGenerationOptions {
