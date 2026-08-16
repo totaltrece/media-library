@@ -139,12 +139,12 @@ cada segundo (mismo composable que un upload iniciado en esa sesión). Si no
 hay job activo, muestra el selector de subida. Un job activo oculta el
 selector. `/admin/videos` y `/` no muestran esta zona.
 
-Durante la conversión HEVC, la fase **Procesando vídeo** muestra el
+Durante la conversión HEVC, la fase **Processing video** muestra el
 porcentaje real (`progress`) y una barra corta. Al pasar a
 `generating_thumbnail` e `installing` el porcentaje desaparece. Un H.264
 sin conversión no muestra progreso de FFmpeg.
 
-Al completar, **View in Sin tags** vuelve a `/admin/videos?untagged=1`. El
+Al completar, **View in Untagged** vuelve a `/admin/videos?untagged=1`. El
 catálogo recarga `GET /api/search` y `GET /api/tags` (no
 `POST /api/library/refresh`). El icono de refresh de biblioteca está en la
 cabecera compartida de todas las páginas.
@@ -154,7 +154,13 @@ Ubicaciones definitivas tras `completed`:
 - vídeo: `LIBRARY_PATH/<videoId>`
 - thumbnail: `LIBRARY_PATH/.ts/<videoId>.jpg`
 
-`videoId` es el nombre original sanitizado (el mismo media id de la aplicación).
+`videoId` es el nombre de biblioteca. Si el fichero subido ya incluye una fecha
+`YYYYMMDD` (incluido `PXL_YYYYMMDD_HHMMSSmmm`), se conserva el nombre sanitizado.
+Si Chrome/Android entrega un nombre MediaStore sin fecha (`1000141506.mp4`), el
+pipeline lee `creation_time` con ffprobe y genera el nombre canónico
+`PXL_YYYYMMDD_HHMMSSmmm.mp4` en la zona horaria local del servidor. Si los
+metadatos no tienen una fecha fiable, se conserva el nombre sanitizado; no se
+inventa una fecha.
 No se sobrescriben ficheros ni filas existentes. No se escribe JSON sidecar.
 No se usa `POST /api/library/refresh` internamente.
 
@@ -211,6 +217,15 @@ Reutilizar el comportamiento actual:
 
 Al finalizar:
 
-`upsertVideo(mediaId)` → tags vacíos.
+`upsertVideo(mediaId, recordedAt)` → tags vacíos.
 
-No crear una segunda fuente de verdad.
+`recorded_at` es TEXT ISO-8601 UTC nullable (`2026-03-14T19:04:31.123Z`).
+En el alta se obtiene del probe ffprobe del vídeo **original** (antes de convertir).
+Si no hay metadata fiable, queda `NULL`; el alta no lee el nombre del fichero.
+
+El backfill de vídeos existentes usa el mismo probe. Si ffprobe no da fecha
+y el nombre contiene un `YYYYMMDD` válido, rellena ese día a las 20:00
+Europe/Madrid (hora convencional; el instante se guarda en UTC). Nombres
+sin fecha válida ni metadata quedan `NULL`.
+
+No crear una segunda fuente de verdad en el pipeline de upload.

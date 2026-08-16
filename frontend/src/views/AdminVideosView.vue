@@ -15,7 +15,7 @@
         :aria-pressed="!untaggedOnly"
         @click="showAllVideos"
       >
-        Todos
+        All
       </button>
       <button
         class="secondary-button"
@@ -25,7 +25,7 @@
         :aria-pressed="untaggedOnly"
         @click="showUntaggedVideos"
       >
-        Sin tags ({{ untaggedCount }})
+        Untagged ({{ untaggedCount }})
       </button>
     </div>
 

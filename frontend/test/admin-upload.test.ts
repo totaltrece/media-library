@@ -20,6 +20,7 @@ const catalogVideos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/untagged.mp4",
     video: "/api/video/untagged.mp4",
     tags: [],
+    recordedAt: null,
   },
   {
     id: "salsa/first.mp4",
@@ -27,6 +28,7 @@ const catalogVideos: SearchResultItem[] = [
     thumbnail: "/api/thumbnail/salsa/first.mp4",
     video: "/api/video/salsa/first.mp4",
     tags: ["salsa"],
+    recordedAt: null,
   },
 ];
 
@@ -106,8 +108,8 @@ describe("admin video upload", () => {
 
   it("renders the upload zone and selected file name", async () => {
     const wrapper = mount(AdminVideoUpload);
-    expect(wrapper.text()).toContain("Subir vídeo");
-    expect(wrapper.get('[data-testid="upload-select"]').text()).toContain("Seleccionar vídeo");
+    expect(wrapper.text()).toContain("Upload video");
+    expect(wrapper.get('[data-testid="upload-select"]').text()).toContain("Select video");
 
     await chooseFile(wrapper, "PXL_clip.mp4");
     expect(wrapper.get('[data-testid="upload-file-name"]').text()).toBe("PXL_clip.mp4");
@@ -123,7 +125,7 @@ describe("admin video upload", () => {
     await flushPromises();
 
     expect(fetchMock).not.toHaveBeenCalledWith("/api/admin/uploads", expect.anything());
-    expect(wrapper.text()).toContain("Selecciona un vídeo primero.");
+    expect(wrapper.text()).toContain("Select a video first.");
   });
 
   it("posts multipart without a manual content-type and polls job status", async () => {
@@ -167,7 +169,7 @@ describe("admin video upload", () => {
     expect(postCall?.[1]?.headers).toBeUndefined();
     expect((postCall?.[1]?.body as FormData).get("video")).toBe(file);
     expect(wrapper.emitted("completed")).toBeUndefined();
-    expect(wrapper.text()).toContain("Vídeo en proceso");
+    expect(wrapper.text()).toContain("Video in progress");
     expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="upload-submit"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="upload-file-name"]').text()).toBe("clip.mp4");
@@ -176,13 +178,13 @@ describe("admin video upload", () => {
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
     await flushPromises();
     expect(wrapper.get('[data-step="processing"]').classes()).toContain("is-current");
-    expect(wrapper.get('[data-step="processing"]').text()).toContain("Procesando vídeo · 47%");
+    expect(wrapper.get('[data-step="processing"]').text()).toContain("Processing video · 47%");
     expect(wrapper.find('[data-testid="upload-progress-bar"]').exists()).toBe(true);
 
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
     await flushPromises();
     expect(wrapper.get('[data-step="generating_thumbnail"]').classes()).toContain("is-current");
-    expect(wrapper.get('[data-step="generating_thumbnail"]').text()).toContain("Generando thumbnail");
+    expect(wrapper.get('[data-step="generating_thumbnail"]').text()).toContain("Generating thumbnail");
     expect(wrapper.get('[data-step="processing"]').text()).not.toContain("%");
     expect(wrapper.find('[data-testid="upload-progress-bar"]').exists()).toBe(false);
 
@@ -192,7 +194,7 @@ describe("admin video upload", () => {
 
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
     await flushPromises();
-    expect(wrapper.get('[data-testid="upload-success"]').text()).toBe("Vídeo añadido correctamente");
+    expect(wrapper.get('[data-testid="upload-success"]').text()).toBe("Video added successfully");
     expect(wrapper.emitted("completed")).toHaveLength(1);
 
     const getCallsBefore = fetchMock.mock.calls.filter(([url]) => String(url) === "/api/admin/uploads/job-1").length;
@@ -230,7 +232,7 @@ describe("admin video upload", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(wrapper.text()).toContain("No se ha podido procesar el vídeo.");
+    expect(wrapper.text()).toContain("The video could not be processed.");
     expect(wrapper.text()).not.toContain("C:\\secret");
 
     const getCallsBefore = fetchMock.mock.calls.filter(([url]) => String(url) === "/api/admin/uploads/job-1").length;
@@ -294,8 +296,8 @@ describe("admin video upload", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="upload-poll-warning"]').text()).toContain("No se puede consultar el estado");
-    expect(wrapper.text()).not.toContain("No se ha podido procesar el vídeo.");
+    expect(wrapper.get('[data-testid="upload-poll-warning"]').text()).toContain("Unable to check status");
+    expect(wrapper.text()).not.toContain("The video could not be processed.");
 
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
     await flushPromises();
@@ -330,15 +332,15 @@ describe("admin video upload", () => {
     await chooseFile(wrapper, "one.mp4");
     await wrapper.get('[data-testid="upload-submit"]').trigger("click");
     await flushPromises();
-    expect(wrapper.text()).toContain("Ya hay un vídeo en proceso.");
+    expect(wrapper.text()).toContain("A video is already being processed.");
 
     await wrapper.get('[data-testid="upload-submit"]').trigger("click");
     await flushPromises();
-    expect(wrapper.text()).toContain("El vídeo supera el tamaño máximo permitido.");
+    expect(wrapper.text()).toContain("The video exceeds the maximum allowed size.");
 
     await wrapper.get('[data-testid="upload-submit"]').trigger("click");
     await flushPromises();
-    expect(wrapper.text()).toContain("No se ha podido enviar el vídeo. Comprueba la conexión.");
+    expect(wrapper.text()).toContain("The video could not be uploaded. Check your connection.");
   });
 
   it("recovers the current job when a 409 response includes a jobId", async () => {
@@ -373,8 +375,8 @@ describe("admin video upload", () => {
     await flushPromises();
 
     expect(wrapper.get('[data-step="processing"]').classes()).toContain("is-current");
-    expect(wrapper.text()).toContain("Vídeo en proceso");
-    expect(wrapper.text()).not.toContain("Ya hay un vídeo en proceso.");
+    expect(wrapper.text()).toContain("Video in progress");
+    expect(wrapper.text()).not.toContain("A video is already being processed.");
   });
 
   it("shows the uploading steps before the POST finishes", async () => {
@@ -407,7 +409,7 @@ describe("admin video upload", () => {
     await wrapper.get('[data-testid="upload-submit"]').trigger("click");
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Vídeo en proceso");
+    expect(wrapper.text()).toContain("Video in progress");
     expect(wrapper.get('[data-step="uploading"]').classes()).toContain("is-current");
     expect(wrapper.find('[data-testid="upload-submit"]').exists()).toBe(false);
     expect(
@@ -453,8 +455,8 @@ describe("admin video upload", () => {
     await flushPromises();
 
     expect(wrapper.get('[data-step="processing"]').classes()).toContain("is-current");
-    expect(wrapper.text()).toContain("Vídeo en proceso");
-    expect(wrapper.text()).not.toContain("Ya hay un vídeo en proceso.");
+    expect(wrapper.text()).toContain("Video in progress");
+    expect(wrapper.text()).not.toContain("A video is already being processed.");
   });
 
   it("does not start a second POST when an active job is found first", async () => {
@@ -522,9 +524,9 @@ describe("admin video upload", () => {
     await flushPromises();
 
     expect(wrapper.get('[data-testid="upload-poll-warning"]').text()).toBe(
-      "No se ha encontrado el estado de la subida.",
+      "The upload status could not be found.",
     );
-    expect(wrapper.text()).not.toContain("No se ha podido procesar el vídeo.");
+    expect(wrapper.text()).not.toContain("The video could not be processed.");
 
     const getCallsBefore = fetchMock.mock.calls.filter(([url]) => String(url) === "/api/admin/uploads/job-1").length;
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS * 2);
@@ -556,20 +558,21 @@ describe("admin video upload", () => {
 
     await wrapper.get('[data-testid="upload-submit"]').trigger("click");
     await flushPromises();
-    expect(wrapper.text()).toContain("El vídeo seleccionado no es válido.");
+    expect(wrapper.text()).toContain("The selected video is not valid.");
 
     await wrapper.get('[data-testid="upload-submit"]').trigger("click");
     await flushPromises();
-    expect(wrapper.text()).toContain("No se ha podido procesar el vídeo.");
+    expect(wrapper.text()).toContain("The video could not be processed.");
   });
 
-  it("opens the upload page from admin videos and shows the new video under Sin tags", async () => {
+  it("opens the upload page from admin videos and shows the new video under Untagged", async () => {
     const uploaded: SearchResultItem = {
       id: "clip.mp4",
       name: "clip.mp4",
       thumbnail: "/api/thumbnail/clip.mp4",
       video: "/api/video/clip.mp4",
       tags: [],
+      recordedAt: null,
     };
     let catalog = [...catalogVideos];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -611,7 +614,7 @@ describe("admin video upload", () => {
     });
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Sin tags (1)");
+    expect(wrapper.text()).toContain("Untagged (1)");
     expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
 
     await wrapper.get('[data-testid="upload-new-video"]').trigger("click");
@@ -625,12 +628,12 @@ describe("admin video upload", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Vídeo añadido correctamente");
+    expect(wrapper.text()).toContain("Video added successfully");
     await wrapper.get('[data-testid="upload-view-untagged"]').trigger("click");
     await flushPromises();
 
     expect(router.currentRoute.value.name).toBe("admin-videos");
-    expect(wrapper.text()).toContain("Sin tags (2)");
+    expect(wrapper.text()).toContain("Untagged (2)");
     expect(wrapper.text()).toContain("clip.mp4");
     expect(wrapper.get('[data-testid="filter-untagged"]').classes()).toContain("active");
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
@@ -695,7 +698,7 @@ describe("admin video upload", () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads/active");
-    expect(wrapper.text()).toContain("Vídeo en proceso");
+    expect(wrapper.text()).toContain("Video in progress");
     expect(wrapper.get('[data-testid="upload-file-name"]').text()).toBe("PXL_20260813_214135367.TS.mp4");
     expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
     expect(wrapper.get('[data-step="processing"]').classes()).toContain("is-current");
@@ -705,7 +708,7 @@ describe("admin video upload", () => {
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
     await flushPromises();
     expect(wrapper.get('[data-step="generating_thumbnail"]').classes()).toContain("is-current");
-    expect(wrapper.get('[data-step="generating_thumbnail"]').text()).toContain("Generando thumbnail");
+    expect(wrapper.get('[data-step="generating_thumbnail"]').text()).toContain("Generating thumbnail");
     expect(wrapper.find('[data-testid="upload-progress-bar"]').exists()).toBe(false);
 
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
@@ -714,7 +717,7 @@ describe("admin video upload", () => {
 
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS);
     await flushPromises();
-    expect(wrapper.get('[data-testid="upload-success"]').text()).toBe("Vídeo añadido correctamente");
+    expect(wrapper.get('[data-testid="upload-success"]').text()).toBe("Video added successfully");
     expect(wrapper.find('[data-testid="upload-view-untagged"]').exists()).toBe(true);
 
     const pollCallsBefore = fetchMock.mock.calls.filter(([url]) => String(url) === "/api/admin/uploads/job-1").length;
@@ -752,7 +755,7 @@ describe("admin video upload", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(wrapper.text()).toContain("No se ha podido procesar el vídeo.");
+    expect(wrapper.text()).toContain("The video could not be processed.");
     const pollCallsBefore = fetchMock.mock.calls.filter(([url]) => String(url) === "/api/admin/uploads/job-1").length;
     await vi.advanceTimersByTimeAsync(UPLOAD_POLL_INTERVAL_MS * 2);
     await flushPromises();
@@ -761,7 +764,19 @@ describe("admin video upload", () => {
   });
 
   it("does not add the upload zone to the consumer view", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ count: 1, tags: ["salsa"] }));
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === "/api/tags") {
+        return jsonResponse({ count: 1, tags: ["salsa"] });
+      }
+
+      if (url === "/api/search") {
+        return jsonResponse({ query: { tags: [] }, count: 0, results: [] });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const router = createUploadRouter();
@@ -776,11 +791,10 @@ describe("admin video upload", () => {
     expect(wrapper.get('[data-testid="upload-new-video"]').text()).toBe("Upload video");
     expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
-    expect(wrapper.text()).not.toContain("Seleccionar vídeo");
-    expect(wrapper.text()).not.toContain("Subir vídeo");
+    expect(wrapper.text()).not.toContain("Select video");
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
     expect(fetchMock).toHaveBeenCalledWith("/api/tags");
-    expect(fetchMock).not.toHaveBeenCalledWith("/api/search");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search");
     expect(
       fetchMock.mock.calls.some(([, init]) => init?.method === "POST"),
     ).toBe(false);

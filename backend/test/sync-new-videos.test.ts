@@ -51,9 +51,9 @@ test("an empty SQLite store inserts every video discovered on the filesystem", a
 
     assert.deepEqual(result, { discovered: 3, inserted: 3 });
     assert.deepEqual(libraryStore.listVideosWithTags(), [
-      { id: "video1.mp4", tags: [] },
-      { id: "video2.mp4", tags: [] },
-      { id: "video3.mp4", tags: [] },
+      { id: "video1.mp4", recordedAt: null, tags: [] },
+      { id: "video2.mp4", recordedAt: null, tags: [] },
+      { id: "video3.mp4", recordedAt: null, tags: [] },
     ]);
   } finally {
     libraryStore.close();
@@ -83,11 +83,11 @@ test("new filesystem videos are inserted without changing existing tags", async 
 
     assert.deepEqual(result, { discovered: 5, inserted: 2 });
     assert.deepEqual(libraryStore.listVideosWithTags(), [
-      { id: "video1.mp4", tags: ["salsa", "bea"] },
-      { id: "video2.mp4", tags: ["bachata"] },
-      { id: "video3.mp4", tags: ["linea"] },
-      { id: "video4.mp4", tags: [] },
-      { id: "video5.mp4", tags: [] },
+      { id: "video1.mp4", recordedAt: null, tags: ["salsa", "bea"] },
+      { id: "video2.mp4", recordedAt: null, tags: ["bachata"] },
+      { id: "video3.mp4", recordedAt: null, tags: ["linea"] },
+      { id: "video4.mp4", recordedAt: null, tags: [] },
+      { id: "video5.mp4", recordedAt: null, tags: [] },
     ]);
   } finally {
     libraryStore.close();
@@ -109,7 +109,7 @@ test("running the sync twice does not duplicate videos or change tags", async ()
 
     assert.deepEqual(firstResult, { discovered: 1, inserted: 0 });
     assert.deepEqual(secondResult, { discovered: 1, inserted: 0 });
-    assert.deepEqual(libraryStore.listVideos(), [{ id: "video1.mp4" }]);
+    assert.deepEqual(libraryStore.listVideos(), [{ id: "video1.mp4", recordedAt: null }]);
     assert.deepEqual(libraryStore.getVideoTags("video1.mp4"), ["salsa"]);
   } finally {
     libraryStore.close();
@@ -127,7 +127,7 @@ test("a video without a TagSpaces sidecar is still inserted", async () => {
     const result = await syncNewVideos(libraryPath, libraryStore);
 
     assert.deepEqual(result, { discovered: 1, inserted: 1 });
-    assert.deepEqual(libraryStore.listVideosWithTags(), [{ id: "missing.mp4", tags: [] }]);
+    assert.deepEqual(libraryStore.listVideosWithTags(), [{ id: "missing.mp4", recordedAt: null, tags: [] }]);
   } finally {
     libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
@@ -149,8 +149,8 @@ test("videos missing from the filesystem are not deleted from SQLite", async () 
 
     assert.deepEqual(result, { discovered: 1, inserted: 0 });
     assert.deepEqual(libraryStore.listVideosWithTags(), [
-      { id: "kept.mp4", tags: ["salsa"] },
-      { id: "removed.mp4", tags: ["bachata"] },
+      { id: "kept.mp4", recordedAt: null, tags: ["salsa"] },
+      { id: "removed.mp4", recordedAt: null, tags: ["bachata"] },
     ]);
   } finally {
     libraryStore.close();

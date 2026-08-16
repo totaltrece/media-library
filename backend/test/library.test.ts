@@ -120,6 +120,7 @@ test("POST /api/library/refresh inserts new videos and keeps existing tags", asy
         thumbnail: "/api/thumbnail/video5.mp4",
         video: "/api/video/video5.mp4",
         tags: [],
+        recordedAt: null,
       },
     );
 

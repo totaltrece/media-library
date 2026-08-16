@@ -10,6 +10,7 @@ export interface SearchResultItem {
   thumbnail: string;
   video: string;
   tags: string[];
+  recordedAt: string | null;
 }
 
 export interface SearchResponse {
@@ -31,6 +32,7 @@ export function toSearchResult(video: IndexedVideo, libraryPath: string): Search
     thumbnail: toThumbnailUrl(id),
     video: toVideoUrl(id),
     tags: video.tags,
+    recordedAt: video.recordedAt ?? null,
   };
 }
 

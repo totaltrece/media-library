@@ -19,6 +19,7 @@ import { SyncNewVideosUseCase } from "../src/application/sync-new-videos.js";
 import { toIndexedVideos } from "../src/application/to-indexed-videos.js";
 import { PUBLIC_PROCESSING_FAILED_MESSAGE } from "../src/application/to-upload-job-view.js";
 import { PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE } from "../src/application/video-already-exists-error.js";
+import { toCanonicalPxlFileName, toStoredRecordedAt } from "../src/application/resolve-canonical-upload-name.js";
 import type { LibraryMediaInstaller } from "../src/ports/library-media-installer.js";
 import type { LibraryStore } from "../src/ports/library-store.js";
 import type { ProcessingJob, ProcessingPhase } from "../src/ports/processing-job-store.js";
@@ -88,6 +89,7 @@ test("POST /api/admin/uploads returns 202 and finishes HEVC install asynchronous
       thumbnail: "/api/thumbnail/PXL_clip.mp4",
       video: "/api/video/PXL_clip.mp4",
       tags: [],
+      recordedAt: null,
     });
 
     const tagged = await context.app.inject({ method: "GET", url: "/api/search?tag=salsa" });
@@ -112,6 +114,87 @@ test("POST /api/admin/uploads returns 202 and finishes HEVC install asynchronous
     assert.equal(status.json().converted, true);
     assert.equal(status.json().videoId, "PXL_clip.mp4");
     assert.equal(JSON.stringify(status.json()).includes(context.libraryPath.replaceAll("\\", "\\\\")), false);
+  });
+});
+
+test("POST /api/admin/uploads keeps a PXL name that already contains a recording date", async () => {
+  await withUploadApp({
+    codec: "h264",
+    recordingTime: "2020-01-01T00:00:00.000Z",
+  }, async (context) => {
+    const originalName = "PXL_20260314_200431123.mp4";
+    const response = await context.app.inject({
+      method: "POST",
+      url: "/api/admin/uploads",
+      ...multipartRequest(originalName, VIDEO_BYTES),
+    });
+
+    assert.equal(response.statusCode, 202);
+    const job = await waitForTerminalJob(context.jobs, String(response.json().jobId));
+    assert.equal(job.state.status, "completed");
+    assert.equal(job.originalName, originalName);
+    if (job.state.status === "completed") {
+      assert.equal(job.state.videoId, originalName);
+    }
+    assert.equal(context.libraryStore.findVideo(originalName)?.id, originalName);
+    assert.equal(await readFile(join(context.libraryPath, originalName), "utf8"), VIDEO_BYTES.toString());
+  });
+});
+
+test("POST /api/admin/uploads names an Android MediaStore file from video metadata", async () => {
+  const recordingTime = "2026-03-14T19:04:31.123Z";
+  const expected = toCanonicalPxlFileName(new Date(recordingTime), ".mp4");
+
+  await withUploadApp({ codec: "h264", recordingTime }, async (context) => {
+    const response = await context.app.inject({
+      method: "POST",
+      url: "/api/admin/uploads",
+      ...multipartRequest("1000141506.mp4", VIDEO_BYTES),
+    });
+
+    assert.equal(response.statusCode, 202);
+    const job = await waitForTerminalJob(context.jobs, String(response.json().jobId));
+    assert.equal(job.state.status, "completed");
+    assert.equal(job.originalName, expected);
+    if (job.state.status === "completed") {
+      assert.equal(job.state.videoId, expected);
+    }
+    assert.match(expected, /^PXL_\d{8}_\d{9}\.mp4$/);
+    assert.equal(context.libraryStore.findVideo("1000141506.mp4"), null);
+    assert.equal(context.libraryStore.findVideo(expected)?.id, expected);
+    assert.equal(context.libraryStore.findVideo(expected)?.recordedAt, toStoredRecordedAt(recordingTime));
+    assert.equal(await readFile(join(context.libraryPath, expected), "utf8"), VIDEO_BYTES.toString());
+    assert.deepEqual(await readFile(join(context.libraryPath, ".ts", `${expected}.jpg`)), THUMBNAIL_BYTES);
+
+    const status = await context.app.inject({
+      method: "GET",
+      url: `/api/admin/uploads/${job.id}`,
+    });
+    assert.equal(status.json().videoId, expected);
+  });
+});
+
+test("POST /api/admin/uploads keeps a MediaStore name when metadata has no reliable date", async () => {
+  await withUploadApp({
+    codec: "h264",
+    recordingTime: "1970-01-01T00:00:00.000000Z",
+  }, async (context) => {
+    const response = await context.app.inject({
+      method: "POST",
+      url: "/api/admin/uploads",
+      ...multipartRequest("1000141506.mp4", VIDEO_BYTES),
+    });
+
+    assert.equal(response.statusCode, 202);
+    const job = await waitForTerminalJob(context.jobs, String(response.json().jobId));
+    assert.equal(job.state.status, "completed");
+    assert.equal(job.originalName, "1000141506.mp4");
+    if (job.state.status === "completed") {
+      assert.equal(job.state.videoId, "1000141506.mp4");
+    }
+    assert.equal(context.libraryStore.findVideo("1000141506.mp4")?.id, "1000141506.mp4");
+    assert.equal(context.libraryStore.findVideo("1000141506.mp4")?.recordedAt, null);
+    assert.equal((await readdir(context.libraryPath)).some((name) => name.startsWith("PXL_")), false);
   });
 });
 
@@ -596,6 +679,7 @@ async function withUploadApp(
     failSqlite?: boolean;
     holdProcessing?: boolean;
     uploadMaxBytes?: number;
+    recordingTime?: string | null;
   },
   run: (context: {
     app: Awaited<ReturnType<typeof createApp>>;
@@ -621,7 +705,7 @@ async function withUploadApp(
   libraryStore.upsertVideo("existing.mp4");
   failUpsert.current = options.failSqlite === true;
   const jobs = new InMemoryProcessingJobStore();
-  const processor = new RecordingVideoProcessor(options.codec, options.failAt);
+  const processor = new RecordingVideoProcessor(options.codec, options.failAt, options.recordingTime ?? null);
   if (options.holdProcessing === true) {
     processor.hold();
   }
@@ -756,12 +840,12 @@ function wrapLibraryStore(inner: LibraryStore, failUpsert: { current: boolean })
   return new Proxy(inner, {
     get(target, property, receiver) {
       if (property === "upsertVideo") {
-        return (id: string) => {
+        return (id: string, recordedAt?: string | null) => {
           if (failUpsert.current) {
             throw new Error("sqlite down");
           }
 
-          return target.upsertVideo(id);
+          return target.upsertVideo(id, recordedAt);
         };
       }
 
@@ -833,6 +917,7 @@ class RecordingVideoProcessor implements VideoProcessor {
   constructor(
     private readonly videoCodec: string,
     private readonly failAt?: "probe" | "convert" | "thumbnail",
+    private readonly recordingTime: string | null = null,
   ) {}
 
   hold(): void {
@@ -860,6 +945,7 @@ class RecordingVideoProcessor implements VideoProcessor {
       height: 240,
       videoCodec: this.videoCodec,
       audioCodec: "aac",
+      recordingTime: this.recordingTime,
     };
   }
 

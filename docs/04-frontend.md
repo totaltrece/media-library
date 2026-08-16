@@ -56,7 +56,8 @@ The frontend never accesses the filesystem.
 The initial screen contains:
 
 - compact tag search box with selected tags inside the field
-- results update as soon as a tag is added or removed
+- all videos on first load; results update as soon as a tag is added or removed
+- clearing every selected tag shows the full catalog again
 - shared header: View, Upload video, Admin videos, Admin tags, and refresh library
 - search results
 
@@ -113,13 +114,14 @@ highlighted. Upload lives at `/admin/videos/upload`: it loads
 `POST /api/admin/uploads` uses multipart field `video`. During HEVC
 conversion the processing step shows `progress` (0–100). `/admin/videos` and
 the consumer screen at `/` do not include this upload zone. After a
-successful upload, **View in Sin tags** returns to the catalog with the new
+successful upload, **View in Untagged** returns to the catalog with the new
 video visible through `GET /api/search`; the upload page does not call
 `POST /api/library/refresh`.
 
 The tag catalog at `/admin/tags` is managed through `GET /api/admin/tags`,
 `PUT /api/admin/tags/:id`, and `DELETE /api/admin/tags/:id`.
-The consumer search screen at `/` is unchanged.
+The consumer search screen at `/` loads `GET /api/search` with no tags so the
+full catalog is visible until the user filters.
 
 # Layout
 

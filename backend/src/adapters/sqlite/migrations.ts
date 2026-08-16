@@ -25,4 +25,10 @@ export const sqliteMigrations: SqliteMigration[] = [
       ) STRICT;
     `,
   },
+  {
+    version: 2,
+    sql: `
+      ALTER TABLE videos ADD COLUMN recorded_at TEXT;
+    `,
+  },
 ];

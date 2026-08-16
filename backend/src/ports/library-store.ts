@@ -1,5 +1,6 @@
 export interface LibraryVideo {
   id: string;
+  recordedAt: string | null;
 }
 
 export interface LibraryTag {
@@ -15,16 +16,18 @@ export interface LibraryTagUsage {
 
 export interface LibraryVideoWithTags {
   id: string;
+  recordedAt: string | null;
   tags: string[];
 }
 
 export interface LibraryStore {
   initialize(): void;
   close(): void;
-  upsertVideo(id: string): LibraryVideo;
+  upsertVideo(id: string, recordedAt?: string | null): LibraryVideo;
   findVideo(id: string): LibraryVideo | null;
   listVideos(): LibraryVideo[];
   deleteVideo(id: string): void;
+  setVideoRecordedAt(id: string, recordedAt: string | null): LibraryVideo;
   upsertTag(name: string): LibraryTag;
   findTagById(id: number): LibraryTag | null;
   findTagByName(name: string): LibraryTag | null;

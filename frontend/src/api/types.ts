@@ -9,6 +9,7 @@ export interface SearchResultItem {
   thumbnail: string;
   video: string;
   tags: string[];
+  recordedAt: string | null;
 }
 
 export interface SearchResponse {

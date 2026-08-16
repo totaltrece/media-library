@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { ActiveProcessingJobError } from "../src/application/active-processing-job-error.js";
 import { ProcessVideoJobUseCase } from "../src/application/process-video-job.js";
+import { toCanonicalPxlFileName } from "../src/application/resolve-canonical-upload-name.js";
 import { createProcessingJob, transitionProcessingJob } from "../src/application/processing-job.js";
 import { InMemoryProcessingJobStore } from "../src/adapters/in-memory-processing-job-store.js";
 import { buildProcessingJobPaths } from "../src/application/processing-job-paths.js";
@@ -198,13 +199,75 @@ test("processStaged stops at finalizing so install can complete the job", async 
   assert.deepEqual(workspace.discarded, []);
 });
 
-function probeResult(videoCodec: string): VideoProbeResult {
+test("processStaged keeps a PXL name that already contains a recording date", async () => {
+  const { useCase, workspace } = createHarness({
+    probe: probeResult("h264", "2020-01-01T00:00:00.000Z"),
+  });
+
+  const started = await useCase.begin({
+    originalName: "PXL_20260314_200431123.mp4",
+    jobId: "job-pxl",
+  });
+  await workspace.stageSource(started.job.id, originalPath);
+  const result = await useCase.processStaged(started.job.id);
+
+  assert.equal(result.status, "processed");
+  if (result.status !== "processed") {
+    return;
+  }
+
+  assert.equal(result.originalName, "PXL_20260314_200431123.mp4");
+  assert.equal(result.job.originalName, "PXL_20260314_200431123.mp4");
+});
+
+test("processStaged renames an Android MediaStore file from video metadata", async () => {
+  const recordingTime = "2026-03-14T19:04:31.123Z";
+  const expected = toCanonicalPxlFileName(new Date(recordingTime), ".mp4");
+  const { useCase, workspace, jobs } = createHarness({
+    probe: probeResult("h264", recordingTime),
+  });
+
+  const started = await useCase.begin({ originalName: "1000141506.mp4", jobId: "job-android" });
+  await workspace.stageSource(started.job.id, originalPath);
+  const result = await useCase.processStaged(started.job.id);
+
+  assert.equal(result.status, "processed");
+  if (result.status !== "processed") {
+    return;
+  }
+
+  assert.equal(result.originalName, expected);
+  assert.equal(result.job.originalName, expected);
+  assert.equal(jobs.findById("job-android")?.originalName, expected);
+  assert.match(expected, /^PXL_\d{8}_\d{9}\.mp4$/);
+});
+
+test("processStaged keeps a MediaStore name when metadata has no reliable date", async () => {
+  const { useCase, workspace } = createHarness({
+    probe: probeResult("h264", "1970-01-01T00:00:00.000000Z"),
+  });
+
+  const started = await useCase.begin({ originalName: "1000141506.mp4", jobId: "job-nodate" });
+  await workspace.stageSource(started.job.id, originalPath);
+  const result = await useCase.processStaged(started.job.id);
+
+  assert.equal(result.status, "processed");
+  if (result.status !== "processed") {
+    return;
+  }
+
+  assert.equal(result.originalName, "1000141506.mp4");
+  assert.equal(result.job.originalName, "1000141506.mp4");
+});
+
+function probeResult(videoCodec: string, recordingTime: string | null = null): VideoProbeResult {
   return {
     durationSeconds: 4,
     width: 1080,
     height: 1920,
     videoCodec,
     audioCodec: "aac",
+    recordingTime,
   };
 }
 

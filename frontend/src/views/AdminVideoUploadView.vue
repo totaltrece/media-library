@@ -2,7 +2,7 @@
   <div class="app-shell">
     <AppHeader
       title="Upload new video"
-      subtitle="Process a video on the server. It will appear under Sin tags when it finishes."
+      subtitle="Process a video on the server. It will appear under Untagged when it finishes."
     />
 
     <AdminVideoUpload @completed="onUploadCompleted" />
@@ -13,7 +13,7 @@
         data-testid="upload-view-untagged"
         to="/admin/videos?untagged=1"
       >
-        View in Sin tags
+        View in Untagged
       </RouterLink>
     </p>
   </div>

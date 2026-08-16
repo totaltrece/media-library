@@ -17,18 +17,18 @@
             id="catalog-tag-filter"
             v-model="filterQuery"
             autocomplete="off"
-            placeholder="Buscar tags..."
+            placeholder="Search tags..."
             type="search"
           />
         </div>
-        <div class="admin-tag-sort" role="group" aria-label="Ordenar tags">
+        <div class="admin-tag-sort" role="group" aria-label="Sort tags">
           <button
             class="secondary-button"
             type="button"
             data-testid="sort-name"
             :class="{ active: sort === 'name-asc' || sort === 'name-desc' }"
             :aria-pressed="sort === 'name-asc' || sort === 'name-desc'"
-            :aria-label="sort === 'name-desc' ? 'Ordenar de la Z a la A' : 'Ordenar de la A a la Z'"
+            :aria-label="sort === 'name-desc' ? 'Sort Z to A' : 'Sort A to Z'"
             @click="toggleNameSort"
           >
             A-Z{{ sort === "name-desc" ? " ↑" : sort === "name-asc" ? " ↓" : "" }}
@@ -39,10 +39,10 @@
             data-testid="sort-usage"
             :class="{ active: sort === 'usage-desc' || sort === 'usage-asc' }"
             :aria-pressed="sort === 'usage-desc' || sort === 'usage-asc'"
-            :aria-label="sort === 'usage-asc' ? 'Ordenar por usos, menos usados primero' : 'Ordenar por usos, más usados primero'"
+            :aria-label="sort === 'usage-asc' ? 'Sort by usage, least used first' : 'Sort by usage, most used first'"
             @click="toggleUsageSort"
           >
-            Usos{{ sort === "usage-asc" ? " ↑" : sort === "usage-desc" ? " ↓" : "" }}
+            Usage{{ sort === "usage-asc" ? " ↑" : sort === "usage-desc" ? " ↓" : "" }}
           </button>
         </div>
       </div>
@@ -62,22 +62,22 @@
               @keydown.escape="cancelEdit"
             />
             <button class="primary-button" data-testid="save-tag" type="button" :disabled="saving" @click="saveEdit">
-              Guardar
+              Save
             </button>
-            <button class="secondary-button" type="button" :disabled="saving" @click="cancelEdit">Cancelar</button>
+            <button class="secondary-button" type="button" :disabled="saving" @click="cancelEdit">Cancel</button>
           </template>
           <template v-else>
             <RouterLink
               class="admin-tag-name"
-              :aria-label="`Ver vídeos con ${tag.name}`"
-              :title="`Ver vídeos con ${tag.name}`"
+              :aria-label="`View videos tagged ${tag.name}`"
+              :title="`View videos tagged ${tag.name}`"
               :to="{ name: 'admin-videos', query: { tag: tag.name } }"
             >
               {{ tag.name }}
             </RouterLink>{{ " " }}<span class="admin-tag-count">({{ tag.usageCount }})</span>
             <button
-              :aria-label="`Editar ${tag.name}`"
-              :title="`Editar ${tag.name}`"
+              :aria-label="`Edit ${tag.name}`"
+              :title="`Edit ${tag.name}`"
               class="admin-tag-action"
               type="button"
               @click="startEdit(tag)"
@@ -88,8 +88,8 @@
               </svg>
             </button>
             <button
-              :aria-label="`Eliminar ${tag.name}`"
-              :title="`Eliminar ${tag.name}`"
+              :aria-label="`Delete ${tag.name}`"
+              :title="`Delete ${tag.name}`"
               class="admin-tag-action admin-tag-action-danger"
               type="button"
               @click="askDelete(tag)"
@@ -122,11 +122,11 @@
         aria-labelledby="delete-tag-title"
         aria-describedby="delete-tag-description"
       >
-        <p id="delete-tag-title">¿Eliminar el tag "{{ confirmingTag.name }}"?</p>
-        <p id="delete-tag-description">Se eliminará también su relación con todos los vídeos que lo utilizan.</p>
+        <p id="delete-tag-title">Delete the tag "{{ confirmingTag.name }}"?</p>
+        <p id="delete-tag-description">This will also remove it from every video that uses it.</p>
         <div class="search-actions">
           <button class="secondary-button" data-testid="cancel-delete-tag" type="button" @click="cancelDelete">
-            Cancelar
+            Cancel
           </button>
           <button
             class="primary-button"
@@ -135,7 +135,7 @@
             :disabled="saving"
             @click="confirmDelete"
           >
-            Eliminar
+            Delete
           </button>
         </div>
       </div>

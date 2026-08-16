@@ -61,8 +61,8 @@ test("RefreshLibraryUseCase syncs new videos then reloads the SQLite snapshot", 
     const response = await useCase.execute();
 
     assert.deepEqual(libraryStore.listVideosWithTags(), [
-      { id: "salsa/first.mp4", tags: ["salsa", "bea"] },
-      { id: "salsa/fourth.mp4", tags: [] },
+      { id: "salsa/first.mp4", recordedAt: null, tags: ["salsa", "bea"] },
+      { id: "salsa/fourth.mp4", recordedAt: null, tags: [] },
     ]);
     assert.deepEqual(response, { count: 2 });
     assert.deepEqual(

@@ -1,8 +1,8 @@
 <template>
   <div class="app-shell">
     <AppHeader
-      :title="video?.name ?? 'Edit tags'"
-      subtitle="Edit tags for this video. Changes are saved to the library."
+      title="Edit video"
+      :subtitle="pageSubtitle"
       @refreshed="loadVideo"
     />
 
@@ -32,7 +32,7 @@
               :disabled="saving || deleting || !isDirty"
               @click="saveTags"
             >
-              {{ saving ? "Saving..." : "Guardar cambios" }}
+              {{ saving ? "Saving..." : "Save changes" }}
             </button>
             <button
               class="danger-button"
@@ -41,7 +41,7 @@
               :disabled="saving || deleting"
               @click="openDeleteModal"
             >
-              Eliminar vídeo
+              Delete video
             </button>
           </div>
 
@@ -67,9 +67,9 @@
         aria-labelledby="delete-video-title"
         aria-describedby="delete-video-description"
       >
-        <p id="delete-video-title">¿Eliminar vídeo?</p>
+        <p id="delete-video-title">Delete video?</p>
         <p id="delete-video-description">
-          Esta acción eliminará el vídeo y su thumbnail de la biblioteca y todas sus relaciones con etiquetas. Esta acción no se puede deshacer.
+          This will delete the video and its thumbnail from the library, and all of its tag relations. This cannot be undone.
         </p>
         <div class="search-actions">
           <button
@@ -79,7 +79,7 @@
             :disabled="deleting"
             @click="cancelDelete"
           >
-            Cancelar
+            Cancel
           </button>
           <button
             class="danger-button"
@@ -88,7 +88,7 @@
             :disabled="deleting"
             @click="confirmDelete"
           >
-            {{ deleting ? "Eliminando..." : "Eliminar vídeo" }}
+            {{ deleting ? "Deleting..." : "Delete video" }}
           </button>
         </div>
       </div>
@@ -139,6 +139,10 @@ const isDirty = computed(
   () => JSON.stringify(draftTags.value) !== JSON.stringify(savedTags.value),
 );
 
+const pageSubtitle = computed(
+  () => `Edit tags for "${video.value?.name ?? props.id}"`,
+);
+
 const previewResult = computed(() => {
   if (video.value === null) {
     return {
@@ -147,6 +151,7 @@ const previewResult = computed(() => {
       thumbnail: `/api/thumbnail/${props.id}`,
       video: `/api/video/${props.id}`,
       tags: draftTags.value,
+      recordedAt: null,
     };
   }
 
@@ -186,6 +191,7 @@ async function loadVideo(): Promise<void> {
       thumbnail: `/api/thumbnail/${props.id}`,
       video: `/api/video/${props.id}`,
       tags: videoTags.tags,
+      recordedAt: null,
     };
     savedTags.value = [...videoTags.tags];
     draftTags.value = [...videoTags.tags];

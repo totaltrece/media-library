@@ -73,8 +73,9 @@ M3 orquesta un job completo sin HTTP. Dependencias: `VideoProcessor`,
 - Éxito: el workspace se conserva para que M5 instale el resultado.
 - Error: `failed` y se descarta el workspace.
 - Un segundo job activo se rechaza con `ActiveProcessingJobError` (HTTP 409 en M4).
-- `completed.videoId` es el nombre original, no un id de catálogo. M5 usará las
-  rutas del resultado para instalar y registrar SQLite.
+- `completed.videoId` es el id de biblioteca: el nombre original si ya incluye
+  fecha, o el `PXL_YYYYMMDD_HHMMSSmmm` generado desde metadatos cuando el
+  selector no entrega esa fecha. M5 instala con ese id.
 - `ProcessingWorkspace.stageSource` copia el input a `sourcePath` sin modificar
   el original. Así un H.264 también queda en el workspace.
 - HTTP (M4) no copia: `begin()` prepara el workspace, el adapter escribe el
@@ -98,7 +99,7 @@ La administración sube y sigue el vídeo en `/admin/videos/upload`. Al entrar,
 consulta `GET /api/admin/uploads/active` y retoma el polling si hay un job
 `uploading` o `processing`. El intervalo es 1 s; se detiene en
 `completed`/`failed`, en `404` y al desmontar. Un fallo de red en el polling
-no marca el job como fallido. Tras completar, **View in Sin tags** abre el
+no marca el job como fallido. Tras completar, **View in Untagged** abre el
 catálogo con `GET /api/search` + `GET /api/tags`, no con refresh del
 filesystem. El porcentaje de conversión sale de FFmpeg `-progress`
 (`out_time` / duración de ffprobe), se guarda en el job en memoria y se lee
@@ -130,13 +131,43 @@ actuales.
 ## Instalación en la biblioteca (M5)
 M5 es el primer hito que escribe en `LIBRARY_PATH`.
 
-- `videoId` = nombre original sanitizado (media id existente).
+- `videoId` = nombre de biblioteca. Se conserva un nombre sanitizado que ya
+  incluye fecha `YYYYMMDD` (p. ej. `PXL_YYYYMMDD_HHMMSSmmm`). Si el selector
+  de Android entrega un id MediaStore sin fecha, se genera el nombre canónico
+  `PXL_YYYYMMDD_HHMMSSmmm` a partir de `creation_time` de ffprobe. Sin fecha
+  fiable en metadatos, se conserva el nombre sanitizado; no se inventa una fecha.
 - Vídeo: `LIBRARY_PATH/<videoId>`. Thumbnail: `LIBRARY_PATH/.ts/<videoId>.jpg`.
 - Copia con `fs.copyFile(..., COPYFILE_EXCL)`; no se usa shell.
 - Si SQLite o el destino ya existen → `409`, sin sobrescribir.
 - SQLite (`upsertVideo`) solo después de vídeo + thumbnail instalados.
+  `recorded_at` sale de ffprobe (`VideoProbeResult.recordingTime`), no del
+  nombre ni de la fecha de subida.
 - Recarga del índice con `reloadVideoIndex`, no con `POST /api/library/refresh`.
 - Compensación: borrar solo ficheros creados por este job. Nunca borrar
   preexistentes. Si falla SQLite tras copiar, se eliminan los ficheros nuevos.
   Si falla la compensación, se conserva el workspace y el job queda `failed`.
 - El thumbnail instalado es el de M3; no se vuelve a ejecutar FFmpeg.
+
+## Fecha de grabación (`recorded_at`)
+La fecha mostrada en el catálogo vive en SQLite, no en el nombre del fichero.
+
+- Columna: `videos.recorded_at` TEXT ISO-8601 UTC, nullable, ordenable.
+- Origen en el alta: `ffprobe -show_format -show_streams` sobre el original,
+  **antes** de convertir. El adapter lee tags en este orden:
+  1. `format.tags.creation_time`
+  2. `format.tags.com.apple.quicktime.creationdate`
+  3. video stream `tags.creation_time`
+  4. video stream `tags.com.apple.quicktime.creationdate`
+- Se descartan valores ilegibles y fechas no plausibles (p. ej. epoch 1970).
+- En el **alta** no se usa mtime, fecha de upload ni el nombre del fichero.
+- Vídeos antiguos: CLI `backfill-recorded-at` (con `--dry-run` primero).
+  Probe del fichero en `LIBRARY_PATH`; no convierte ni toca tags/thumbnails.
+- Prioridad en el backfill:
+  1. ffprobe (misma metadata que el alta)
+  2. fallback **solo** si hay un `YYYYMMDD` válido en el nombre y no hay fecha
+     de ffprobe: ese día a las **20:00 Europe/Madrid**, guardado en UTC.
+     Es una fecha aproximada (día conocido, hora convencional).
+     Ejemplos: `VID-20251227-WA0005.mp4`, `20241016-WA0010-mariposas.mp4`.
+  3. si no hay fuente válida: `NULL`
+- El dry-run imprime `source: ffprobe | filename-fallback | none`.
+- Si no hay fecha fiable: `NULL`. El frontend oculta el overlay.

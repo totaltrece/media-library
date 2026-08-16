@@ -23,10 +23,17 @@ export class SqliteLibraryStore implements LibraryStore {
     this.database.close();
   }
 
-  upsertVideo(id: string): LibraryVideo {
+  upsertVideo(id: string, recordedAt: string | null = null): LibraryVideo {
     const videoId = requireNonEmpty(id, "Video id");
 
-    this.database.prepare("INSERT INTO videos (id) VALUES (?) ON CONFLICT(id) DO NOTHING").run(videoId);
+    this.database
+      .prepare(
+        `
+          INSERT INTO videos (id, recorded_at) VALUES (?, ?)
+          ON CONFLICT(id) DO UPDATE SET recorded_at = COALESCE(videos.recorded_at, excluded.recorded_at)
+        `,
+      )
+      .run(videoId, recordedAt);
 
     const video = this.findVideo(videoId);
 
@@ -38,15 +45,32 @@ export class SqliteLibraryStore implements LibraryStore {
   }
 
   findVideo(id: string): LibraryVideo | null {
-    const row = this.database.prepare("SELECT id FROM videos WHERE id = ?").get(id);
+    const row = this.database.prepare("SELECT id, recorded_at FROM videos WHERE id = ?").get(id);
 
-    return isVideoRow(row) ? { id: row.id } : null;
+    return isVideoRow(row) ? toLibraryVideo(row) : null;
   }
 
   listVideos(): LibraryVideo[] {
-    const rows = this.database.prepare("SELECT id FROM videos ORDER BY id").all();
+    const rows = this.database.prepare("SELECT id, recorded_at FROM videos ORDER BY id").all();
 
-    return rows.filter(isVideoRow).map((row) => ({ id: row.id }));
+    return rows.filter(isVideoRow).map((row) => toLibraryVideo(row));
+  }
+
+  setVideoRecordedAt(id: string, recordedAt: string | null): LibraryVideo {
+    const videoId = requireNonEmpty(id, "Video id");
+    const result = this.database.prepare("UPDATE videos SET recorded_at = ? WHERE id = ?").run(recordedAt, videoId);
+
+    if (result.changes === 0) {
+      throw new Error(`Video not found: ${videoId}`);
+    }
+
+    const video = this.findVideo(videoId);
+
+    if (video === null) {
+      throw new Error(`Unable to persist video ${videoId}`);
+    }
+
+    return video;
   }
 
   deleteVideo(id: string): void {
@@ -243,6 +267,7 @@ export class SqliteLibraryStore implements LibraryStore {
   listVideosWithTags(): LibraryVideoWithTags[] {
     return this.listVideos().map((video) => ({
       id: video.id,
+      recordedAt: video.recordedAt,
       tags: this.getVideoTags(video.id),
     }));
   }
@@ -321,8 +346,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isVideoRow(value: unknown): value is { id: string } {
+function isVideoRow(value: unknown): value is Record<string, unknown> & { id: string } {
   return isRecord(value) && typeof value.id === "string";
+}
+
+function toLibraryVideo(row: unknown): LibraryVideo {
+  if (!isVideoRow(row)) {
+    throw new Error("Invalid video row");
+  }
+
+  return {
+    id: row.id,
+    recordedAt: typeof row.recorded_at === "string" && row.recorded_at.length > 0 ? row.recorded_at : null,
+  };
 }
 
 function isTagRow(value: unknown): value is { id: number | bigint; name: string } {

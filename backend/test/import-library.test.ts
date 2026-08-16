@@ -68,6 +68,7 @@ test("imports a video with several TagSpaces tag titles", async () => {
     assert.deepEqual(store.listVideosWithTags(), [
       {
         id: "salsa/first.mp4",
+        recordedAt: null,
         tags: ["salsa", "bea", "linea"],
       },
     ]);
@@ -88,7 +89,7 @@ test("imports a video without TagSpaces metadata and leaves tags empty", async (
 
     assert.strictEqual(result.withoutMetadata, 1);
     assert.strictEqual(result.withoutTags, 1);
-    assert.deepEqual(store.listVideosWithTags(), [{ id: "missing.mp4", tags: [] }]);
+    assert.deepEqual(store.listVideosWithTags(), [{ id: "missing.mp4", recordedAt: null, tags: [] }]);
   } finally {
     store.close();
     await rm(libraryPath, { recursive: true, force: true });
@@ -107,7 +108,7 @@ test("imports a video whose TagSpaces metadata has no tags", async () => {
 
     assert.strictEqual(result.withoutMetadata, 0);
     assert.strictEqual(result.withoutTags, 1);
-    assert.deepEqual(store.listVideosWithTags(), [{ id: "empty.mp4", tags: [] }]);
+    assert.deepEqual(store.listVideosWithTags(), [{ id: "empty.mp4", recordedAt: null, tags: [] }]);
   } finally {
     store.close();
     await rm(libraryPath, { recursive: true, force: true });
@@ -168,7 +169,7 @@ test("running the import twice does not duplicate videos, tags, or relations", a
 
     assert.strictEqual(secondResult.imported, 1);
     assert.strictEqual(secondResult.tagsCreated, 0);
-    assert.deepEqual(store.listVideos(), [{ id: "first.mp4" }]);
+    assert.deepEqual(store.listVideos(), [{ id: "first.mp4", recordedAt: null }]);
     assert.deepEqual(
       store.listTags().map((tag) => tag.name),
       ["bea", "salsa"],
@@ -217,7 +218,7 @@ test("a video import error does not leave partial tag relations", async () => {
     assert.strictEqual(result.errors.length, 1);
     assert.strictEqual(result.errors[0]?.videoId, "broken.mp4");
     assert.match(result.errors[0]?.message ?? "", /Tag name must not be empty/);
-    assert.deepEqual(store.findVideo("broken.mp4"), { id: "broken.mp4" });
+    assert.deepEqual(store.findVideo("broken.mp4"), { id: "broken.mp4", recordedAt: null });
     assert.deepEqual(store.getVideoTags("broken.mp4"), []);
     assert.deepEqual(store.listTags(), []);
   } finally {

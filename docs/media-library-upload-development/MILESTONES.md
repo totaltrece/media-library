@@ -4,7 +4,7 @@
 
 Permitir:
 
-`móvil/PC → upload → procesamiento Node/FFmpeg → H.264 → thumbnail 281×500 → filesystem → SQLite → Admin/Sin tags`
+`móvil/PC → upload → procesamiento Node/FFmpeg → H.264 → thumbnail 281×500 → filesystem → SQLite → Admin/Untagged`
 
 El procesamiento debe continuar aunque se cierre el navegador.
 
@@ -30,9 +30,11 @@ El resultado permanece en el workspace temporal. Sin instalación en
 
 ## M5 — Integración con biblioteca
 Implementado: tras un procesamiento correcto, el vídeo y el thumbnail se
-instalan en `LIBRARY_PATH` / `.ts/`, se registra `upsertVideo` sin tags y se
-recarga el índice. Un id o fichero existente se rechaza con `409`.
-Sin cola, sin UI de upload y sin persistencia de jobs.
+instalan en `LIBRARY_PATH` / `.ts/`, se registra `upsertVideo` sin tags (con
+`recorded_at` desde ffprobe o `NULL`) y se recarga el índice. Un id o fichero
+existente se rechaza con `409`. Sin cola, sin UI de upload y sin persistencia
+de jobs. Los vídeos ya instalados se rellenan con `backfill-recorded-at`
+(ffprobe; fallback `YYYYMMDD` del nombre solo si no hay metadata).
 
 ## M6.1 — Upload HTTP asíncrono
 Implementado: `POST /api/admin/uploads` responde `202` tras persistir el
@@ -45,7 +47,7 @@ Implementado: página `/admin/videos/upload`, enlazada desde la cabecera
 compartida (**Upload video**). `POST` multipart, `GET /api/admin/uploads/active`
 al entrar, polling de `GET /api/admin/uploads/:jobId`, fases visibles,
 porcentaje real de FFmpeg durante la conversión, un solo upload activo y
-vuelta al catálogo en Sin tags. Cabecera compartida con View / Upload video /
+vuelta al catálogo en Untagged. Cabecera compartida con View / Upload video /
 Admin videos / Admin tags y refresh. Sin cola, sin persistencia de jobs y sin
 captura de cámara.
 
@@ -67,4 +69,4 @@ Solo si el uso real lo justifica.
 
 ### Criterio de finalización del MVP
 
-Un vídeo grabado con el móvil puede subirse al servidor, procesarse completamente, generar thumbnail, entrar en SQLite y aparecer en `Admin → Vídeos → Sin tags`, sin intervención manual.
+Un vídeo grabado con el móvil puede subirse al servidor, procesarse completamente, generar thumbnail, entrar en SQLite y aparecer en `Admin → Videos → Untagged`, sin intervención manual.

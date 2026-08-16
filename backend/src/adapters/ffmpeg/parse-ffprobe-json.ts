@@ -37,7 +37,44 @@ export function parseFfprobeJson(stdout: string): VideoProbeResult {
     height,
     videoCodec: readOptionalCodec(videoStream.codec_name),
     audioCodec: isRecord(audioStream) ? readOptionalCodec(audioStream.codec_name) : null,
+    recordingTime: readRecordingTime(format, videoStream),
   };
+}
+
+function readRecordingTime(
+  format: Record<string, unknown> | undefined,
+  videoStream: Record<string, unknown>,
+): string | null {
+  const candidates = [
+    readTag(format?.tags, "creation_time"),
+    readTag(format?.tags, "com.apple.quicktime.creationdate"),
+    readTag(videoStream.tags, "creation_time"),
+    readTag(videoStream.tags, "com.apple.quicktime.creationdate"),
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate !== null) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function readTag(tags: unknown, key: string): string | null {
+  if (!isRecord(tags)) {
+    return null;
+  }
+
+  const value = tags[key];
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function readOptionalCodec(value: unknown): string | null {

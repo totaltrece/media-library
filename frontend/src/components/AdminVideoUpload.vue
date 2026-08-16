@@ -1,10 +1,10 @@
 <template>
-  <section class="admin-upload" aria-label="Subir vídeo">
-    <h2>{{ busy ? "Vídeo en proceso" : "Subir vídeo" }}</h2>
-    <p v-if="!busy">El vídeo se procesará en el servidor y aparecerá en Sin tags cuando termine.</p>
+  <section class="admin-upload" aria-label="Upload video">
+    <h2>{{ busy ? "Video in progress" : "Upload video" }}</h2>
+    <p v-if="!busy">The video will be processed on the server and appear under Untagged when it finishes.</p>
 
     <p v-if="checking && !busy" class="status-message info" data-testid="upload-checking">
-      Comprobando si hay una subida en curso...
+      Checking for an upload in progress...
     </p>
 
     <input
@@ -29,7 +29,7 @@
         :disabled="checking"
         @click="openFilePicker"
       >
-        Seleccionar vídeo
+        Select video
       </button>
       <button
         class="primary-button admin-upload-button"
@@ -38,7 +38,7 @@
         :disabled="checking"
         @click="submitUpload"
       >
-        Subir vídeo
+        Upload video
       </button>
     </div>
 
@@ -133,7 +133,7 @@ async function submitUpload(): Promise<void> {
   }
 
   if (selectedFile.value === null) {
-    error.value = "Selecciona un vídeo primero.";
+    error.value = "Select a video first.";
     return;
   }
 
@@ -208,12 +208,12 @@ watch(
   () => job.value?.status,
   (status) => {
     if (status === "completed") {
-      successMessage.value = "Vídeo añadido correctamente";
+      successMessage.value = "Video added successfully";
       emit("completed");
     }
 
     if (status === "failed") {
-      error.value = "No se ha podido procesar el vídeo.";
+      error.value = "The video could not be processed.";
       successMessage.value = null;
     }
   },

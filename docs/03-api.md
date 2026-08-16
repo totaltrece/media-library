@@ -88,7 +88,8 @@ Response
         "bachata",
         "damian",
         "bea"
-      ]
+      ],
+      "recordedAt": "2025-06-30T17:36:42.391Z"
     }
   ]
 }

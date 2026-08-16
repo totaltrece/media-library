@@ -52,7 +52,7 @@
           :class="{ highlighted: highlightedIndex === filteredSuggestions.length }"
           @click="selectTag(query)"
         >
-          Añadir nuevo tag
+          Add new tag
         </button>
       </li>
       <li v-else-if="filteredSuggestions.length === 0">
