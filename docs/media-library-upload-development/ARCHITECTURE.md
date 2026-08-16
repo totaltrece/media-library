@@ -129,22 +129,22 @@ job activo, ese job se pierde; no se reanuda. No hay cola.
 ## UI de subida (M6.2)
 
 La administración comparte cabecera entre `/` (**View**),
-`/admin/videos/upload` (**Upload video**), `/admin/videos` (**Admin videos**)
-y `/admin/tags` (**Admin tags**), más el refresh de biblioteca.
+`/admin/videos/upload` (**Upload video**) y `/admin/tags` (**Admin tags**),
+más el refresh de biblioteca.
 
 `/admin/videos/upload` es la página que recupera y muestra el upload activo. Al
 entrar consulta `GET /api/admin/uploads/active`. Si hay un job activo,
 muestra las fases y continúa el polling de `GET /api/admin/uploads/:jobId`
 cada segundo (mismo composable que un upload iniciado en esa sesión). Si no
 hay job activo, muestra el selector de subida. Un job activo oculta el
-selector. `/admin/videos` y `/` no muestran esta zona.
+selector. `/` no muestra esta zona.
 
 Durante la conversión HEVC, la fase **Processing video** muestra el
 porcentaje real (`progress`) y una barra corta. Al pasar a
 `generating_thumbnail` e `installing` el porcentaje desaparece. Un H.264
 sin conversión no muestra progreso de FFmpeg.
 
-Al completar, **View in Untagged** vuelve a `/admin/videos?untagged=1`. El
+Al completar, **View in Untagged** vuelve a `/?untagged=1`. El
 catálogo recarga `GET /api/search` y `GET /api/tags` (no
 `POST /api/library/refresh`). El icono de refresh de biblioteca está en la
 cabecera compartida de todas las páginas.

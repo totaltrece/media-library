@@ -4,10 +4,7 @@ import { defineComponent, nextTick } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
 
 import AdminTagsView from "../src/views/AdminTagsView.vue";
-import AdminVideoEditView from "../src/views/AdminVideoEditView.vue";
-import AdminVideoUploadView from "../src/views/AdminVideoUploadView.vue";
-import AdminVideosView from "../src/views/AdminVideosView.vue";
-import HomeView from "../src/views/HomeView.vue";
+import { routes } from "../src/router.js";
 
 const catalog = {
   count: 3,
@@ -29,18 +26,7 @@ function jsonResponse(body: unknown, ok = true, status = 200): Response {
 function createTestRouter() {
   return createRouter({
     history: createMemoryHistory(),
-    routes: [
-      { path: "/", name: "home", component: HomeView },
-      { path: "/admin/videos", name: "admin-videos", component: AdminVideosView },
-      { path: "/admin/videos/upload", name: "admin-video-upload", component: AdminVideoUploadView },
-      { path: "/admin/tags", name: "admin-tags", component: AdminTagsView },
-      {
-        path: "/admin/videos/:id(.*)",
-        name: "admin-video-edit",
-        component: AdminVideoEditView,
-        props: true,
-      },
-    ],
+    routes,
   });
 }
 
@@ -74,7 +60,7 @@ describe("admin tag catalog", () => {
       "(127)",
     ]);
     expect(wrapper.get('a[aria-label="View videos tagged jota"]').attributes("href")).toBe(
-      "/admin/videos?tag=jota",
+      "/?tag=jota",
     );
   });
 
@@ -349,19 +335,17 @@ describe("admin tag catalog", () => {
     expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
 
-    await wrapper.get("a[href='/admin/videos']").trigger("click");
-    await flushPromises();
-    expect(router.currentRoute.value.name).toBe("admin-videos");
-    expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
-    expect(wrapper.get('[data-testid="nav-videos"]').classes()).toContain("active");
-    expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
-    expect(wrapper.text()).not.toContain("Refresh library");
-
     await wrapper.get("a[href='/admin/tags']").trigger("click");
     await flushPromises();
     expect(router.currentRoute.value.name).toBe("admin-tags");
     expect(wrapper.get('[data-testid="nav-tags"]').classes()).toContain("active");
     expect(wrapper.text()).toContain("salsa (127)");
+
+    await wrapper.get("a[href='/']").trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.name).toBe("home");
+    expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
+    expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
   });
 
   it("navigates between the video and tag admin pages", async () => {
@@ -390,14 +374,14 @@ describe("admin tag catalog", () => {
     const Root = defineComponent({
       template: "<router-view />",
     });
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mount(Root, {
       global: { plugins: [router] },
     });
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Video tags");
+    expect(wrapper.text()).toContain("Media Library");
 
     await wrapper.get("a[href='/admin/tags']").trigger("click");
     await flushPromises();
@@ -406,11 +390,11 @@ describe("admin tag catalog", () => {
     expect(wrapper.text()).toContain("Tag catalog");
     expect(wrapper.text()).toContain("salsa (127)");
 
-    await wrapper.get("a[href='/admin/videos']").trigger("click");
+    await wrapper.get("a[href='/']").trigger("click");
     await flushPromises();
 
-    expect(router.currentRoute.value.name).toBe("admin-videos");
-    expect(wrapper.text()).toContain("Video tags");
+    expect(router.currentRoute.value.name).toBe("home");
+    expect(wrapper.text()).toContain("Media Library");
   });
 
   it("opens the admin video search with the selected tag", async () => {
@@ -481,14 +465,14 @@ describe("admin tag catalog", () => {
     await wrapper.get('a[aria-label="View videos tagged jota"]').trigger("click");
     await flushPromises();
 
-    expect(router.currentRoute.value.name).toBe("admin-videos");
+    expect(router.currentRoute.value.name).toBe("home");
     expect(router.currentRoute.value.query).toEqual({ tag: "jota" });
     expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=jota");
     expect(wrapper.get(".selected-tags").text()).toContain("jota");
     expect(wrapper.text()).toContain("1 result");
     expect(wrapper.text()).toContain("jota.mp4");
 
-    await wrapper.get('button[aria-label="Play video tagged jota"]').trigger("click");
+    await wrapper.get('a[aria-label="Edit tags for jota.mp4"]').trigger("click");
     await flushPromises();
 
     expect(router.currentRoute.value.name).toBe("admin-video-edit");

@@ -71,7 +71,7 @@
               class="admin-tag-name"
               :aria-label="`View videos tagged ${tag.name}`"
               :title="`View videos tagged ${tag.name}`"
-              :to="{ name: 'admin-videos', query: { tag: tag.name } }"
+              :to="{ name: 'home', query: { tag: tag.name } }"
             >
               {{ tag.name }}
             </RouterLink>{{ " " }}<span class="admin-tag-count">({{ tag.usageCount }})</span>

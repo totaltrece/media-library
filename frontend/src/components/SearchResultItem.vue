@@ -9,7 +9,17 @@
       <img :alt="`Thumbnail for video tagged ${result.tags.join(', ')}`" :src="thumbnailUrl" />
       <span v-if="displayDate !== null" class="result-card-date">{{ displayDate }}</span>
     </button>
-    <p v-if="showName" class="result-card-name">{{ result.name }}</p>
+    <p v-if="showName" class="result-card-name">
+      <RouterLink
+        v-if="nameLinksToEdit"
+        class="result-card-name-link"
+        :aria-label="`Edit tags for ${result.name}`"
+        :to="{ name: 'admin-video-edit', params: { id: result.id } }"
+      >
+        {{ result.name }}
+      </RouterLink>
+      <template v-else>{{ result.name }}</template>
+    </p>
     <div class="result-card-tags">
       <template v-if="interactiveTags">
         <button
@@ -34,6 +44,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { RouterLink } from "vue-router";
 
 import { buildApiUrl } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
@@ -45,10 +56,12 @@ const props = withDefaults(
     selected: boolean;
     interactiveTags?: boolean;
     showName?: boolean;
+    nameLinksToEdit?: boolean;
   }>(),
   {
     interactiveTags: true,
     showName: false,
+    nameLinksToEdit: false,
   },
 );
 

@@ -48,7 +48,7 @@ compartida (**Upload video**). `POST` multipart, `GET /api/admin/uploads/active`
 al entrar, polling de `GET /api/admin/uploads/:jobId`, fases visibles,
 porcentaje real de FFmpeg durante la conversión, un solo upload activo y
 vuelta al catálogo en Untagged. Cabecera compartida con View / Upload video /
-Admin videos / Admin tags y refresh. Sin cola, sin persistencia de jobs y sin
+Admin tags y refresh. Sin cola, sin persistencia de jobs y sin
 captura de cámara.
 
 ## M6 — UI de estado

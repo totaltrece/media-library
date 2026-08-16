@@ -26,6 +26,7 @@
         :key="result.id"
         :interactive-tags="interactiveTags"
         :show-name="showName"
+        :name-links-to-edit="nameLinksToEdit"
         :result="result"
         :selected="result.id === selectedVideoId"
         @select-tag="$emit('select-tag', $event)"
@@ -51,11 +52,13 @@ const props = withDefaults(
     emptyMessage?: string;
     interactiveTags?: boolean;
     showName?: boolean;
+    nameLinksToEdit?: boolean;
   }>(),
   {
     emptyMessage: "No videos match the selected tags.",
     interactiveTags: true,
     showName: false,
+    nameLinksToEdit: false,
   },
 );
 

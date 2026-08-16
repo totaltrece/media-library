@@ -11,7 +11,7 @@
       <RouterLink
         class="primary-button"
         data-testid="upload-view-untagged"
-        to="/admin/videos?untagged=1"
+        to="/?untagged=1"
       >
         View in Untagged
       </RouterLink>

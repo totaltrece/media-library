@@ -1,8 +1,8 @@
 <template>
   <div class="app-shell">
     <AppHeader
-      title="Video tags"
-      subtitle="Find a video and edit its tags."
+      title="Media Library"
+      subtitle="Find a video, play it, or edit its tags."
       @refreshed="onLibraryRefreshed"
     />
 
@@ -48,20 +48,28 @@
         <SearchResults
           :empty-message="emptyMessage"
           :show-name="true"
+          :name-links-to-edit="true"
           :results="visibleVideos"
           :searched="true"
-          :selected-video-id="null"
+          :selected-video-id="selectedVideo?.id ?? null"
           @select-tag="selectResultTag"
-          @select-video="openVideo"
+          @select-video="playVideo"
         />
       </div>
     </template>
+
+    <VideoPlayer
+      v-if="selectedVideo"
+      :tags="selectedVideo.tags"
+      :video-path="selectedVideo.video"
+      @close="closeVideo"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 
 import { fetchTags, searchVideos } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
@@ -70,14 +78,15 @@ import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 import SearchResults from "../components/SearchResults.vue";
 import TagSearch from "../components/TagSearch.vue";
+import VideoPlayer from "../components/VideoPlayer.vue";
 import { applyUntaggedFilter, countUntaggedVideos } from "../utils/admin-videos.js";
 
-const router = useRouter();
 const route = useRoute();
 const catalogVideos = ref<SearchResultItem[]>([]);
 const searchResults = ref<SearchResultItem[]>([]);
 const availableTags = ref<string[]>([]);
 const selectedTags = ref<string[]>([]);
+const selectedVideo = ref<SearchResultItem | null>(null);
 const untaggedOnly = ref(false);
 const hasSearched = ref(false);
 const loadingCatalog = ref(true);
@@ -119,10 +128,12 @@ function resetSearch(): void {
   hasSearched.value = false;
   searchError.value = null;
   loadingSearch.value = false;
+  syncSelectedVideo();
 }
 
 function showAllVideos(): void {
   untaggedOnly.value = false;
+  syncSelectedVideo();
 }
 
 function showUntaggedVideos(): void {
@@ -152,6 +163,7 @@ function removeTag(tag: string): void {
     hasSearched.value = false;
     searchError.value = null;
     loadingSearch.value = false;
+    syncSelectedVideo();
     return;
   }
 
@@ -181,6 +193,7 @@ async function runSearch(): Promise<void> {
 
     searchResults.value = response.results;
     hasSearched.value = true;
+    syncSelectedVideo();
   } catch (searchLoadError: unknown) {
     if (generation !== searchGeneration) {
       return;
@@ -189,6 +202,7 @@ async function runSearch(): Promise<void> {
     searchResults.value = [];
     hasSearched.value = true;
     searchError.value = searchLoadError instanceof Error ? searchLoadError.message : "Unable to search videos.";
+    syncSelectedVideo();
   } finally {
     if (generation === searchGeneration) {
       loadingSearch.value = false;
@@ -234,8 +248,22 @@ watch(
   { immediate: true },
 );
 
-function openVideo(result: SearchResultItem): void {
-  void router.push({ name: "admin-video-edit", params: { id: result.id } });
+function playVideo(result: SearchResultItem): void {
+  selectedVideo.value = result;
+}
+
+function closeVideo(): void {
+  selectedVideo.value = null;
+}
+
+function syncSelectedVideo(): void {
+  if (selectedVideo.value === null) {
+    return;
+  }
+
+  if (!visibleVideos.value.some((video) => video.id === selectedVideo.value?.id)) {
+    selectedVideo.value = null;
+  }
 }
 
 async function onLibraryRefreshed(): Promise<void> {

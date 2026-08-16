@@ -249,11 +249,11 @@ async function confirmDelete(): Promise<void> {
   try {
     await deleteVideo(props.id);
     confirmingDelete.value = false;
-    await router.push({ name: "admin-videos" });
+    await router.push({ name: "home" });
   } catch (removeError: unknown) {
     if (removeError instanceof ApiRequestError && removeError.status === 404) {
       confirmingDelete.value = false;
-      await router.push({ name: "admin-videos" });
+      await router.push({ name: "home" });
       return;
     }
 

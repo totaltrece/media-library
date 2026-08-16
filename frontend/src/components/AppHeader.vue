@@ -58,7 +58,6 @@ const emit = defineEmits<{
 const items = [
   { id: "view", to: "/", label: "View", testId: "nav-view" },
   { id: "upload", to: "/admin/videos/upload", label: "Upload video", testId: "upload-new-video" },
-  { id: "videos", to: "/admin/videos", label: "Admin videos", testId: "nav-videos" },
   { id: "tags", to: "/admin/tags", label: "Admin tags", testId: "nav-tags" },
 ] as const;
 
@@ -69,14 +68,12 @@ const refreshError = ref<string | null>(null);
 const current = computed(() => {
   switch (route.name) {
     case "home":
+    case "admin-video-edit":
       return "view";
     case "admin-video-upload":
       return "upload";
     case "admin-tags":
       return "tags";
-    case "admin-videos":
-    case "admin-video-edit":
-      return "videos";
     default:
       return null;
   }

@@ -58,8 +58,8 @@ The initial screen contains:
 - compact tag search box with selected tags inside the field
 - all videos on first load; results update as soon as a tag is added or removed
 - clearing every selected tag shows the full catalog again
-- shared header: View, Upload video, Admin videos, Admin tags, and refresh library
-- search results
+- shared header: View, Upload video, Admin tags, and refresh library
+- search results: thumbnail plays the video, filename opens the editor
 
 Searching should feel immediate and responsive.
 
@@ -69,10 +69,9 @@ Searching should feel immediate and responsive.
 
 Each result displays:
 
-- thumbnail
+- thumbnail (opens the video player)
+- filename (opens the tag editor)
 - tags
-
-The MVP does not display filenames. Selecting a result opens the embedded player.
 
 ---
 
@@ -93,35 +92,32 @@ The frontend never downloads or copies media files.
 
 ---
 
-## Admin video tags
+## Library catalog
 
-Additional screens live at `/admin/videos`, `/admin/videos/upload`, `/admin/videos/:id`, and `/admin/tags`.
+The catalog lives at `/`. It reuses `TagSearch` and `GET /api/search?tag=...`
+to find videos by tags, filter untagged items, and play them in a modal.
+The filename between the thumbnail and tags links to `/admin/videos/:id`.
+The edit screen updates tags through `GET /api/videos/:id/tags`, `GET /api/tags`,
+and `PUT /api/videos/:id/tags`. It can also delete the video with
+`DELETE /api/videos/:id` after a confirmation modal. A successful delete
+returns to `/`, which reloads the catalog from `GET /api/search` and
+`GET /api/tags`.
 
-They reuse the existing `TagSearch` component and `GET /api/search?tag=...`
-to find videos by tags, filter untagged items, and edit tags through
-`GET /api/videos/:id/tags`, `GET /api/tags`, and `PUT /api/videos/:id/tags`.
-The edit screen can also delete the video with `DELETE /api/videos/:id` after
-a confirmation modal. A successful delete returns to `/admin/videos`, which
-reloads the catalog from `GET /api/search` and `GET /api/tags`.
-
-`/admin/videos` shares the same header as `/`, `/admin/videos/upload`, and
-`/admin/tags`: **View**, **Upload video**, **Admin videos**, **Admin tags**,
-and refresh library (`POST /api/library/refresh`). The current section is
-highlighted. Upload lives at `/admin/videos/upload`: it loads
-`GET /api/admin/uploads/active` on enter. If a job is `uploading` or
-`processing`, it shows the progress zone and polls
-`GET /api/admin/uploads/:jobId`. Otherwise it shows the upload picker.
-`POST /api/admin/uploads` uses multipart field `video`. During HEVC
-conversion the processing step shows `progress` (0–100). `/admin/videos` and
-the consumer screen at `/` do not include this upload zone. After a
-successful upload, **View in Untagged** returns to the catalog with the new
-video visible through `GET /api/search`; the upload page does not call
-`POST /api/library/refresh`.
+`/` shares the same header as `/admin/videos/upload` and `/admin/tags`:
+**View**, **Upload video**, **Admin tags**, and refresh library
+(`POST /api/library/refresh`). The current section is highlighted. Upload
+lives at `/admin/videos/upload`: it loads `GET /api/admin/uploads/active` on
+enter. If a job is `uploading` or `processing`, it shows the progress zone
+and polls `GET /api/admin/uploads/:jobId`. Otherwise it shows the upload
+picker. `POST /api/admin/uploads` uses multipart field `video`. During HEVC
+conversion the processing step shows `progress` (0–100). `/` does not include
+this upload zone. After a successful upload, **View in Untagged** returns to
+`/?untagged=1`; the upload page does not call `POST /api/library/refresh`.
 
 The tag catalog at `/admin/tags` is managed through `GET /api/admin/tags`,
-`PUT /api/admin/tags/:id`, and `DELETE /api/admin/tags/:id`.
-The consumer search screen at `/` loads `GET /api/search` with no tags so the
-full catalog is visible until the user filters.
+`PUT /api/admin/tags/:id`, and `DELETE /api/admin/tags/:id`. Tag names link
+to `/?tag=...` so the catalog opens filtered by that tag. `/admin/videos`
+without an id redirects to `/`.
 
 # Layout
 

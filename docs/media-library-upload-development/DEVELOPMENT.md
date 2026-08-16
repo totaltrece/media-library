@@ -110,7 +110,7 @@ Comprobar:
 5. `http://localhost:3000/api/video/PXL_20260813_214135367.TS.mp4`
 6. `http://localhost:3000/api/thumbnail/PXL_20260813_214135367.TS.mp4`
 7. `http://localhost:3000/api/search` incluye el vídeo con `tags: []`
-8. `http://localhost:3000/admin/videos` → Untagged
+8. `http://localhost:3000/?untagged=1` → Untagged
 9. SQLite: `videos` +1, `tags` y `video_tags` sin cambio
 10. Refresh library: el vídeo sigue una sola vez y sin tags
 11. repetir el mismo upload → HTTP `409` y ficheros intactos
@@ -132,8 +132,9 @@ Con el backend y el frontend en marcha, abrir `/admin/videos/upload` desde
 5. Si el vídeo es HEVC, **Processing video** muestra un porcentaje real y
    una barra. Al pasar a thumbnail e instalar, el porcentaje desaparece.
 6. Al completar: "Video added successfully". **View in Untagged** abre
-   `/admin/videos` con el vídeo nuevo.
-7. `/` sigue siendo la vista de consumo (**View** en la cabecera).
+   `/?untagged=1` con el vídeo nuevo.
+7. `/` es el catálogo (**View** en la cabecera): el thumbnail reproduce el
+   vídeo y el nombre abre la edición.
 8. El refresh de biblioteca está en la cabecera de todas las páginas.
 9. Mientras hay un job activo, un segundo intento muestra que ya hay un
    vídeo en proceso (`409` del backend).

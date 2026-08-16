@@ -6,11 +6,9 @@ import { createMemoryHistory, createRouter, type Router } from "vue-router";
 import type { SearchResultItem } from "../src/api/types.js";
 import TagEditor from "../src/components/TagEditor.vue";
 import TagSearch from "../src/components/TagSearch.vue";
-import AdminTagsView from "../src/views/AdminTagsView.vue";
+import { routes } from "../src/router.js";
 import AdminVideoEditView from "../src/views/AdminVideoEditView.vue";
-import AdminVideoUploadView from "../src/views/AdminVideoUploadView.vue";
 import AdminVideosView from "../src/views/AdminVideosView.vue";
-import HomeView from "../src/views/HomeView.vue";
 
 const videos: SearchResultItem[] = [
   {
@@ -116,21 +114,10 @@ async function addSearchTags(wrapper: VueWrapper, tags: string[]): Promise<void>
   }
 }
 
-function createTestRouter(initialPath = "/admin/videos"): Router {
+function createTestRouter(initialPath = "/"): Router {
   return createRouter({
     history: createMemoryHistory(),
-    routes: [
-      { path: "/", name: "home", component: HomeView },
-      { path: "/admin/videos", name: "admin-videos", component: AdminVideosView },
-      { path: "/admin/videos/upload", name: "admin-video-upload", component: AdminVideoUploadView },
-      { path: "/admin/tags", name: "admin-tags", component: AdminTagsView },
-      {
-        path: "/admin/videos/:id(.*)",
-        name: "admin-video-edit",
-        component: AdminVideoEditView,
-        props: true,
-      },
-    ],
+    routes,
   });
 }
 
@@ -153,7 +140,7 @@ describe("admin video list", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const router = createTestRouter();
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
@@ -172,13 +159,13 @@ describe("admin video list", () => {
     vi.stubGlobal("fetch", createCatalogFetchMock());
 
     const router = createTestRouter();
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
 
     expect(wrapper.get('[data-testid="upload-new-video"]').text()).toBe("Upload video");
-    expect(wrapper.get('[data-testid="nav-videos"]').classes()).toContain("active");
+    expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
     expect(wrapper.find('[data-testid="upload-file-input"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
   });
@@ -195,7 +182,7 @@ describe("admin video list", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const router = createTestRouter();
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
@@ -221,7 +208,7 @@ describe("admin video list", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const router = createTestRouter();
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
@@ -248,7 +235,7 @@ describe("admin video list", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const router = createTestRouter();
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
@@ -262,6 +249,22 @@ describe("admin video list", () => {
     expect(wrapper.text()).not.toContain("zenit-practice.mp4");
   });
 
+    it("opens the video player from the thumbnail", async () => {
+    vi.stubGlobal("fetch", createCatalogFetchMock());
+
+    const router = createTestRouter();
+    await router.push("/");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideosView, router);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="Play video tagged zenit"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[aria-label="Video player"]').exists()).toBe(true);
+    expect(router.currentRoute.value.name).toBe("home");
+  });
+
   it("opens the tag editor for a search result", async () => {
     const zenitVideo = catalogVideos.find((video) => video.id === "tagged-zenit.mp4")!;
     vi.stubGlobal(
@@ -270,14 +273,14 @@ describe("admin video list", () => {
     );
 
     const router = createTestRouter();
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
 
     await addSearchTags(wrapper, ["zenit"]);
     await flushPromises();
-    await wrapper.get('button[aria-label="Play video tagged zenit"]').trigger("click");
+    await wrapper.get('a[aria-label="Edit tags for 20260715.mp4"]').trigger("click");
     await flushPromises();
 
     expect(router.currentRoute.value.name).toBe("admin-video-edit");
@@ -288,7 +291,7 @@ describe("admin video list", () => {
     vi.stubGlobal("fetch", createCatalogFetchMock());
 
     const router = createTestRouter();
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
@@ -314,7 +317,7 @@ describe("admin video list", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const router = createTestRouter();
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
@@ -354,7 +357,7 @@ describe("admin video list", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const router = createTestRouter();
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
@@ -371,7 +374,7 @@ describe("admin video list", () => {
     expect(wrapper.text()).toContain("1 result");
     expect(wrapper.text()).toContain("20260715.mp4");
     expect(wrapper.text()).not.toContain("zenit-practice.mp4");
-    expect(router.currentRoute.value.name).toBe("admin-videos");
+    expect(router.currentRoute.value.name).toBe("home");
     expect(
       fetchMock.mock.calls.some(([, init]) => init?.method === "PUT" || init?.method === "POST"),
     ).toBe(false);
@@ -399,7 +402,7 @@ describe("admin video list", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const router = createTestRouter();
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
@@ -674,7 +677,7 @@ describe("admin video editor", () => {
     expect(wrapper.get("h1").text()).toBe("Edit video");
     expect(wrapper.text()).toContain('Edit tags for "first.mp4"');
     expect(wrapper.find("#admin-tag-input").exists()).toBe(true);
-    expect(wrapper.get('[data-testid="nav-videos"]').classes()).toContain("active");
+    expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
     expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
 
     await wrapper.get('button[aria-label="Remove isa"]').trigger("click");
@@ -799,7 +802,7 @@ describe("admin video editor", () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/videos/salsa/first.mp4", { method: "DELETE" });
-    expect(router.currentRoute.value.name).toBe("admin-videos");
+    expect(router.currentRoute.value.name).toBe("home");
     expect(fetchMock).toHaveBeenCalledWith("/api/search");
     expect(wrapper.text()).toContain("Untagged (1)");
     expect(wrapper.text()).not.toContain("first.mp4");
@@ -940,7 +943,7 @@ describe("admin video editor", () => {
     await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
     await flushPromises();
 
-    expect(router.currentRoute.value.name).toBe("admin-videos");
+    expect(router.currentRoute.value.name).toBe("home");
     expect(wrapper.text()).toContain("Untagged (1)");
     expect(wrapper.text()).not.toContain("first.mp4");
   });
@@ -984,7 +987,7 @@ describe("admin untagged flow", () => {
     const Root = defineComponent({
       template: "<router-view />",
     });
-    await router.push("/admin/videos");
+    await router.push("/");
     await router.isReady();
     const wrapper = mount(Root, {
       global: {
@@ -997,7 +1000,7 @@ describe("admin untagged flow", () => {
     await nextTick();
     expect(wrapper.text()).toContain("20260801_new.mp4");
 
-    await wrapper.get('button[aria-label="Play video tagged "]').trigger("click");
+    await wrapper.get('a[aria-label="Edit tags for 20260801_new.mp4"]').trigger("click");
     await flushPromises();
 
     await wrapper.get("#admin-tag-input").setValue("salsa");
@@ -1005,7 +1008,7 @@ describe("admin untagged flow", () => {
     await wrapper.get('[data-testid="save-tags"]').trigger("click");
     await flushPromises();
 
-    await router.push("/admin/videos");
+    await router.push("/");
     await flushPromises();
 
     await wrapper.get('[data-testid="filter-untagged"]').trigger("click");
@@ -1028,7 +1031,7 @@ describe("consumer search view", () => {
     const router = createTestRouter("/");
     await router.push("/");
     await router.isReady();
-    const wrapper = mountWithRouter(HomeView, router);
+    const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/tags");
@@ -1036,7 +1039,7 @@ describe("consumer search view", () => {
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
     expect(wrapper.find(".search-results").exists()).toBe(true);
     expect(wrapper.text()).toContain("4 results");
-    expect(wrapper.text()).toContain("Search your tagged videos and watch them from any browser.");
+    expect(wrapper.text()).toContain("Find a video, play it, or edit its tags.");
     expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
     expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
@@ -1055,7 +1058,7 @@ describe("consumer search view", () => {
     const router = createTestRouter("/");
     await router.push("/");
     await router.isReady();
-    const wrapper = mountWithRouter(HomeView, router);
+    const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
 
     await addSearchTags(wrapper, ["salsa"]);
@@ -1086,7 +1089,7 @@ describe("consumer search view", () => {
     const router = createTestRouter("/");
     await router.push("/");
     await router.isReady();
-    const wrapper = mountWithRouter(HomeView, router);
+    const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
 
     await addSearchTags(wrapper, ["salsa"]);
@@ -1135,7 +1138,7 @@ describe("consumer search view", () => {
     const router = createTestRouter("/");
     await router.push("/");
     await router.isReady();
-    const wrapper = mountWithRouter(HomeView, router);
+    const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
 
     await addSearchTags(wrapper, ["salsa"]);

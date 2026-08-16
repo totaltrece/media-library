@@ -47,4 +47,25 @@ describe("SearchResultItem date overlay", () => {
     expect(wrapper.text()).not.toContain("14 03 2026");
     expect(wrapper.text()).not.toContain("XX XX XXXX");
   });
+
+  it("turns the filename into an edit link when requested", () => {
+    const wrapper = mount(SearchResultItem, {
+      props: {
+        result: result({ name: "clip.mp4" }),
+        selected: false,
+        showName: true,
+        nameLinksToEdit: true,
+      },
+      global: {
+        stubs: {
+          RouterLink: {
+            props: ["to"],
+            template: '<a class="result-card-name-link"><slot /></a>',
+          },
+        },
+      },
+    });
+
+    expect(wrapper.get(".result-card-name-link").text()).toBe("clip.mp4");
+  });
 });
