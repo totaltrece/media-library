@@ -2,6 +2,7 @@
   <section class="tag-editor" aria-label="Video tags">
     <TagSuggestionInput
       allow-create
+      compact
       input-id="admin-tag-input"
       label="Add tag"
       placeholder="Add tag..."

@@ -16,7 +16,7 @@
         :aria-label="`Edit tags for ${result.name}`"
         :to="{ name: 'admin-video-edit', params: { id: result.id } }"
       >
-        {{ result.name }}
+        Edit video
       </RouterLink>
       <template v-else>{{ result.name }}</template>
     </p>

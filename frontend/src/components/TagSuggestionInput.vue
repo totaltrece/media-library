@@ -2,6 +2,7 @@
   <div
     ref="tagInputWrapper"
     class="tag-input-wrapper tag-combobox"
+    :class="{ compact }"
     :style="{ '--tag-selector-ch': String(selectorWidthCh) }"
   >
     <label class="visually-hidden" :for="inputId">{{ label }}</label>
@@ -41,9 +42,12 @@
         <button
           type="button"
           :class="{ highlighted: highlightedIndex === index }"
-          :style="tagChipStyle(colorForTag(tag, tagColors, defaultColor))"
           @click="selectTag(tag)"
         >
+          <span
+            class="tag-suggestion-swatch"
+            :style="{ backgroundColor: colorForTag(tag, tagColors, defaultColor) }"
+          />
           {{ tag }}
         </button>
       </li>
@@ -78,6 +82,7 @@ const props = withDefaults(
     placeholder: string;
     inputType?: "text" | "search";
     allowCreate?: boolean;
+    compact?: boolean;
     selectedLabel?: string;
     tagColors?: Record<string, string>;
     defaultColor?: string;
@@ -85,6 +90,7 @@ const props = withDefaults(
   {
     inputType: "text",
     allowCreate: false,
+    compact: false,
     selectedLabel: "Selected tags",
     tagColors: () => ({}),
     defaultColor: DEFAULT_TAG_COLOR,
@@ -362,10 +368,41 @@ onUnmounted(() => {
 .tag-suggestions {
   font-size: 0.875rem;
   padding: 0.125rem;
-  width: calc(var(--tag-selector-ch, 8) * 1ch + 2.5rem);
+  width: calc(var(--tag-selector-ch, 8) * 1ch + 3.5rem);
 }
 
 .tag-suggestions button {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.5rem;
   padding: 0.3125rem 0.5rem;
+}
+
+.tag-suggestion-swatch {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 999px;
+  flex-shrink: 0;
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
+.tag-combobox.compact .tag-combobox-field {
+  gap: 0.25rem;
+  min-height: 0;
+  padding: 0.125rem 0.5rem;
+}
+
+.tag-combobox.compact .tag-combobox-input {
+  padding: 0.125rem 0.25rem;
+}
+
+.tag-combobox.compact .tag-chip {
+  font-size: 0.6875rem;
+  gap: 0.25rem;
+  padding: 0.125rem 0.4375rem;
+}
+
+.tag-combobox.compact .tag-chip button {
+  font-size: 0.8125rem;
 }
 </style>

@@ -621,7 +621,7 @@ describe("admin video upload", () => {
 
     expect(router.currentRoute.value.name).toBe("home");
     expect(wrapper.text()).toContain("Untagged (2)");
-    expect(wrapper.text()).toContain("clip.mp4");
+    expect(wrapper.find('a[aria-label="Edit tags for clip.mp4"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="filter-untagged"]').classes()).toContain("active");
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
   });

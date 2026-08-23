@@ -59,7 +59,7 @@ The initial screen contains:
 - all videos on first load; results update as soon as a tag is added or removed
 - clearing every selected tag shows the full catalog again
 - shared header: View, Upload video, Admin tags, and refresh library
-- search results: thumbnail plays the video, filename opens the editor
+- search results: thumbnail plays the video, Edit video opens the editor
 
 Searching should feel immediate and responsive.
 
@@ -70,7 +70,7 @@ Searching should feel immediate and responsive.
 Each result displays:
 
 - thumbnail (opens the video player)
-- filename (opens the tag editor)
+- Edit video (opens the tag editor)
 - tags
 
 ---
@@ -96,7 +96,7 @@ The frontend never downloads or copies media files.
 
 The catalog lives at `/`. It reuses `TagSearch` and `GET /api/search?tag=...`
 to find videos by tags, filter untagged items, and play them in a modal.
-The filename between the thumbnail and tags links to `/admin/videos/:id`.
+The Edit video link between the thumbnail and tags goes to `/admin/videos/:id`.
 The edit screen updates tags through `GET /api/videos/:id/tags`, `GET /api/admin/tags`,
 `GET /api/admin/tag-types`, and `PUT /api/videos/:id/tags`. New tags default to
 the resource type. It can also delete the video with

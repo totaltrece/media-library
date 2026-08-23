@@ -494,7 +494,8 @@ describe("admin tag catalog", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=jota");
     expect(wrapper.get(".selected-tags").text()).toContain("jota");
     expect(wrapper.text()).toContain("1 result");
-    expect(wrapper.text()).toContain("jota.mp4");
+    expect(wrapper.find('a[aria-label="Edit tags for jota.mp4"]').exists()).toBe(true);
+    expect(wrapper.get('a[aria-label="Edit tags for jota.mp4"]').text()).toBe("Edit video");
 
     await wrapper.get('a[aria-label="Edit tags for jota.mp4"]').trigger("click");
     await flushPromises();
