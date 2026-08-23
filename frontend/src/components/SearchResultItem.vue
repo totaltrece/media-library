@@ -28,13 +28,19 @@
           class="result-card-tag"
           type="button"
           :aria-label="`Add ${tag} to search`"
+          :style="tagChipStyle(colorForTag(tag, tagColors, defaultColor))"
           @click="$emit('select-tag', tag)"
         >
           {{ tag }}
         </button>
       </template>
       <template v-else>
-        <span v-for="tag in result.tags" :key="tag" class="result-card-tag">
+        <span
+          v-for="tag in result.tags"
+          :key="tag"
+          class="result-card-tag"
+          :style="tagChipStyle(colorForTag(tag, tagColors, defaultColor))"
+        >
           {{ tag }}
         </span>
       </template>
@@ -48,6 +54,7 @@ import { RouterLink } from "vue-router";
 
 import { buildApiUrl } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
+import { colorForTag, DEFAULT_TAG_COLOR, tagChipStyle } from "../utils/tag-color.js";
 import { formatVideoDate } from "../utils/video-date.js";
 
 const props = withDefaults(
@@ -57,11 +64,15 @@ const props = withDefaults(
     interactiveTags?: boolean;
     showName?: boolean;
     nameLinksToEdit?: boolean;
+    tagColors?: Record<string, string>;
+    defaultColor?: string;
   }>(),
   {
     interactiveTags: true,
     showName: false,
     nameLinksToEdit: false,
+    tagColors: () => ({}),
+    defaultColor: DEFAULT_TAG_COLOR,
   },
 );
 

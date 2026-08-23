@@ -31,7 +31,9 @@
 
     <TagSearch
       :available-tags="availableTags"
+      :default-color="defaultColor"
       :selected-tags="selectedTags"
+      :tag-colors="tagColors"
       @add-tag="addTag"
       @clear-tags="clearTags"
       @remove-tag="removeTag"
@@ -49,9 +51,11 @@
           :empty-message="emptyMessage"
           :show-name="true"
           :name-links-to-edit="true"
+          :default-color="defaultColor"
           :results="visibleVideos"
           :searched="true"
           :selected-video-id="selectedVideo?.id ?? null"
+          :tag-colors="tagColors"
           @select-tag="selectResultTag"
           @select-video="playVideo"
         />
@@ -60,6 +64,8 @@
 
     <VideoPlayer
       v-if="selectedVideo"
+      :default-color="defaultColor"
+      :tag-colors="tagColors"
       :tags="selectedVideo.tags"
       :video-path="selectedVideo.video"
       @close="closeVideo"
@@ -80,11 +86,14 @@ import SearchResults from "../components/SearchResults.vue";
 import TagSearch from "../components/TagSearch.vue";
 import VideoPlayer from "../components/VideoPlayer.vue";
 import { applyUntaggedFilter, countUntaggedVideos } from "../utils/admin-videos.js";
+import { DEFAULT_TAG_COLOR, tagColorMap } from "../utils/tag-color.js";
 
 const route = useRoute();
 const catalogVideos = ref<SearchResultItem[]>([]);
 const searchResults = ref<SearchResultItem[]>([]);
 const availableTags = ref<string[]>([]);
+const tagColors = ref<Record<string, string>>({});
+const defaultColor = ref(DEFAULT_TAG_COLOR);
 const selectedTags = ref<string[]>([]);
 const selectedVideo = ref<SearchResultItem | null>(null);
 const untaggedOnly = ref(false);
@@ -118,7 +127,8 @@ onMounted(async () => {
 async function loadCatalog(): Promise<void> {
   const [searchResponse, tagsResponse] = await Promise.all([searchVideos([]), fetchTags()]);
   catalogVideos.value = searchResponse.results;
-  availableTags.value = tagsResponse.tags;
+  availableTags.value = tagsResponse.tags.map((tag) => tag.name);
+  tagColors.value = tagColorMap(tagsResponse.tags);
 }
 
 function resetSearch(): void {

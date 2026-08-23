@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 
 import AdminTagsView from "./views/AdminTagsView.vue";
+import AdminTagTypesView from "./views/AdminTagTypesView.vue";
 import AdminVideoEditView from "./views/AdminVideoEditView.vue";
 import AdminVideoUploadView from "./views/AdminVideoUploadView.vue";
 import AdminVideosView from "./views/AdminVideosView.vue";
@@ -20,6 +21,11 @@ export const routes: RouteRecordRaw[] = [
     path: "/admin/tags",
     name: "admin-tags",
     component: AdminTagsView,
+  },
+  {
+    path: "/admin/tag-types",
+    name: "admin-tag-types",
+    component: AdminTagTypesView,
   },
   {
     path: "/admin/videos",

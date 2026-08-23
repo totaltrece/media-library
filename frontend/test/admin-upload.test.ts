@@ -9,6 +9,7 @@ import TagSearch from "../src/components/TagSearch.vue";
 import { routes } from "../src/router.js";
 import { UPLOAD_POLL_INTERVAL_MS } from "../src/utils/upload-job.js";
 import AdminVideosView from "../src/views/AdminVideosView.vue";
+import { tagItems } from "./tag-fixtures.js";
 
 const catalogVideos: SearchResultItem[] = [
   {
@@ -569,7 +570,7 @@ describe("admin video upload", () => {
       }
 
       if (url === "/api/tags") {
-        return jsonResponse({ count: 1, tags: ["salsa"] });
+        return jsonResponse({ count: 1, tags: tagItems("salsa") });
       }
 
       if (url === "/api/search") {
@@ -754,7 +755,7 @@ describe("admin video upload", () => {
       const url = String(input);
 
       if (url === "/api/tags") {
-        return jsonResponse({ count: 1, tags: ["salsa"] });
+        return jsonResponse({ count: 1, tags: tagItems("salsa") });
       }
 
       if (url === "/api/search") {

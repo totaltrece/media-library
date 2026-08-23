@@ -8,6 +8,7 @@ import { InMemoryVideoIndex } from "../src/adapters/in-memory-video-index.js";
 import { createApp } from "../src/app.js";
 import type { VideoIndex } from "../src/ports/video-index.js";
 
+import { tagsWithDefaultColor } from "./tag-colors.js";
 import { testLibraryPath, testVideos } from "./fixtures.js";
 
 class TrackingVideoIndex implements VideoIndex {
@@ -46,7 +47,7 @@ test("GET /tags returns distinct tags from the in-memory index", async () => {
   assert.strictEqual(response.statusCode, 200);
   assert.deepEqual(response.json(), {
     count: 5,
-    tags: ["bachata", "bea", "damian", "linea", "salsa"],
+    tags: tagsWithDefaultColor(["bachata", "bea", "damian", "linea", "salsa"]),
   });
   assert.doesNotMatch(JSON.stringify(response.json()), /videoPath/);
   assert.doesNotMatch(JSON.stringify(response.json()), /media-library/);

@@ -31,4 +31,46 @@ export const sqliteMigrations: SqliteMigration[] = [
       ALTER TABLE videos ADD COLUMN recorded_at TEXT;
     `,
   },
+  {
+    version: 3,
+    sql: `
+      CREATE TABLE tag_types (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        color TEXT NOT NULL,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER NOT NULL
+      ) STRICT;
+
+      INSERT INTO tag_types (id, name, color, is_default, sort_order) VALUES
+        (1, 'type', '#c0392b', 0, 1),
+        (2, 'style', '#f1948a', 0, 2),
+        (3, 'teacher', '#27ae60', 0, 3),
+        (4, 'location', '#8d6e63', 0, 4),
+        (5, 'resource', '#93c5fd', 1, 5);
+
+      CREATE TABLE tags_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        tag_type_id INTEGER NOT NULL DEFAULT 5 REFERENCES tag_types(id)
+      ) STRICT;
+
+      INSERT INTO tags_new (id, name, tag_type_id)
+      SELECT id, name, 5 FROM tags;
+
+      UPDATE tags_new SET tag_type_id = 1 WHERE lower(name) IN ('salsa', 'bachata');
+      UPDATE tags_new SET tag_type_id = 2 WHERE lower(name) IN (
+        'on2', 'linea', 'rueda', 'dominicana', 'sensual', 'tradicional'
+      );
+      UPDATE tags_new SET tag_type_id = 3 WHERE lower(name) IN (
+        'jota', 'estela', 'gabriela', 'pascual', 'dani', 'isa', 'irene', 'javi'
+      );
+      UPDATE tags_new SET tag_type_id = 4 WHERE lower(name) IN (
+        'host', 'sonando', 'pamplona', 'fdm', 'ermita', 'fdem'
+      );
+
+      DROP TABLE tags;
+      ALTER TABLE tags_new RENAME TO tags;
+    `,
+  },
 ];

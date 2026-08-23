@@ -9,6 +9,7 @@ import TagSearch from "../src/components/TagSearch.vue";
 import { routes } from "../src/router.js";
 import AdminVideoEditView from "../src/views/AdminVideoEditView.vue";
 import AdminVideosView from "../src/views/AdminVideosView.vue";
+import { catalogTag, seedTagTypes, tagItems } from "./tag-fixtures.js";
 
 const videos: SearchResultItem[] = [
   {
@@ -74,6 +75,46 @@ function jsonResponse(body: unknown, ok = true, status = 200): Response {
   } as Response;
 }
 
+function adminEditorResponse(url: string): Response | null {
+  if (url === "/api/admin/tag-types") {
+    return jsonResponse(seedTagTypes);
+  }
+
+  if (url === "/api/tags") {
+    return jsonResponse({
+      count: 3,
+      tags: tagItems("bufanda", "isa", "salsa"),
+    });
+  }
+
+  if (url === "/api/admin/tags") {
+    return jsonResponse({
+      count: 3,
+      tags: [
+        catalogTag({ id: 1, name: "bufanda" }),
+        catalogTag({
+          id: 2,
+          name: "isa",
+          typeId: 3,
+          typeName: "teacher",
+          color: "#27ae60",
+          typeSortOrder: 3,
+        }),
+        catalogTag({
+          id: 3,
+          name: "salsa",
+          typeId: 1,
+          typeName: "type",
+          color: "#c0392b",
+          typeSortOrder: 1,
+        }),
+      ],
+    });
+  }
+
+  return null;
+}
+
 function createCatalogFetchMock(
   searchHandler: (url: string) => SearchResultItem[] | null = () => null,
 ) {
@@ -81,7 +122,7 @@ function createCatalogFetchMock(
     const url = String(input);
 
     if (url === "/api/tags") {
-      return jsonResponse({ count: catalogTags.length, tags: catalogTags });
+      return jsonResponse({ count: catalogTags.length, tags: tagItems(...catalogTags) });
     }
 
     const searched = searchHandler(url);
@@ -659,8 +700,9 @@ describe("admin video editor", () => {
         return jsonResponse({ tags: ["salsa", "isa"] });
       }
 
-      if (url === "/api/tags") {
-        return jsonResponse({ count: 3, tags: ["bufanda", "isa", "salsa"] });
+      const adminResponse = adminEditorResponse(url);
+      if (adminResponse !== null) {
+        return adminResponse;
       }
 
       return jsonResponse({ error: { message: "Not found" } }, false, 404);
@@ -711,8 +753,9 @@ describe("admin video editor", () => {
         return jsonResponse({ tags: [] });
       }
 
-      if (url === "/api/tags") {
-        return jsonResponse({ count: 1, tags: ["salsa"] });
+      const adminResponse = adminEditorResponse(url);
+      if (adminResponse !== null) {
+        return adminResponse;
       }
 
       return jsonResponse({ error: { message: "Not found" } }, false, 404);
@@ -756,8 +799,9 @@ describe("admin video editor", () => {
         return jsonResponse({ tags: ["salsa", "isa"] });
       }
 
-      if (url === "/api/tags") {
-        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      const adminResponse = adminEditorResponse(url);
+      if (adminResponse !== null) {
+        return adminResponse;
       }
 
       return jsonResponse({ error: { message: "Not found" } }, false, 404);
@@ -829,8 +873,9 @@ describe("admin video editor", () => {
         return jsonResponse({ tags: ["salsa", "isa"] });
       }
 
-      if (url === "/api/tags") {
-        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      const adminResponse = adminEditorResponse(url);
+      if (adminResponse !== null) {
+        return adminResponse;
       }
 
       return jsonResponse({ error: { message: "Not found" } }, false, 404);
@@ -873,8 +918,9 @@ describe("admin video editor", () => {
         return jsonResponse({ tags: ["salsa", "isa"] });
       }
 
-      if (url === "/api/tags") {
-        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      const adminResponse = adminEditorResponse(url);
+      if (adminResponse !== null) {
+        return adminResponse;
       }
 
       return jsonResponse({ error: { message: "Not found" } }, false, 404);
@@ -918,8 +964,9 @@ describe("admin video editor", () => {
         return jsonResponse({ tags: ["salsa", "isa"] });
       }
 
-      if (url === "/api/tags") {
-        return jsonResponse({ count: 2, tags: ["isa", "salsa"] });
+      const adminResponse = adminEditorResponse(url);
+      if (adminResponse !== null) {
+        return adminResponse;
       }
 
       return jsonResponse({ error: { message: "Not found" } }, false, 404);
@@ -975,8 +1022,9 @@ describe("admin untagged flow", () => {
         return jsonResponse({ tags: untaggedTags });
       }
 
-      if (url === "/api/tags") {
-        return jsonResponse({ count: 1, tags: ["salsa"] });
+      const adminResponse = adminEditorResponse(url);
+      if (adminResponse !== null) {
+        return adminResponse;
       }
 
       return jsonResponse({ error: { message: "Not found" } }, false, 404);
@@ -1108,7 +1156,7 @@ describe("consumer search view", () => {
       const url = String(input);
 
       if (url === "/api/tags") {
-        return jsonResponse({ count: catalogTags.length, tags: catalogTags });
+        return jsonResponse({ count: catalogTags.length, tags: tagItems(...catalogTags) });
       }
 
       if (url === "/api/search") {

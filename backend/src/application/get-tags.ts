@@ -1,10 +1,17 @@
 import type { IndexedVideo } from "@media-library/indexer";
 
+import { DEFAULT_TAG_COLOR } from "./tag-type-color.js";
+import type { LibraryStore } from "../ports/library-store.js";
 import type { VideoIndex } from "../ports/video-index.js";
+
+export interface TagListItem {
+  name: string;
+  color: string;
+}
 
 export interface TagsResponse {
   count: number;
-  tags: string[];
+  tags: TagListItem[];
 }
 
 export function collectDistinctTags(videos: IndexedVideo[]): string[] {
@@ -20,14 +27,22 @@ export function collectDistinctTags(videos: IndexedVideo[]): string[] {
 }
 
 export class GetTagsUseCase {
-  constructor(private readonly videoIndex: VideoIndex) {}
+  constructor(
+    private readonly videoIndex: VideoIndex,
+    private readonly libraryStore?: LibraryStore,
+  ) {}
 
   execute(): TagsResponse {
-    const tags = collectDistinctTags(this.videoIndex.getVideos());
+    const names = collectDistinctTags(this.videoIndex.getVideos());
+    const colors = new Map((this.libraryStore?.listTags() ?? []).map((tag) => [tag.name, tag.color]));
+    const defaultColor = this.libraryStore?.findDefaultTagType()?.color ?? DEFAULT_TAG_COLOR;
 
     return {
-      count: tags.length,
-      tags,
+      count: names.length,
+      tags: names.map((name) => ({
+        name,
+        color: colors.get(name) ?? defaultColor,
+      })),
     };
   }
 }

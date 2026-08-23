@@ -44,70 +44,114 @@
           >
             Usage{{ sort === "usage-asc" ? " ↑" : sort === "usage-desc" ? " ↓" : "" }}
           </button>
+          <button
+            class="secondary-button"
+            type="button"
+            data-testid="sort-type"
+            :class="{ active: sort === 'type-asc' || sort === 'type-desc' }"
+            :aria-pressed="sort === 'type-asc' || sort === 'type-desc'"
+            :aria-label="sort === 'type-desc' ? 'Sort by type, reverse order' : 'Sort by type'"
+            @click="toggleTypeSort"
+          >
+            Type{{ sort === "type-desc" ? " ↑" : sort === "type-asc" ? " ↓" : "" }}
+          </button>
         </div>
       </div>
 
       <p v-if="visibleTags.length === 0" class="status-message info">No matching tags.</p>
 
       <ul v-else class="admin-tag-catalog" aria-label="Tag catalog">
-        <li v-for="tag in visibleTags" :key="tag.id" class="admin-tag-item">
-          <template v-if="editingId === tag.id">
-            <label class="visually-hidden" :for="`rename-tag-${tag.id}`">New tag name</label>
-            <input
-              :id="`rename-tag-${tag.id}`"
-              v-model="editName"
-              autocomplete="off"
-              type="text"
-              @keydown.enter.prevent="saveEdit"
-              @keydown.escape="cancelEdit"
-            />
-            <button class="primary-button" data-testid="save-tag" type="button" :disabled="saving" @click="saveEdit">
-              Save
-            </button>
-            <button class="secondary-button" type="button" :disabled="saving" @click="cancelEdit">Cancel</button>
-          </template>
-          <template v-else>
-            <RouterLink
-              class="admin-tag-name"
-              :aria-label="`View videos tagged ${tag.name}`"
-              :title="`View videos tagged ${tag.name}`"
-              :to="{ name: 'home', query: { tag: tag.name } }"
-            >
-              {{ tag.name }}
-            </RouterLink>{{ " " }}<span class="admin-tag-count">({{ tag.usageCount }})</span>
-            <button
-              :aria-label="`Edit ${tag.name}`"
-              :title="`Edit ${tag.name}`"
-              class="admin-tag-action"
-              type="button"
-              @click="startEdit(tag)"
-            >
-              <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-              </svg>
-            </button>
-            <button
-              :aria-label="`Delete ${tag.name}`"
-              :title="`Delete ${tag.name}`"
-              class="admin-tag-action admin-tag-action-danger"
-              type="button"
-              @click="askDelete(tag)"
-            >
-              <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M3 6h18" />
-                <path d="M8 6V4h8v2" />
-                <path d="M19 6v14H5V6" />
-                <path d="M10 11v6" />
-                <path d="M14 11v6" />
-              </svg>
-            </button>
-          </template>
+        <li
+          v-for="tag in visibleTags"
+          :key="tag.id"
+          class="admin-tag-item"
+          :style="tagChipStyle(tag.color)"
+        >
+          <RouterLink
+            class="admin-tag-name"
+            :aria-label="`View videos tagged ${tag.name}`"
+            :title="`View videos tagged ${tag.name}`"
+            :to="{ name: 'home', query: { tag: tag.name } }"
+          >
+            {{ tag.name }}
+          </RouterLink>{{ " " }}<span class="admin-tag-count">({{ tag.usageCount }})</span>
+          <button
+            :aria-label="`Edit ${tag.name}`"
+            :title="`Edit ${tag.name}`"
+            class="admin-tag-action"
+            type="button"
+            @click="startEdit(tag)"
+          >
+            <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </button>
+          <button
+            :aria-label="`Delete ${tag.name}`"
+            :title="`Delete ${tag.name}`"
+            class="admin-tag-action admin-tag-action-danger"
+            type="button"
+            @click="askDelete(tag)"
+          >
+            <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M3 6h18" />
+              <path d="M8 6V4h8v2" />
+              <path d="M19 6v14H5V6" />
+              <path d="M10 11v6" />
+              <path d="M14 11v6" />
+            </svg>
+          </button>
         </li>
       </ul>
     </template>
 
     <ErrorMessage v-if="actionError" :message="actionError" />
+
+    <div
+      v-if="editingTag"
+      class="video-modal-backdrop"
+      role="presentation"
+      @click.self="cancelEdit"
+    >
+      <div
+        class="admin-tag-confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-tag-title"
+      >
+        <p id="edit-tag-title">Edit tag</p>
+        <label class="admin-tag-field" for="edit-tag-name">Name</label>
+        <input
+          id="edit-tag-name"
+          v-model="editName"
+          autocomplete="off"
+          type="text"
+          @keydown.enter.prevent="saveEdit"
+          @keydown.escape="cancelEdit"
+        />
+        <label class="admin-tag-field" for="edit-tag-type">Type</label>
+        <select id="edit-tag-type" v-model.number="editTypeId">
+          <option v-for="type in types" :key="type.id" :value="type.id">
+            {{ type.name }}
+          </option>
+        </select>
+        <div class="search-actions">
+          <button class="secondary-button" type="button" :disabled="saving" @click="cancelEdit">
+            Cancel
+          </button>
+          <button
+            class="primary-button"
+            data-testid="save-tag"
+            type="button"
+            :disabled="saving"
+            @click="saveEdit"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div
       v-if="confirmingTag"
@@ -146,15 +190,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 
-import { deleteCatalogTag, fetchTagCatalog, renameCatalogTag } from "../api/client.js";
-import type { CatalogTag } from "../api/types.js";
+import { deleteCatalogTag, fetchTagCatalog, fetchTagTypes, updateCatalogTag } from "../api/client.js";
+import type { CatalogTag, TagType } from "../api/types.js";
 import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
+import { tagChipStyle } from "../utils/tag-color.js";
 
-type TagSort = "name-asc" | "name-desc" | "usage-desc" | "usage-asc";
+type TagSort = "name-asc" | "name-desc" | "usage-desc" | "usage-asc" | "type-asc" | "type-desc";
 
 const tags = ref<CatalogTag[]>([]);
+const types = ref<TagType[]>([]);
 const filterQuery = ref("");
 const sort = ref<TagSort>("name-asc");
 const loading = ref(true);
@@ -164,9 +210,14 @@ const actionError = ref<string | null>(null);
 const editingId = ref<number | null>(null);
 const confirmingId = ref<number | null>(null);
 const editName = ref("");
+const editTypeId = ref(0);
 
 const confirmingTag = computed(
   () => tags.value.find((tag) => tag.id === confirmingId.value) ?? null,
+);
+
+const editingTag = computed(
+  () => tags.value.find((tag) => tag.id === editingId.value) ?? null,
 );
 
 const visibleTags = computed(() => {
@@ -189,6 +240,14 @@ const visibleTags = computed(() => {
       return firstTag.usageCount - secondTag.usageCount || firstTag.name.localeCompare(secondTag.name);
     }
 
+    if (sort.value === "type-asc") {
+      return firstTag.typeSortOrder - secondTag.typeSortOrder || firstTag.name.localeCompare(secondTag.name);
+    }
+
+    if (sort.value === "type-desc") {
+      return secondTag.typeSortOrder - firstTag.typeSortOrder || firstTag.name.localeCompare(secondTag.name);
+    }
+
     return firstTag.name.localeCompare(secondTag.name);
   });
 });
@@ -199,6 +258,10 @@ function toggleNameSort(): void {
 
 function toggleUsageSort(): void {
   sort.value = sort.value === "usage-desc" ? "usage-asc" : "usage-desc";
+}
+
+function toggleTypeSort(): void {
+  sort.value = sort.value === "type-asc" ? "type-desc" : "type-asc";
 }
 
 watch(filterQuery, () => {
@@ -215,8 +278,9 @@ async function loadTags(): Promise<void> {
   loading.value = true;
 
   try {
-    const response = await fetchTagCatalog();
-    tags.value = response.tags;
+    const [catalog, tagTypes] = await Promise.all([fetchTagCatalog(), fetchTagTypes()]);
+    tags.value = catalog.tags;
+    types.value = tagTypes.types;
     error.value = null;
   } catch (loadError: unknown) {
     error.value = loadError instanceof Error ? loadError.message : "Unable to load tags.";
@@ -233,6 +297,7 @@ function startEdit(tag: CatalogTag): void {
   editingId.value = tag.id;
   confirmingId.value = null;
   editName.value = tag.name;
+  editTypeId.value = tag.typeId;
   actionError.value = null;
 }
 
@@ -251,7 +316,7 @@ async function saveEdit(): Promise<void> {
   actionError.value = null;
 
   try {
-    const updated = await renameCatalogTag(tagId, editName.value);
+    const updated = await updateCatalogTag(tagId, editName.value, editTypeId.value);
     tags.value = tags.value.map((tag) => (tag.id === tagId ? updated : tag));
     cancelEdit();
   } catch (saveError: unknown) {
@@ -351,8 +416,7 @@ async function confirmDelete(): Promise<void> {
 
 .admin-tag-item {
   align-items: center;
-  background: #fff;
-  border: 1px solid #dadce0;
+  border: 1px solid transparent;
   border-radius: 999px;
   display: flex;
   flex-wrap: nowrap;
@@ -361,7 +425,7 @@ async function confirmDelete(): Promise<void> {
 }
 
 .admin-tag-name {
-  color: #174ea6;
+  color: inherit;
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.2;
@@ -370,28 +434,14 @@ async function confirmDelete(): Promise<void> {
 
 .admin-tag-name:hover,
 .admin-tag-name:focus-visible {
-  color: #0b3d91;
   text-decoration: underline;
 }
 
 .admin-tag-count {
-  color: #7d8ea3;
   font-size: 0.75rem;
   font-weight: 500;
+  opacity: 0.8;
   padding-right: 0.125rem;
-}
-
-.admin-tag-item input {
-  border: 1px solid #dadce0;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-}
-
-.admin-tag-item .primary-button,
-.admin-tag-item .secondary-button {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.625rem;
 }
 
 .admin-tag-action {
@@ -399,11 +449,12 @@ async function confirmDelete(): Promise<void> {
   background: transparent;
   border: 0;
   border-radius: 999px;
-  color: #5f6368;
+  color: inherit;
   cursor: pointer;
   display: inline-flex;
   height: 1.25rem;
   justify-content: center;
+  opacity: 0.75;
   padding: 0;
   text-decoration: none;
   width: 1.25rem;
@@ -411,14 +462,13 @@ async function confirmDelete(): Promise<void> {
 
 .admin-tag-action:hover,
 .admin-tag-action:focus-visible {
-  background: #e8f0fe;
-  color: #174ea6;
+  background: rgba(255, 255, 255, 0.28);
+  opacity: 1;
 }
 
 .admin-tag-action-danger:hover,
 .admin-tag-action-danger:focus-visible {
-  background: #fce8e6;
-  color: #a50e0e;
+  background: rgba(165, 14, 14, 0.16);
 }
 
 .admin-tag-action svg {
@@ -443,5 +493,18 @@ async function confirmDelete(): Promise<void> {
 
 .admin-tag-confirm-modal p:first-child {
   font-weight: 600;
+}
+
+.admin-tag-field {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.admin-tag-confirm-modal input,
+.admin-tag-confirm-modal select {
+  border: 1px solid #dadce0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
 }
 </style>

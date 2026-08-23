@@ -7,7 +7,9 @@
       placeholder="Add tag..."
       selected-label="Current tags"
       :available-tags="availableTags"
+      :default-color="defaultColor"
       :selected-tags="tags"
+      :tag-colors="tagColors"
       @remove="removeTag"
       @select="addTag"
     />
@@ -20,6 +22,8 @@ import TagSuggestionInput from "./TagSuggestionInput.vue";
 const props = defineProps<{
   tags: string[];
   availableTags: string[];
+  tagColors?: Record<string, string>;
+  defaultColor?: string;
 }>();
 
 const emit = defineEmits<{

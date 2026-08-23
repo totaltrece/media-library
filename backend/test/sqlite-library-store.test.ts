@@ -39,7 +39,7 @@ test("schema migrations are idempotent", () => {
     .all()
     .map((row) => (row as { version: number }).version);
 
-  assert.deepEqual(versions, [1, 2]);
+  assert.deepEqual(versions, [1, 2, 3]);
 
   database.close();
 });
@@ -322,27 +322,29 @@ test("listTagUsages includes unused tags with a zero count", () => {
     store.upsertTag("bufanda");
 
     assert.deepEqual(store.listTagUsages(), [
-      { id: store.findTagByName("bufanda")!.id, name: "bufanda", usageCount: 0 },
-      { id: store.findTagByName("jota")!.id, name: "jota", usageCount: 1 },
-      { id: store.findTagByName("salsa")!.id, name: "salsa", usageCount: 1 },
+      { ...store.findTagByName("bufanda")!, usageCount: 0 },
+      { ...store.findTagByName("jota")!, usageCount: 1 },
+      { ...store.findTagByName("salsa")!, usageCount: 1 },
     ]);
   } finally {
     store.close();
   }
 });
 
-test("renameTag changes the name and keeps the same id and video relations", () => {
+test("updateTag changes the name and keeps the same id and video relations", () => {
   const store = openSqliteLibraryStore(":memory:");
 
   try {
     store.upsertVideo("salsa/first.mp4");
     store.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
     const jota = store.findTagByName("jota")!;
+    const teacher = store.listTagTypes().find((type) => type.name === "teacher")!;
 
-    const renamed = store.renameTag(jota.id, "jota-nueva");
+    const renamed = store.updateTag(jota.id, "jota-nueva", teacher.id);
 
     assert.strictEqual(renamed.id, jota.id);
     assert.strictEqual(renamed.name, "jota-nueva");
+    assert.strictEqual(renamed.typeId, teacher.id);
     assert.equal(store.findTagByName("jota"), null);
     assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["salsa", "jota-nueva"]);
   } finally {
@@ -350,16 +352,18 @@ test("renameTag changes the name and keeps the same id and video relations", () 
   }
 });
 
-test("renameTag rejects empty names and existing names", () => {
+test("updateTag rejects empty names, missing types, and existing names", () => {
   const store = openSqliteLibraryStore(":memory:");
 
   try {
     const salsa = store.upsertTag("salsa");
     store.upsertTag("jota");
+    const resource = store.findDefaultTagType()!;
 
-    assert.throws(() => store.renameTag(salsa.id, ""), /Tag name must not be empty/);
-    assert.throws(() => store.renameTag(salsa.id, "jota"), /Tag name already exists: jota/);
-    assert.throws(() => store.renameTag(999, "nuevo"), /Tag not found: 999/);
+    assert.throws(() => store.updateTag(salsa.id, "", resource.id), /Tag name must not be empty/);
+    assert.throws(() => store.updateTag(salsa.id, "jota", resource.id), /Tag name already exists: jota/);
+    assert.throws(() => store.updateTag(999, "nuevo", resource.id), /Tag not found: 999/);
+    assert.throws(() => store.updateTag(salsa.id, "salsa", 999), /Tag type not found: 999/);
     assert.deepEqual(store.listTags().map((tag) => tag.name), ["jota", "salsa"]);
   } finally {
     store.close();
@@ -433,8 +437,110 @@ test("migration v2 adds recorded_at without dropping existing videos", () => {
     recorded_at: string | null;
   };
 
-  assert.deepEqual(versions, [1, 2]);
+  assert.deepEqual(versions, [1, 2, 3]);
   assert.equal(row.id, "clip.mp4");
   assert.equal(row.recorded_at, null);
   database.close();
+});
+
+test("new tags use the default resource type", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    const salsa = store.upsertTag("salsa");
+    const resource = store.findDefaultTagType()!;
+
+    assert.equal(resource.name, "resource");
+    assert.equal(salsa.typeName, "resource");
+    assert.equal(salsa.color, "#93c5fd");
+    assert.deepEqual(
+      store.listTagTypes().map((type) => type.name),
+      ["type", "style", "teacher", "location", "resource"],
+    );
+  } finally {
+    store.close();
+  }
+});
+
+test("migration v3 classifies existing tags and leaves unmatched tags as resource", () => {
+  const database = new DatabaseSync(":memory:");
+
+  database.exec(`
+    CREATE TABLE schema_migrations (
+      version INTEGER PRIMARY KEY,
+      applied_at TEXT NOT NULL
+    ) STRICT;
+  `);
+  database.exec(sqliteMigrations[0]!.sql);
+  database.prepare("INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(1, "2026-01-01T00:00:00.000Z");
+  database.prepare("INSERT INTO tags (name) VALUES (?)").run("salsa");
+  database.prepare("INSERT INTO tags (name) VALUES (?)").run("on2");
+  database.prepare("INSERT INTO tags (name) VALUES (?)").run("jota");
+  database.prepare("INSERT INTO tags (name) VALUES (?)").run("host");
+  database.prepare("INSERT INTO tags (name) VALUES (?)").run("bufanda");
+
+  applySqliteMigrations(database);
+
+  const classified = database
+    .prepare(
+      `
+        SELECT tags.name AS name, tag_types.name AS typeName
+        FROM tags
+        INNER JOIN tag_types ON tag_types.id = tags.tag_type_id
+        ORDER BY tags.name
+      `,
+    )
+    .all()
+    .map((row) => {
+      const typed = row as { name: string; typeName: string };
+      return { name: typed.name, typeName: typed.typeName };
+    });
+
+  assert.deepEqual(classified, [
+    { name: "bufanda", typeName: "resource" },
+    { name: "host", typeName: "location" },
+    { name: "jota", typeName: "teacher" },
+    { name: "on2", typeName: "style" },
+    { name: "salsa", typeName: "type" },
+  ]);
+  database.close();
+});
+
+test("tag types can be created, renamed, and deleted when unused", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    const created = store.createTagType("workshop", "#112233");
+    assert.equal(created.name, "workshop");
+    assert.equal(created.color, "#112233");
+    assert.equal(created.isDefault, false);
+    assert.equal(created.sortOrder, 6);
+    assert.equal(created.tagCount, 0);
+
+    const updated = store.updateTagType(created.id, "workshops", "#abcdef");
+    assert.equal(updated.name, "workshops");
+    assert.equal(updated.color, "#abcdef");
+
+    store.deleteTagType(created.id);
+    assert.equal(store.findTagTypeById(created.id), null);
+  } finally {
+    store.close();
+  }
+});
+
+test("default and in-use tag types cannot be deleted", () => {
+  const store = openSqliteLibraryStore(":memory:");
+
+  try {
+    const resource = store.findDefaultTagType()!;
+    const teacher = store.listTagTypes().find((type) => type.name === "teacher")!;
+    store.upsertTag("jota");
+    store.updateTag(store.findTagByName("jota")!.id, "jota", teacher.id);
+
+    assert.throws(() => store.deleteTagType(resource.id), /Default tag type cannot be deleted/);
+    assert.throws(() => store.deleteTagType(teacher.id), /Tag type is in use: teacher/);
+    assert.throws(() => store.deleteTagType(999), /Tag type not found: 999/);
+  } finally {
+    store.close();
+  }
 });

@@ -176,8 +176,7 @@
 }
 
 .tag-chip.is-new {
-  background: #e6f4ea;
-  color: #137333;
+  box-shadow: inset 0 0 0 1px rgba(32, 33, 36, 0.28);
 }
 
 .tag-chip button {
@@ -369,7 +368,7 @@
 
 .result-card-tag:hover,
 .result-card-tag:focus-visible {
-  background: #d2e3fc;
+  filter: brightness(0.92);
 }
 
 .video-modal-backdrop {

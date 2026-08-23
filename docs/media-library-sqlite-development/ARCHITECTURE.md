@@ -17,7 +17,8 @@ El proceso termina haciendo `rsync` al servidor.
 El servidor mantiene:
 - SQLite;
 - relación vídeos/tags;
-- catálogo de tags.
+- catálogo de tags;
+- tipos de tag (nombre, color, tipo por defecto).
 
 ## Flujo de nuevos vídeos
 

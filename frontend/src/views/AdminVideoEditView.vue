@@ -15,14 +15,21 @@
           <SearchResultItem
             :interactive-tags="false"
             :show-name="true"
+            :default-color="defaultColor"
             :result="previewResult"
             :selected="false"
+            :tag-colors="tagColors"
             @select-video="showPlayer = true"
           />
         </div>
 
         <div class="admin-video-tags">
-          <TagEditor v-model:tags="draftTags" :available-tags="availableTags" />
+          <TagEditor
+            v-model:tags="draftTags"
+            :available-tags="availableTags"
+            :default-color="defaultColor"
+            :tag-colors="tagColors"
+          />
 
           <div class="search-actions">
             <button
@@ -96,6 +103,8 @@
 
     <VideoPlayer
       v-if="video && showPlayer"
+      :default-color="defaultColor"
+      :tag-colors="tagColors"
       :tags="draftTags"
       :video-path="video.video"
       @close="showPlayer = false"
@@ -107,7 +116,7 @@
 import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
-import { ApiRequestError, deleteVideo, fetchTags, fetchVideoTags, searchVideos, updateVideoTags } from "../api/client.js";
+import { ApiRequestError, deleteVideo, fetchTagCatalog, fetchTagTypes, fetchVideoTags, searchVideos, updateVideoTags } from "../api/client.js";
 import type { SearchResultItem as VideoResult } from "../api/types.js";
 import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
@@ -115,6 +124,7 @@ import LoadingIndicator from "../components/LoadingIndicator.vue";
 import SearchResultItem from "../components/SearchResultItem.vue";
 import TagEditor from "../components/TagEditor.vue";
 import VideoPlayer from "../components/VideoPlayer.vue";
+import { DEFAULT_TAG_COLOR, tagColorMap } from "../utils/tag-color.js";
 
 const props = defineProps<{
   id: string;
@@ -123,6 +133,8 @@ const props = defineProps<{
 const router = useRouter();
 const video = ref<VideoResult | null>(null);
 const availableTags = ref<string[]>([]);
+const tagColors = ref<Record<string, string>>({});
+const defaultColor = ref(DEFAULT_TAG_COLOR);
 const savedTags = ref<string[]>([]);
 const draftTags = ref<string[]>([]);
 const loading = ref(true);
@@ -179,10 +191,11 @@ async function loadVideo(): Promise<void> {
   showPlayer.value = false;
 
   try {
-    const [searchResponse, videoTags, catalog] = await Promise.all([
+    const [searchResponse, videoTags, catalog, types] = await Promise.all([
       searchVideos([]),
       fetchVideoTags(props.id),
-      fetchTags(),
+      fetchTagCatalog(),
+      fetchTagTypes(),
     ]);
 
     video.value = searchResponse.results.find((result) => result.id === props.id) ?? {
@@ -195,7 +208,9 @@ async function loadVideo(): Promise<void> {
     };
     savedTags.value = [...videoTags.tags];
     draftTags.value = [...videoTags.tags];
-    availableTags.value = catalog.tags;
+    availableTags.value = catalog.tags.map((tag) => tag.name);
+    tagColors.value = tagColorMap(catalog.tags);
+    defaultColor.value = types.types.find((type) => type.isDefault)?.color ?? DEFAULT_TAG_COLOR;
   } catch (loadError: unknown) {
     error.value = loadError instanceof Error ? loadError.message : "Unable to load video tags.";
   } finally {
@@ -213,6 +228,14 @@ async function saveTags(): Promise<void> {
     savedTags.value = [...response.tags];
     draftTags.value = [...response.tags];
     availableTags.value = uniqueTags([...availableTags.value, ...response.tags]);
+    tagColors.value = {
+      ...tagColors.value,
+      ...Object.fromEntries(
+        response.tags
+          .filter((tag) => tagColors.value[tag] === undefined)
+          .map((tag) => [tag, defaultColor.value]),
+      ),
+    };
     saveMessage.value = "Tags saved.";
   } catch (updateError: unknown) {
     saveError.value = updateError instanceof Error ? updateError.message : "Unable to save tags.";

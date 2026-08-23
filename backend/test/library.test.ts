@@ -16,6 +16,7 @@ import type { LibraryStore } from "../src/ports/library-store.js";
 import type { VideoDiscovery } from "../src/ports/video-discovery.js";
 
 import { testVideos } from "./fixtures.js";
+import { tagsWithDefaultColor } from "./tag-colors.js";
 
 async function createLibrary(): Promise<string> {
   const libraryPath = await mkdtemp(join(tmpdir(), "media-library-refresh-"));
@@ -166,7 +167,7 @@ test("POST /api/library/refresh returns 500 and preserves the existing index on 
 
     assert.deepEqual(tagsResponse.json(), {
       count: 5,
-      tags: ["bachata", "bea", "damian", "linea", "salsa"],
+      tags: tagsWithDefaultColor(["bachata", "bea", "damian", "linea", "salsa"]),
     });
   } finally {
     await app.close();

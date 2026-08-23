@@ -11,5 +11,6 @@ La biblioteca física continuará viviendo inicialmente en el ACEMAGIC y se publ
 4. M4 — Edición de tags desde `media-library`
 5. M5 — Edición múltiple
 6. M6 — Gestión avanzada y retirada de TagSpaces
+7. Tag types — tipos con color, UI y configuración (`docs/media-library-tag-types-development/`)
 
 M1 se desarrolla y valida primero en local. Después se despliega al servidor y se configura la ruta de SQLite mediante variables de entorno.
