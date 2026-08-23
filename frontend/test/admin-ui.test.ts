@@ -67,6 +67,10 @@ const catalogVideos: SearchResultItem[] = [
 
 const catalogTags = ["isa", "jota", "salsa", "zenit"];
 
+function hasVideoNamed(wrapper: VueWrapper, name: string): boolean {
+  return wrapper.find(`a[aria-label="Edit tags for ${name}"]`).exists();
+}
+
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
     ok,
@@ -190,10 +194,11 @@ describe("admin video list", () => {
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
     expect(wrapper.text()).toContain("4 results");
     expect(wrapper.text()).toContain("Untagged (1)");
-    expect(wrapper.text()).toContain("20260801_new.mp4");
-    expect(wrapper.text()).toContain("zenit-practice.mp4");
-    expect(wrapper.text()).toContain("20260715.mp4");
-    expect(wrapper.text()).toContain("first.mp4");
+    expect(wrapper.findAll(".result-card-name-link").every((link) => link.text() === "Edit video")).toBe(true);
+    expect(hasVideoNamed(wrapper, "20260801_new.mp4")).toBe(true);
+    expect(hasVideoNamed(wrapper, "zenit-practice.mp4")).toBe(true);
+    expect(hasVideoNamed(wrapper, "20260715.mp4")).toBe(true);
+    expect(hasVideoNamed(wrapper, "first.mp4")).toBe(true);
   });
 
   it("links to the upload page instead of embedding the upload zone", async () => {
@@ -259,9 +264,9 @@ describe("admin video list", () => {
 
     expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=zenit");
     expect(wrapper.text()).toContain("1 result");
-    expect(wrapper.text()).toContain("20260715.mp4");
-    expect(wrapper.text()).not.toContain("zenit-practice.mp4");
-    expect(wrapper.text()).not.toContain("20260801_new.mp4");
+    expect(hasVideoNamed(wrapper, "20260715.mp4")).toBe(true);
+    expect(hasVideoNamed(wrapper, "zenit-practice.mp4")).toBe(false);
+    expect(hasVideoNamed(wrapper, "20260801_new.mp4")).toBe(false);
   });
 
   it("keeps AND behavior when several tags are selected", async () => {
@@ -286,8 +291,8 @@ describe("admin video list", () => {
 
     expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
     expect(wrapper.text()).toContain("1 result");
-    expect(wrapper.text()).toContain("first.mp4");
-    expect(wrapper.text()).not.toContain("zenit-practice.mp4");
+    expect(hasVideoNamed(wrapper, "first.mp4")).toBe(true);
+    expect(hasVideoNamed(wrapper, "zenit-practice.mp4")).toBe(false);
   });
 
     it("opens the video player from the thumbnail", async () => {
@@ -341,9 +346,9 @@ describe("admin video list", () => {
     await nextTick();
 
     expect(wrapper.text()).toContain("1 result");
-    expect(wrapper.text()).toContain("20260801_new.mp4");
-    expect(wrapper.text()).not.toContain("zenit-practice.mp4");
-    expect(wrapper.text()).not.toContain("20260715.mp4");
+    expect(hasVideoNamed(wrapper, "20260801_new.mp4")).toBe(true);
+    expect(hasVideoNamed(wrapper, "zenit-practice.mp4")).toBe(false);
+    expect(hasVideoNamed(wrapper, "20260715.mp4")).toBe(false);
   });
 
   it("clears selected tags when switching to Untagged and shows the untagged catalog", async () => {
@@ -374,16 +379,16 @@ describe("admin video list", () => {
 
     expect(wrapper.findAll(".selected-tags .tag-chip")).toHaveLength(0);
     expect(wrapper.text()).toContain("1 result");
-    expect(wrapper.text()).toContain("20260801_new.mp4");
-    expect(wrapper.text()).not.toContain("20260715.mp4");
-    expect(wrapper.text()).not.toContain("zenit-practice.mp4");
+    expect(hasVideoNamed(wrapper, "20260801_new.mp4")).toBe(true);
+    expect(hasVideoNamed(wrapper, "20260715.mp4")).toBe(false);
+    expect(hasVideoNamed(wrapper, "zenit-practice.mp4")).toBe(false);
 
     await wrapper.get('[data-testid="filter-all"]').trigger("click");
     await nextTick();
 
     expect(wrapper.text()).toContain("4 results");
-    expect(wrapper.text()).toContain("20260801_new.mp4");
-    expect(wrapper.text()).toContain("20260715.mp4");
+    expect(hasVideoNamed(wrapper, "20260801_new.mp4")).toBe(true);
+    expect(hasVideoNamed(wrapper, "20260715.mp4")).toBe(true);
   });
 
   it("adds a clicked result tag to search without editing the video", async () => {
@@ -413,8 +418,8 @@ describe("admin video list", () => {
     expect(wrapper.findAll(".selected-tags .tag-chip")).toHaveLength(1);
     expect(wrapper.get(".selected-tags").text()).toContain("zenit");
     expect(wrapper.text()).toContain("1 result");
-    expect(wrapper.text()).toContain("20260715.mp4");
-    expect(wrapper.text()).not.toContain("zenit-practice.mp4");
+    expect(hasVideoNamed(wrapper, "20260715.mp4")).toBe(true);
+    expect(hasVideoNamed(wrapper, "zenit-practice.mp4")).toBe(false);
     expect(router.currentRoute.value.name).toBe("home");
     expect(
       fetchMock.mock.calls.some(([, init]) => init?.method === "PUT" || init?.method === "POST"),
@@ -457,8 +462,8 @@ describe("admin video list", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
     expect(wrapper.findAll(".selected-tags .tag-chip")).toHaveLength(2);
     expect(wrapper.text()).toContain("1 result");
-    expect(wrapper.text()).toContain("first.mp4");
-    expect(wrapper.text()).not.toContain("zenit-practice.mp4");
+    expect(hasVideoNamed(wrapper, "first.mp4")).toBe(true);
+    expect(hasVideoNamed(wrapper, "zenit-practice.mp4")).toBe(false);
   });
 });
 
@@ -511,6 +516,8 @@ describe("tag editor", () => {
 
     expect(wrapper.find(".tag-suggestions").text()).toContain("bufanda");
     expect(wrapper.find(".tag-suggestions").text()).not.toContain("salsa");
+    expect(wrapper.get(".tag-suggestions button").attributes("style") ?? "").not.toContain("background-color");
+    expect(wrapper.get(".tag-suggestion-swatch").attributes("style")).toContain("background-color");
 
     await wrapper.findAll(".tag-suggestions button")[0]!.trigger("click");
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "bufanda"]);
@@ -849,7 +856,7 @@ describe("admin video editor", () => {
     expect(router.currentRoute.value.name).toBe("home");
     expect(fetchMock).toHaveBeenCalledWith("/api/search");
     expect(wrapper.text()).toContain("Untagged (1)");
-    expect(wrapper.text()).not.toContain("first.mp4");
+    expect(hasVideoNamed(wrapper, "first.mp4")).toBe(false);
   });
 
   it("avoids a second DELETE while a deletion is in progress", async () => {
@@ -992,7 +999,7 @@ describe("admin video editor", () => {
 
     expect(router.currentRoute.value.name).toBe("home");
     expect(wrapper.text()).toContain("Untagged (1)");
-    expect(wrapper.text()).not.toContain("first.mp4");
+    expect(hasVideoNamed(wrapper, "first.mp4")).toBe(false);
   });
 });
 
@@ -1046,7 +1053,7 @@ describe("admin untagged flow", () => {
 
     await wrapper.get('[data-testid="filter-untagged"]').trigger("click");
     await nextTick();
-    expect(wrapper.text()).toContain("20260801_new.mp4");
+    expect(hasVideoNamed(wrapper, "20260801_new.mp4")).toBe(true);
 
     await wrapper.get('a[aria-label="Edit tags for 20260801_new.mp4"]').trigger("click");
     await flushPromises();
@@ -1063,7 +1070,7 @@ describe("admin untagged flow", () => {
     await nextTick();
 
     expect(wrapper.text()).toContain("Untagged (0)");
-    expect(wrapper.text()).not.toContain("20260801_new.mp4");
+    expect(hasVideoNamed(wrapper, "20260801_new.mp4")).toBe(false);
   });
 });
 

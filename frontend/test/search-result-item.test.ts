@@ -60,12 +60,14 @@ describe("SearchResultItem date overlay", () => {
         stubs: {
           RouterLink: {
             props: ["to"],
-            template: '<a class="result-card-name-link"><slot /></a>',
+            template: '<a class="result-card-name-link" v-bind="$attrs"><slot /></a>',
           },
         },
       },
     });
 
-    expect(wrapper.get(".result-card-name-link").text()).toBe("clip.mp4");
+    expect(wrapper.get(".result-card-name-link").text()).toBe("Edit video");
+    expect(wrapper.get(".result-card-name-link").attributes("aria-label")).toBe("Edit tags for clip.mp4");
+    expect(wrapper.text()).not.toContain("clip.mp4");
   });
 });
