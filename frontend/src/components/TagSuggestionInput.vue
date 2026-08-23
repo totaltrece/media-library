@@ -11,6 +11,7 @@
           v-for="tag in selectedTags"
           :key="tag"
           :class="['tag-chip', { 'is-new': isNewTag(tag) }]"
+          :style="tagChipStyle(colorForTag(tag, tagColors, defaultColor))"
         >
           {{ tag }}
           <button
@@ -40,6 +41,7 @@
         <button
           type="button"
           :class="{ highlighted: highlightedIndex === index }"
+          :style="tagChipStyle(colorForTag(tag, tagColors, defaultColor))"
           @click="selectTag(tag)"
         >
           {{ tag }}
@@ -65,6 +67,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
+import { colorForTag, DEFAULT_TAG_COLOR, tagChipStyle } from "../utils/tag-color.js";
+
 const props = withDefaults(
   defineProps<{
     availableTags: string[];
@@ -75,11 +79,15 @@ const props = withDefaults(
     inputType?: "text" | "search";
     allowCreate?: boolean;
     selectedLabel?: string;
+    tagColors?: Record<string, string>;
+    defaultColor?: string;
   }>(),
   {
     inputType: "text",
     allowCreate: false,
     selectedLabel: "Selected tags",
+    tagColors: () => ({}),
+    defaultColor: DEFAULT_TAG_COLOR,
   },
 );
 

@@ -1,6 +1,11 @@
+export interface TagListItem {
+  name: string;
+  color: string;
+}
+
 export interface TagsResponse {
   count: number;
-  tags: string[];
+  tags: TagListItem[];
 }
 
 export interface SearchResultItem {
@@ -38,11 +43,29 @@ export interface CatalogTag {
   id: number;
   name: string;
   usageCount: number;
+  typeId: number;
+  typeName: string;
+  color: string;
+  typeSortOrder: number;
 }
 
 export interface CatalogTagsResponse {
   count: number;
   tags: CatalogTag[];
+}
+
+export interface TagType {
+  id: number;
+  name: string;
+  color: string;
+  isDefault: boolean;
+  sortOrder: number;
+  tagCount: number;
+}
+
+export interface TagTypesResponse {
+  count: number;
+  types: TagType[];
 }
 
 export type UploadJobStatus = "idle" | "uploading" | "processing" | "completed" | "failed";

@@ -5,6 +5,7 @@ import type { ListTagCatalogUseCase } from "../../application/list-tag-catalog.j
 import type { RenameTagUseCase } from "../../application/rename-tag.js";
 import { TagNameConflictError } from "../../application/tag-name-conflict-error.js";
 import { TagNotFoundError } from "../../application/tag-not-found-error.js";
+import { TagTypeNotFoundError } from "../../application/tag-type-not-found-error.js";
 
 export interface AdminTagsControllerOptions {
   listTagCatalogUseCase: ListTagCatalogUseCase;
@@ -27,13 +28,13 @@ export function registerAdminTagsRoutes(
       return sendBadRequest(reply, "Tag id is required");
     }
 
-    const name = parseTagNameBody(request.body);
+    const body = parseTagUpdateBody(request.body);
 
-    if (name === undefined) {
+    if (body === undefined) {
       return sendBadRequest(reply, "Tag name is required");
     }
 
-    return executeAdminTag(reply, () => options.renameTagUseCase.execute(tagId, name));
+    return executeAdminTag(reply, () => options.renameTagUseCase.execute(tagId, body.name, body.typeId));
   });
 
   app.delete("/admin/tags/:id", async (request, reply) => {
@@ -57,12 +58,23 @@ function parseTagId(request: FastifyRequest): number | undefined {
   return Number.isInteger(tagId) && tagId > 0 ? tagId : undefined;
 }
 
-function parseTagNameBody(body: unknown): string | undefined {
+function parseTagUpdateBody(body: unknown): { name: string; typeId?: number } | undefined {
   if (typeof body !== "object" || body === null || !("name" in body) || typeof body.name !== "string") {
     return undefined;
   }
 
-  return body.name;
+  if (!("typeId" in body) || body.typeId === undefined) {
+    return { name: body.name };
+  }
+
+  if (typeof body.typeId !== "number" || !Number.isInteger(body.typeId) || body.typeId <= 0) {
+    return undefined;
+  }
+
+  return {
+    name: body.name,
+    typeId: body.typeId,
+  };
 }
 
 function sendBadRequest(reply: FastifyReply, message: string) {
@@ -77,7 +89,7 @@ function executeAdminTag<T>(reply: FastifyReply, execute: () => T) {
   try {
     return execute();
   } catch (error: unknown) {
-    if (error instanceof TagNotFoundError) {
+    if (error instanceof TagNotFoundError || error instanceof TagTypeNotFoundError) {
       return reply.status(404).send({
         error: {
           message: error.message,
@@ -95,7 +107,7 @@ function executeAdminTag<T>(reply: FastifyReply, execute: () => T) {
 
     const message = error instanceof Error ? error.message : "Unable to update tag";
 
-    if (message.includes("Tag name must not be empty")) {
+    if (message.includes("Tag name must not be empty") || message.includes("Tag type not found")) {
       return sendBadRequest(reply, message);
     }
 

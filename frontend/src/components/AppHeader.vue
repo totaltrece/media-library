@@ -59,6 +59,7 @@ const items = [
   { id: "view", to: "/", label: "View", testId: "nav-view" },
   { id: "upload", to: "/admin/videos/upload", label: "Upload video", testId: "upload-new-video" },
   { id: "tags", to: "/admin/tags", label: "Admin tags", testId: "nav-tags" },
+  { id: "tag-types", to: "/admin/tag-types", label: "Tag types", testId: "nav-tag-types" },
 ] as const;
 
 const route = useRoute();
@@ -74,6 +75,8 @@ const current = computed(() => {
       return "upload";
     case "admin-tags":
       return "tags";
+    case "admin-tag-types":
+      return "tag-types";
     default:
       return null;
   }

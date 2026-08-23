@@ -32,7 +32,12 @@
       <ErrorMessage v-if="playbackError" :message="playbackError" />
 
       <div class="result-tags">
-        <span v-for="tag in tags" :key="tag" class="tag-chip">{{ tag }}</span>
+        <span
+          v-for="tag in tags"
+          :key="tag"
+          class="tag-chip"
+          :style="tagChipStyle(colorForTag(tag, tagColors, defaultColor))"
+        >{{ tag }}</span>
       </div>
     </section>
   </div>
@@ -43,11 +48,20 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import { buildApiUrl } from "../api/client.js";
 import ErrorMessage from "./ErrorMessage.vue";
+import { colorForTag, DEFAULT_TAG_COLOR, tagChipStyle } from "../utils/tag-color.js";
 
-const props = defineProps<{
-  videoPath: string;
-  tags: string[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    videoPath: string;
+    tags: string[];
+    tagColors?: Record<string, string>;
+    defaultColor?: string;
+  }>(),
+  {
+    tagColors: () => ({}),
+    defaultColor: DEFAULT_TAG_COLOR,
+  },
+);
 
 const emit = defineEmits<{
   close: [];

@@ -123,13 +123,13 @@ describe("tag catalog API", () => {
 
     vi.stubGlobal("fetch", fetchMock);
 
-    const { deleteCatalogTag, fetchTagCatalog, renameCatalogTag } = await import("../src/api/client.js");
+    const { deleteCatalogTag, fetchTagCatalog, updateCatalogTag } = await import("../src/api/client.js");
 
     await expect(fetchTagCatalog()).resolves.toEqual({
       count: 1,
       tags: [{ id: 7, name: "salsa", usageCount: 12 }],
     });
-    await expect(renameCatalogTag(7, "salsa-linea")).resolves.toEqual({
+    await expect(updateCatalogTag(7, "salsa-linea", 3)).resolves.toEqual({
       id: 7,
       name: "salsa-linea",
       usageCount: 12,
@@ -140,7 +140,7 @@ describe("tag catalog API", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/admin/tags/7", {
       headers: { "Content-Type": "application/json" },
       method: "PUT",
-      body: JSON.stringify({ name: "salsa-linea" }),
+      body: JSON.stringify({ name: "salsa-linea", typeId: 3 }),
     });
     expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/admin/tags/7", { method: "DELETE" });
 

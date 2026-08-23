@@ -4,6 +4,8 @@ import type {
   CatalogTagsResponse,
   RefreshLibraryResponse,
   SearchResponse,
+  TagType,
+  TagTypesResponse,
   TagsResponse,
   UploadAcceptedResponse,
   UploadJobView,
@@ -135,13 +137,17 @@ export async function fetchTagCatalog(): Promise<CatalogTagsResponse> {
   return readJsonResponse<CatalogTagsResponse>(response);
 }
 
-export async function renameCatalogTag(tagId: number, name: string): Promise<CatalogTag> {
+export async function updateCatalogTag(
+  tagId: number,
+  name: string,
+  typeId: number,
+): Promise<CatalogTag> {
   const response = await fetch(buildApiUrl(`/admin/tags/${tagId}`), {
     headers: {
       "Content-Type": "application/json",
     },
     method: "PUT",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, typeId }),
   });
 
   return readJsonResponse<CatalogTag>(response);
@@ -149,6 +155,44 @@ export async function renameCatalogTag(tagId: number, name: string): Promise<Cat
 
 export async function deleteCatalogTag(tagId: number): Promise<void> {
   const response = await fetch(buildApiUrl(`/admin/tags/${tagId}`), {
+    method: "DELETE",
+  });
+
+  await readJsonResponse<{ id: number }>(response);
+}
+
+export async function fetchTagTypes(): Promise<TagTypesResponse> {
+  const response = await fetch(buildApiUrl("/admin/tag-types"));
+
+  return readJsonResponse<TagTypesResponse>(response);
+}
+
+export async function createTagType(name: string, color: string): Promise<TagType> {
+  const response = await fetch(buildApiUrl("/admin/tag-types"), {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+    body: JSON.stringify({ name, color }),
+  });
+
+  return readJsonResponse<TagType>(response);
+}
+
+export async function updateTagType(tagTypeId: number, name: string, color: string): Promise<TagType> {
+  const response = await fetch(buildApiUrl(`/admin/tag-types/${tagTypeId}`), {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "PUT",
+    body: JSON.stringify({ name, color }),
+  });
+
+  return readJsonResponse<TagType>(response);
+}
+
+export async function deleteTagType(tagTypeId: number): Promise<void> {
+  const response = await fetch(buildApiUrl(`/admin/tag-types/${tagTypeId}`), {
     method: "DELETE",
   });
 

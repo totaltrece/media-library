@@ -97,14 +97,16 @@ The frontend never downloads or copies media files.
 The catalog lives at `/`. It reuses `TagSearch` and `GET /api/search?tag=...`
 to find videos by tags, filter untagged items, and play them in a modal.
 The filename between the thumbnail and tags links to `/admin/videos/:id`.
-The edit screen updates tags through `GET /api/videos/:id/tags`, `GET /api/tags`,
-and `PUT /api/videos/:id/tags`. It can also delete the video with
+The edit screen updates tags through `GET /api/videos/:id/tags`, `GET /api/admin/tags`,
+`GET /api/admin/tag-types`, and `PUT /api/videos/:id/tags`. New tags default to
+the resource type. It can also delete the video with
 `DELETE /api/videos/:id` after a confirmation modal. A successful delete
 returns to `/`, which reloads the catalog from `GET /api/search` and
 `GET /api/tags`.
 
-`/` shares the same header as `/admin/videos/upload` and `/admin/tags`:
-**View**, **Upload video**, **Admin tags**, and refresh library
+`/` shares the same header as `/admin/videos/upload`, `/admin/tags`, and
+`/admin/tag-types`: **View**, **Upload video**, **Admin tags**, **Tag types**,
+and refresh library
 (`POST /api/library/refresh`). The current section is highlighted. Upload
 lives at `/admin/videos/upload`: it loads `GET /api/admin/uploads/active` on
 enter. If a job is `uploading` or `processing`, it shows the progress zone
@@ -115,8 +117,10 @@ this upload zone. After a successful upload, **View in Untagged** returns to
 `/?untagged=1`; the upload page does not call `POST /api/library/refresh`.
 
 The tag catalog at `/admin/tags` is managed through `GET /api/admin/tags`,
-`PUT /api/admin/tags/:id`, and `DELETE /api/admin/tags/:id`. Tag names link
-to `/?tag=...` so the catalog opens filtered by that tag. `/admin/videos`
+`PUT /api/admin/tags/:id`, and `DELETE /api/admin/tags/:id`. Chips use the tag
+type color. The pencil opens a modal to edit name and type. Tag names link
+to `/?tag=...` so the catalog opens filtered by that tag. Tag types are
+configured at `/admin/tag-types`. `/admin/videos`
 without an id redirects to `/`.
 
 # Layout

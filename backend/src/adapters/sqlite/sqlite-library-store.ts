@@ -5,12 +5,37 @@ import { DatabaseSync } from "node:sqlite";
 import type {
   LibraryStore,
   LibraryTag,
+  LibraryTagType,
   LibraryTagUsage,
   LibraryVideo,
   LibraryVideoWithTags,
 } from "../../ports/library-store.js";
 
 import { sqliteMigrations } from "./migrations.js";
+
+const TAG_SELECT = `
+  SELECT
+    tags.id AS id,
+    tags.name AS name,
+    tag_types.id AS typeId,
+    tag_types.name AS typeName,
+    tag_types.color AS color,
+    tag_types.sort_order AS typeSortOrder
+  FROM tags
+  INNER JOIN tag_types ON tag_types.id = tags.tag_type_id
+`;
+
+const TAG_TYPE_SELECT = `
+  SELECT
+    tag_types.id AS id,
+    tag_types.name AS name,
+    tag_types.color AS color,
+    tag_types.is_default AS isDefault,
+    tag_types.sort_order AS sortOrder,
+    COUNT(tags.id) AS tagCount
+  FROM tag_types
+  LEFT JOIN tags ON tags.tag_type_id = tag_types.id
+`;
 
 export class SqliteLibraryStore implements LibraryStore {
   constructor(private readonly database: DatabaseSync) {}
@@ -83,10 +108,11 @@ export class SqliteLibraryStore implements LibraryStore {
 
   upsertTag(name: string): LibraryTag {
     const tagName = requireNonEmpty(name, "Tag name");
+    const defaultType = this.requireDefaultTagType();
 
     this.database
-      .prepare("INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO NOTHING")
-      .run(tagName);
+      .prepare("INSERT INTO tags (name, tag_type_id) VALUES (?, ?) ON CONFLICT(name) DO NOTHING")
+      .run(tagName, defaultType.id);
 
     const tag = this.findTagByName(tagName);
 
@@ -98,47 +124,48 @@ export class SqliteLibraryStore implements LibraryStore {
   }
 
   findTagByName(name: string): LibraryTag | null {
-    const row = this.database.prepare("SELECT id, name FROM tags WHERE name = ?").get(name);
+    const row = this.database.prepare(`${TAG_SELECT} WHERE tags.name = ?`).get(name);
 
-    return isTagRow(row) ? { id: Number(row.id), name: row.name } : null;
+    return isTagRow(row) ? toLibraryTag(row) : null;
   }
 
   findTagById(id: number): LibraryTag | null {
-    const row = this.database.prepare("SELECT id, name FROM tags WHERE id = ?").get(id);
+    const row = this.database.prepare(`${TAG_SELECT} WHERE tags.id = ?`).get(id);
 
-    return isTagRow(row) ? { id: Number(row.id), name: row.name } : null;
+    return isTagRow(row) ? toLibraryTag(row) : null;
   }
 
   listTags(): LibraryTag[] {
-    const rows = this.database.prepare("SELECT id, name FROM tags ORDER BY name").all();
+    const rows = this.database.prepare(`${TAG_SELECT} ORDER BY tags.name`).all();
 
-    return rows.filter(isTagRow).map((row) => ({
-      id: Number(row.id),
-      name: row.name,
-    }));
+    return rows.filter(isTagRow).map((row) => toLibraryTag(row));
   }
 
   listTagUsages(): LibraryTagUsage[] {
     const rows = this.database
       .prepare(
         `
-          SELECT tags.id AS id, tags.name AS name, COUNT(video_tags.video_id) AS usageCount
+          SELECT
+            tags.id AS id,
+            tags.name AS name,
+            tag_types.id AS typeId,
+            tag_types.name AS typeName,
+            tag_types.color AS color,
+            tag_types.sort_order AS typeSortOrder,
+            COUNT(video_tags.video_id) AS usageCount
           FROM tags
+          INNER JOIN tag_types ON tag_types.id = tags.tag_type_id
           LEFT JOIN video_tags ON video_tags.tag_id = tags.id
-          GROUP BY tags.id, tags.name
+          GROUP BY tags.id, tags.name, tag_types.id, tag_types.name, tag_types.color, tag_types.sort_order
           ORDER BY tags.name
         `,
       )
       .all();
 
-    return rows.filter(isTagUsageRow).map((row) => ({
-      id: Number(row.id),
-      name: row.name,
-      usageCount: Number(row.usageCount),
-    }));
+    return rows.filter(isTagUsageRow).map((row) => toLibraryTagUsage(row));
   }
 
-  renameTag(id: number, name: string): LibraryTag {
+  updateTag(id: number, name: string, typeId: number): LibraryTag {
     const tagName = requireNonEmpty(name, "Tag name");
     const current = this.findTagById(id);
 
@@ -146,25 +173,29 @@ export class SqliteLibraryStore implements LibraryStore {
       throw new Error(`Tag not found: ${id}`);
     }
 
-    if (current.name === tagName) {
-      return current;
+    if (this.findTagTypeById(typeId) === null) {
+      throw new Error(`Tag type not found: ${typeId}`);
     }
 
-    const conflict = this.findTagByName(tagName);
+    if (current.name !== tagName) {
+      const conflict = this.findTagByName(tagName);
 
-    if (conflict !== null) {
-      throw new Error(`Tag name already exists: ${tagName}`);
+      if (conflict !== null) {
+        throw new Error(`Tag name already exists: ${tagName}`);
+      }
     }
 
-    this.database.prepare("UPDATE tags SET name = ? WHERE id = ?").run(tagName, id);
+    this.database
+      .prepare("UPDATE tags SET name = ?, tag_type_id = ? WHERE id = ?")
+      .run(tagName, typeId, id);
 
-    const renamed = this.findTagById(id);
+    const updated = this.findTagById(id);
 
-    if (renamed === null) {
-      throw new Error(`Unable to rename tag ${id}`);
+    if (updated === null) {
+      throw new Error(`Unable to update tag ${id}`);
     }
 
-    return renamed;
+    return updated;
   }
 
   deleteTag(id: number): void {
@@ -173,6 +204,97 @@ export class SqliteLibraryStore implements LibraryStore {
     if (result.changes === 0) {
       throw new Error(`Tag not found: ${id}`);
     }
+  }
+
+  listTagTypes(): LibraryTagType[] {
+    const rows = this.database
+      .prepare(`${TAG_TYPE_SELECT} GROUP BY tag_types.id ORDER BY tag_types.sort_order, tag_types.name`)
+      .all();
+
+    return rows.filter(isTagTypeRow).map((row) => toLibraryTagType(row));
+  }
+
+  findTagTypeById(id: number): LibraryTagType | null {
+    const row = this.database.prepare(`${TAG_TYPE_SELECT} WHERE tag_types.id = ? GROUP BY tag_types.id`).get(id);
+
+    return isTagTypeRow(row) ? toLibraryTagType(row) : null;
+  }
+
+  findDefaultTagType(): LibraryTagType | null {
+    const row = this.database
+      .prepare(`${TAG_TYPE_SELECT} WHERE tag_types.is_default = 1 GROUP BY tag_types.id`)
+      .get();
+
+    return isTagTypeRow(row) ? toLibraryTagType(row) : null;
+  }
+
+  createTagType(name: string, color: string): LibraryTagType {
+    const typeName = requireNonEmpty(name, "Tag type name");
+    const conflict = this.findTagTypeByName(typeName);
+
+    if (conflict !== null) {
+      throw new Error(`Tag type name already exists: ${typeName}`);
+    }
+
+    const nextOrderRow = this.database.prepare("SELECT MAX(sort_order) AS sortOrder FROM tag_types").get();
+    const sortOrder = isSortOrderRow(nextOrderRow) && nextOrderRow.sortOrder !== null
+      ? Number(nextOrderRow.sortOrder) + 1
+      : 1;
+
+    const result = this.database
+      .prepare("INSERT INTO tag_types (name, color, is_default, sort_order) VALUES (?, ?, 0, ?)")
+      .run(typeName, color, sortOrder);
+
+    const created = this.findTagTypeById(Number(result.lastInsertRowid));
+
+    if (created === null) {
+      throw new Error(`Unable to persist tag type ${typeName}`);
+    }
+
+    return created;
+  }
+
+  updateTagType(id: number, name: string, color: string): LibraryTagType {
+    const typeName = requireNonEmpty(name, "Tag type name");
+    const current = this.findTagTypeById(id);
+
+    if (current === null) {
+      throw new Error(`Tag type not found: ${id}`);
+    }
+
+    const conflict = this.findTagTypeByName(typeName);
+
+    if (conflict !== null && conflict.id !== id) {
+      throw new Error(`Tag type name already exists: ${typeName}`);
+    }
+
+    this.database.prepare("UPDATE tag_types SET name = ?, color = ? WHERE id = ?").run(typeName, color, id);
+
+    const updated = this.findTagTypeById(id);
+
+    if (updated === null) {
+      throw new Error(`Unable to update tag type ${id}`);
+    }
+
+    return updated;
+  }
+
+  deleteTagType(id: number): void {
+    const current = this.findTagTypeById(id);
+
+    if (current === null) {
+      throw new Error(`Tag type not found: ${id}`);
+    }
+
+    if (current.isDefault) {
+      throw new Error("Default tag type cannot be deleted");
+    }
+
+    if (current.tagCount > 0) {
+      throw new Error(`Tag type is in use: ${current.name}`);
+    }
+
+    this.database.prepare("DELETE FROM tag_types WHERE id = ?").run(id);
   }
 
   setVideoTags(videoId: string, tagNames: string[]): void {
@@ -271,6 +393,22 @@ export class SqliteLibraryStore implements LibraryStore {
       tags: this.getVideoTags(video.id),
     }));
   }
+
+  private findTagTypeByName(name: string): LibraryTagType | null {
+    const row = this.database.prepare(`${TAG_TYPE_SELECT} WHERE tag_types.name = ? GROUP BY tag_types.id`).get(name);
+
+    return isTagTypeRow(row) ? toLibraryTagType(row) : null;
+  }
+
+  private requireDefaultTagType(): LibraryTagType {
+    const defaultType = this.findDefaultTagType();
+
+    if (defaultType === null) {
+      throw new Error("Default tag type is missing");
+    }
+
+    return defaultType;
+  }
 }
 
 export function openSqliteLibraryStore(databasePath: string): SqliteLibraryStore {
@@ -287,6 +425,7 @@ export function openSqliteLibraryStore(databasePath: string): SqliteLibraryStore
 }
 
 export function applySqliteMigrations(database: DatabaseSync): void {
+  database.exec("PRAGMA foreign_keys = OFF");
   database.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       version INTEGER PRIMARY KEY,
@@ -320,6 +459,8 @@ export function applySqliteMigrations(database: DatabaseSync): void {
       throw error;
     }
   }
+
+  database.exec("PRAGMA foreign_keys = ON");
 }
 
 function requireNonEmpty(value: string, label: string): string {
@@ -361,11 +502,78 @@ function toLibraryVideo(row: unknown): LibraryVideo {
   };
 }
 
-function isTagRow(value: unknown): value is { id: number | bigint; name: string } {
+function toLibraryTag(row: unknown): LibraryTag {
+  if (!isTagRow(row)) {
+    throw new Error("Invalid tag row");
+  }
+
+  return {
+    id: Number(row.id),
+    name: row.name,
+    typeId: Number(row.typeId),
+    typeName: row.typeName,
+    color: row.color,
+    typeSortOrder: Number(row.typeSortOrder),
+  };
+}
+
+function toLibraryTagUsage(row: unknown): LibraryTagUsage {
+  if (!isTagUsageRow(row)) {
+    throw new Error("Invalid tag usage row");
+  }
+
+  return {
+    ...toLibraryTag(row),
+    usageCount: Number(row.usageCount),
+  };
+}
+
+function toLibraryTagType(row: unknown): LibraryTagType {
+  if (!isTagTypeRow(row)) {
+    throw new Error("Invalid tag type row");
+  }
+
+  return {
+    id: Number(row.id),
+    name: row.name,
+    color: row.color,
+    isDefault: Number(row.isDefault) === 1,
+    sortOrder: Number(row.sortOrder),
+    tagCount: Number(row.tagCount),
+  };
+}
+
+interface TagRow {
+  id: number | bigint;
+  name: string;
+  typeId: number | bigint;
+  typeName: string;
+  color: string;
+  typeSortOrder: number | bigint;
+}
+
+interface TagUsageRow extends TagRow {
+  usageCount: number | bigint;
+}
+
+interface TagTypeRow {
+  id: number | bigint;
+  name: string;
+  color: string;
+  isDefault: number | bigint;
+  sortOrder: number | bigint;
+  tagCount: number | bigint;
+}
+
+function isTagRow(value: unknown): value is TagRow {
   return (
     isRecord(value) &&
     (typeof value.id === "number" || typeof value.id === "bigint") &&
-    typeof value.name === "string"
+    typeof value.name === "string" &&
+    (typeof value.typeId === "number" || typeof value.typeId === "bigint") &&
+    typeof value.typeName === "string" &&
+    typeof value.color === "string" &&
+    (typeof value.typeSortOrder === "number" || typeof value.typeSortOrder === "bigint")
   );
 }
 
@@ -373,14 +581,30 @@ function isNameRow(value: unknown): value is { name: string } {
   return isRecord(value) && typeof value.name === "string";
 }
 
-function isTagUsageRow(
-  value: unknown,
-): value is { id: number | bigint; name: string; usageCount: number | bigint } {
+function isTagUsageRow(value: unknown): value is TagUsageRow {
+  return (
+    isTagRow(value) &&
+    isRecord(value) &&
+    (typeof value["usageCount"] === "number" || typeof value["usageCount"] === "bigint")
+  );
+}
+
+function isTagTypeRow(value: unknown): value is TagTypeRow {
   return (
     isRecord(value) &&
     (typeof value.id === "number" || typeof value.id === "bigint") &&
     typeof value.name === "string" &&
-    (typeof value.usageCount === "number" || typeof value.usageCount === "bigint")
+    typeof value.color === "string" &&
+    (typeof value.isDefault === "number" || typeof value.isDefault === "bigint") &&
+    (typeof value.sortOrder === "number" || typeof value.sortOrder === "bigint") &&
+    (typeof value.tagCount === "number" || typeof value.tagCount === "bigint")
+  );
+}
+
+function isSortOrderRow(value: unknown): value is { sortOrder: number | bigint | null } {
+  return (
+    isRecord(value) &&
+    (value.sortOrder === null || typeof value.sortOrder === "number" || typeof value.sortOrder === "bigint")
   );
 }
 

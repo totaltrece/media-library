@@ -113,14 +113,14 @@ Response
 {
   "count": 3,
   "tags": [
-    "bachata",
-    "bea",
-    "salsa"
+    { "name": "bachata", "color": "#c0392b" },
+    { "name": "bea", "color": "#93c5fd" },
+    { "name": "salsa", "color": "#c0392b" }
   ]
 }
 ```
 
-Tags are unique and sorted alphabetically.
+Tags are unique and sorted alphabetically. `color` is the hex color of the tag's type. Unused catalog tags are omitted.
 
 ---
 
@@ -235,29 +235,42 @@ DELETE /api/admin/tags/:id
     {
       "id": 3,
       "name": "bufanda",
-      "usageCount": 0
+      "usageCount": 0,
+      "typeId": 5,
+      "typeName": "resource",
+      "color": "#93c5fd",
+      "typeSortOrder": 5
     },
     {
       "id": 2,
       "name": "jota",
-      "usageCount": 84
+      "usageCount": 84,
+      "typeId": 3,
+      "typeName": "teacher",
+      "color": "#27ae60",
+      "typeSortOrder": 3
     },
     {
       "id": 1,
       "name": "salsa",
-      "usageCount": 127
+      "usageCount": 127,
+      "typeId": 1,
+      "typeName": "type",
+      "color": "#c0392b",
+      "typeSortOrder": 1
     }
   ]
 }
 ```
 
-`PUT` renames a tag by id. The `tag_id` and all `video_tags` relations stay
+`PUT` updates a tag name and type by id. The `tag_id` and all `video_tags` relations stay
 unchanged. Empty names return **400 Bad Request**. A name that already belongs
-to another tag returns **409 Conflict**. A missing id returns **404 Not Found**.
+to another tag returns **409 Conflict**. A missing id or type returns **404 Not Found**.
 
 ```json
 {
-  "name": "jota-nueva"
+  "name": "jota-nueva",
+  "typeId": 3
 }
 ```
 
@@ -266,6 +279,42 @@ to another tag returns **409 Conflict**. A missing id returns **404 Not Found**.
 returns **404 Not Found**.
 
 These endpoints never write media files or TagSpaces metadata.
+
+---
+
+## Admin tag types
+
+```text
+GET /api/admin/tag-types
+POST /api/admin/tag-types
+PUT /api/admin/tag-types/:id
+DELETE /api/admin/tag-types/:id
+```
+
+`GET` returns every tag type, ordered by `sortOrder`. Each type includes the
+number of tags assigned to it. The seeded types are `type`, `style`, `teacher`,
+`location`, and `resource`. `resource` is the default for newly created tags and
+cannot be deleted.
+
+```json
+{
+  "count": 5,
+  "types": [
+    {
+      "id": 5,
+      "name": "resource",
+      "color": "#93c5fd",
+      "isDefault": true,
+      "sortOrder": 5,
+      "tagCount": 12
+    }
+  ]
+}
+```
+
+`POST` and `PUT` accept `{ "name", "color" }`. Color must be hex (`#93c5fd` or
+`#abc`). Duplicate names return **409**. Deleting a type that still has tags, or
+the default type, returns **409**.
 
 ---
 

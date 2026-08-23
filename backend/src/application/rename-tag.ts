@@ -4,6 +4,7 @@ import type { MutableVideoIndex } from "../ports/video-index.js";
 import { reloadVideoIndex } from "./reload-video-index.js";
 import { TagNameConflictError } from "./tag-name-conflict-error.js";
 import { TagNotFoundError } from "./tag-not-found-error.js";
+import { TagTypeNotFoundError } from "./tag-type-not-found-error.js";
 
 export class RenameTagUseCase {
   constructor(
@@ -12,7 +13,7 @@ export class RenameTagUseCase {
     private readonly libraryPath: string,
   ) {}
 
-  execute(tagId: number, name: string): LibraryTagUsage {
+  execute(tagId: number, name: string, typeId?: number): LibraryTagUsage {
     const tagName = name.trim();
 
     if (tagName.length === 0) {
@@ -25,21 +26,27 @@ export class RenameTagUseCase {
       throw new TagNotFoundError(tagId);
     }
 
+    const nextTypeId = typeId ?? current.typeId;
+
+    if (this.libraryStore.findTagTypeById(nextTypeId) === null) {
+      throw new TagTypeNotFoundError(nextTypeId);
+    }
+
     const conflict = this.libraryStore.findTagByName(tagName);
 
     if (conflict !== null && conflict.id !== tagId) {
       throw new TagNameConflictError(tagName);
     }
 
-    this.libraryStore.renameTag(tagId, tagName);
+    this.libraryStore.updateTag(tagId, tagName, nextTypeId);
     reloadVideoIndex(this.libraryStore, this.videoIndex, this.libraryPath);
 
-    const renamed = this.libraryStore.listTagUsages().find((tag) => tag.id === tagId);
+    const updated = this.libraryStore.listTagUsages().find((tag) => tag.id === tagId);
 
-    if (renamed === undefined) {
+    if (updated === undefined) {
       throw new TagNotFoundError(tagId);
     }
 
-    return renamed;
+    return updated;
   }
 }

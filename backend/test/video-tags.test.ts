@@ -15,6 +15,7 @@ import { createApp } from "../src/app.js";
 import type { LibraryStore } from "../src/ports/library-store.js";
 
 import { testLibraryPath } from "./fixtures.js";
+import { tagsWithDefaultColor } from "./tag-colors.js";
 
 async function createAppWithStore(libraryStore: LibraryStore, libraryPath = testLibraryPath) {
   const videoIndex = new InMemoryVideoIndex(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath));
@@ -96,7 +97,7 @@ test("POST /api/videos/:id/tags creates a new catalog tag automatically", async 
 
     assert.strictEqual(response.statusCode, 200);
     assert.ok(libraryStore.findTagByName("bufanda"));
-    assert.deepEqual(catalogResponse.json().tags, ["bufanda", "salsa"]);
+    assert.deepEqual(catalogResponse.json().tags, tagsWithDefaultColor(["bufanda", "salsa"]));
 
     await app.close();
   } finally {

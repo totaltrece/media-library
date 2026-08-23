@@ -10,6 +10,7 @@ import { InMemoryVideoIndex } from "../src/adapters/in-memory-video-index.js";
 import { createApp } from "../src/app.js";
 
 import { testLibraryPath, testVideos } from "./fixtures.js";
+import { tagsWithDefaultColor } from "./tag-colors.js";
 
 async function createStaticFixture(): Promise<{
   cssPath: string;
@@ -165,7 +166,7 @@ test("API routes remain available when static frontend is enabled", async () => 
   assert.strictEqual(response.statusCode, 200);
   assert.deepEqual(response.json(), {
     count: 5,
-    tags: ["bachata", "bea", "damian", "linea", "salsa"],
+    tags: tagsWithDefaultColor(["bachata", "bea", "damian", "linea", "salsa"]),
   });
 
   await app.close();

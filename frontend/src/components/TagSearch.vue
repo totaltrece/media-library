@@ -8,7 +8,9 @@
         placeholder="Type to find tags"
         selected-label="Selected tags"
         :available-tags="availableTags"
+        :default-color="defaultColor"
         :selected-tags="selectedTags"
+        :tag-colors="tagColors"
         @remove="$emit('remove-tag', $event)"
         @select="$emit('add-tag', $event)"
       />
@@ -28,6 +30,8 @@ import TagSuggestionInput from "./TagSuggestionInput.vue";
 defineProps<{
   availableTags: string[];
   selectedTags: string[];
+  tagColors?: Record<string, string>;
+  defaultColor?: string;
 }>();
 
 defineEmits<{

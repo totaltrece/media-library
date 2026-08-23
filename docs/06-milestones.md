@@ -268,7 +268,22 @@ A `/stats` endpoint.
 
 ---
 
-# Milestone 14 — MVP Completion
+# Milestone 14 — Tag types
+
+Status: implemented
+
+Typed tags with colors, sort-by-type in tag admin, a tag-type configuration
+screen, and a modal to edit tag name and type. Detail in
+`docs/media-library-tag-types-development/`.
+
+Deliverable
+
+Colored chips in the catalog and tag admin; CRUD for types; new tags default
+to resource.
+
+---
+
+# Milestone 15 — MVP Completion
 
 Status: ⏳ Planned
 

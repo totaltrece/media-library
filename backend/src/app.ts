@@ -1,7 +1,9 @@
 import Fastify from "fastify";
 
 import { AddVideoTagUseCase } from "./application/add-video-tag.js";
+import { CreateTagTypeUseCase } from "./application/create-tag-type.js";
 import { DeleteTagUseCase } from "./application/delete-tag.js";
+import { DeleteTagTypeUseCase } from "./application/delete-tag-type.js";
 import { DeleteVideoUseCase } from "./application/delete-video.js";
 import { BackgroundUploadJobRunner, type BackgroundUploadErrorLogger } from "./application/background-upload-job-runner.js";
 import { CompleteUploadUseCase } from "./application/complete-upload.js";
@@ -11,16 +13,19 @@ import { GetUploadJobUseCase } from "./application/get-upload-job.js";
 import { GetVideoTagsUseCase } from "./application/get-video-tags.js";
 import { InstallProcessedUploadUseCase } from "./application/install-processed-upload.js";
 import { ListTagCatalogUseCase } from "./application/list-tag-catalog.js";
+import { ListTagTypesUseCase } from "./application/list-tag-types.js";
 import type { ProcessVideoJobUseCase } from "./application/process-video-job.js";
 import type { RefreshLibraryUseCase } from "./application/refresh-library.js";
 import { RemoveVideoTagUseCase } from "./application/remove-video-tag.js";
 import { RenameTagUseCase } from "./application/rename-tag.js";
 import { SearchVideosUseCase } from "./application/search-videos.js";
 import { SetVideoTagsUseCase } from "./application/set-video-tags.js";
+import { UpdateTagTypeUseCase } from "./application/update-tag-type.js";
 import { StreamVideoUseCase } from "./application/stream-video.js";
 import { FilesystemLibraryMediaInstaller } from "./adapters/filesystem/filesystem-library-media-installer.js";
 import { FilesystemVideoStore } from "./adapters/filesystem/filesystem-video-store.js";
 import { TagSpacesThumbnailStore } from "./adapters/filesystem/tagspaces-thumbnail-store.js";
+import { registerAdminTagTypesRoutes } from "./adapters/http/admin-tag-types-controller.js";
 import { registerAdminTagsRoutes } from "./adapters/http/admin-tags-controller.js";
 import { registerLibraryRoutes } from "./adapters/http/library-controller.js";
 import { registerSearchRoutes } from "./adapters/http/search-controller.js";
@@ -56,7 +61,7 @@ export async function createApp(dependencies: AppDependencies) {
   });
 
   const searchVideosUseCase = new SearchVideosUseCase(dependencies.videoIndex);
-  const getTagsUseCase = new GetTagsUseCase(dependencies.videoIndex);
+  const getTagsUseCase = new GetTagsUseCase(dependencies.videoIndex, dependencies.libraryStore);
   const getThumbnailUseCase = new GetThumbnailUseCase(
     new TagSpacesThumbnailStore(dependencies.libraryPath),
   );
@@ -133,6 +138,13 @@ export async function createApp(dependencies: AppDependencies) {
           dependencies.videoIndex,
           dependencies.libraryPath,
         ),
+      });
+
+      registerAdminTagTypesRoutes(api, {
+        listTagTypesUseCase: new ListTagTypesUseCase(dependencies.libraryStore),
+        createTagTypeUseCase: new CreateTagTypeUseCase(dependencies.libraryStore),
+        updateTagTypeUseCase: new UpdateTagTypeUseCase(dependencies.libraryStore),
+        deleteTagTypeUseCase: new DeleteTagTypeUseCase(dependencies.libraryStore),
       });
     }
 

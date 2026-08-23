@@ -24,11 +24,13 @@
       <SearchResultItem
         v-for="result in sortedResults"
         :key="result.id"
+        :default-color="defaultColor"
         :interactive-tags="interactiveTags"
         :show-name="showName"
         :name-links-to-edit="nameLinksToEdit"
         :result="result"
         :selected="result.id === selectedVideoId"
+        :tag-colors="tagColors"
         @select-tag="$emit('select-tag', $event)"
         @select-video="$emit('select-video', result)"
       />
@@ -40,6 +42,7 @@
 import { computed, ref } from "vue";
 
 import type { SearchResultItem as SearchResult } from "../api/types.js";
+import { DEFAULT_TAG_COLOR } from "../utils/tag-color.js";
 import { sortVideosByRecordedAt, type DateSortDirection } from "../utils/video-date.js";
 
 import SearchResultItem from "./SearchResultItem.vue";
@@ -53,12 +56,16 @@ const props = withDefaults(
     interactiveTags?: boolean;
     showName?: boolean;
     nameLinksToEdit?: boolean;
+    tagColors?: Record<string, string>;
+    defaultColor?: string;
   }>(),
   {
     emptyMessage: "No videos match the selected tags.",
     interactiveTags: true,
     showName: false,
     nameLinksToEdit: false,
+    tagColors: () => ({}),
+    defaultColor: DEFAULT_TAG_COLOR,
   },
 );
 

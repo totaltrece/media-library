@@ -42,9 +42,9 @@ test("GET /api/admin/tags lists catalog tags with usage counts", async () => {
     assert.deepEqual(response.json(), {
       count: 3,
       tags: [
-        { id: bufanda.id, name: "bufanda", usageCount: 0 },
-        { id: jota.id, name: "jota", usageCount: 1 },
-        { id: salsa.id, name: "salsa", usageCount: 2 },
+        { ...bufanda, usageCount: 0 },
+        { ...jota, usageCount: 1 },
+        { ...salsa, usageCount: 2 },
       ],
     });
 
@@ -56,7 +56,10 @@ test("GET /api/admin/tags lists catalog tags with usage counts", async () => {
     assert.strictEqual(consumerTags.statusCode, 200);
     assert.deepEqual(consumerTags.json(), {
       count: 2,
-      tags: ["jota", "salsa"],
+      tags: [
+        { name: "jota", color: jota.color },
+        { name: "salsa", color: salsa.color },
+      ],
     });
 
     await app.close();
@@ -82,8 +85,7 @@ test("PUT /api/admin/tags/:id renames a tag without changing its id or video rel
 
     assert.strictEqual(response.statusCode, 200);
     assert.deepEqual(response.json(), {
-      id: jota.id,
-      name: "jota-nueva",
+      ...libraryStore.findTagByName("jota-nueva")!,
       usageCount: 1,
     });
     assert.equal(libraryStore.findTagByName("jota"), null);
@@ -172,6 +174,33 @@ test("DELETE /api/admin/tags/:id removes the tag and its video relations", async
     });
 
     assert.strictEqual(missing.statusCode, 404);
+
+    await app.close();
+  } finally {
+    libraryStore.close();
+  }
+});
+
+test("PUT /api/admin/tags/:id updates the tag type", async () => {
+  const libraryStore = openSqliteLibraryStore(":memory:");
+
+  try {
+    const jota = libraryStore.upsertTag("jota");
+    const teacher = libraryStore.listTagTypes().find((type) => type.name === "teacher")!;
+    const app = await createAppWithStore(libraryStore);
+
+    const response = await app.inject({
+      method: "PUT",
+      url: `/api/admin/tags/${jota.id}`,
+      payload: { name: "jota", typeId: teacher.id },
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.deepEqual(response.json(), {
+      ...libraryStore.findTagByName("jota")!,
+      usageCount: 0,
+    });
+    assert.strictEqual(libraryStore.findTagById(jota.id)?.typeName, "teacher");
 
     await app.close();
   } finally {

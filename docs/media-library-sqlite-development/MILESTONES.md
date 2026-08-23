@@ -70,3 +70,10 @@ Posibles funciones:
 - retirada definitiva de la dependencia de TagSpaces.
 
 No diseñar en detalle antes de validar los milestones anteriores.
+
+---
+
+## Tag types
+
+Tipos de tag con color, ordenación por tipo y pantalla de configuración.
+Detalle en `docs/media-library-tag-types-development/`.
