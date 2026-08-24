@@ -521,6 +521,7 @@ describe("tag editor", () => {
 
     await wrapper.findAll(".tag-suggestions button")[0]!.trigger("click");
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "bufanda"]);
+    expect(wrapper.find(".tag-suggestions").exists()).toBe(false);
 
     await wrapper.setProps({ tags: ["salsa", "bufanda"] } as never);
     await input.setValue("bufanda");
@@ -544,7 +545,7 @@ describe("tag editor", () => {
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "nuevo-tag"]);
   });
 
-  it("keeps the suggestion list open after adding a tag while the input stays focused", async () => {
+  it("closes the suggestion list after adding a tag until the input is focused again", async () => {
     const wrapper = mount(TagEditor, {
       props: {
         tags: ["salsa"],
@@ -559,6 +560,11 @@ describe("tag editor", () => {
 
     await wrapper.get('[data-testid="add-new-tag"]').trigger("click");
     await wrapper.setProps({ tags: ["salsa", "estela"] } as never);
+    await nextTick();
+
+    expect(wrapper.find(".tag-suggestions").exists()).toBe(false);
+
+    await input.trigger("focus");
     await nextTick();
 
     expect(wrapper.find(".tag-suggestions").exists()).toBe(true);
@@ -584,6 +590,25 @@ describe("tag editor", () => {
     await wrapper.get('[data-testid="add-new-tag"]').trigger("click");
 
     expect(wrapper.emitted("update:tags")?.at(-1)?.[0]).toEqual(["salsa", "estela"]);
+  });
+
+  it("closes the suggestion list after a selected tag is removed", async () => {
+    const wrapper = mount(TagEditor, {
+      props: {
+        tags: ["salsa"],
+        availableTags: ["salsa", "bufanda"],
+      },
+    });
+
+    const input = wrapper.get("#admin-tag-input");
+    await input.trigger("focus");
+    await nextTick();
+    expect(wrapper.find(".tag-suggestions").exists()).toBe(true);
+
+    await wrapper.get('button[aria-label="Remove salsa"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.find(".tag-suggestions").exists()).toBe(false);
   });
 
   it("lets the keyboard highlight a matching tag and add it with Enter", async () => {
@@ -691,7 +716,7 @@ describe("admin video editor", () => {
     vi.unstubAllGlobals();
   });
 
-  it("loads current tags and saves the final list with PUT", async () => {
+  it("loads current tags and saves immediately when a tag is added or removed", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
 
@@ -700,7 +725,8 @@ describe("admin video editor", () => {
       }
 
       if (url === "/api/videos/salsa/first.mp4/tags" && init?.method === "PUT") {
-        return jsonResponse({ tags: ["salsa", "bufanda"] });
+        const body = JSON.parse(String(init.body)) as { tags: string[] };
+        return jsonResponse({ tags: body.tags });
       }
 
       if (url === "/api/videos/salsa/first.mp4/tags") {
@@ -726,25 +752,76 @@ describe("admin video editor", () => {
     expect(wrapper.get("h1").text()).toBe("Edit video");
     expect(wrapper.text()).toContain('Edit tags for "first.mp4"');
     expect(wrapper.find("#admin-tag-input").exists()).toBe(true);
+    expect(wrapper.find('[data-testid="save-tags"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
     expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
 
     await wrapper.get('button[aria-label="Remove isa"]').trigger("click");
+    await flushPromises();
+
     await wrapper.get("#admin-tag-input").setValue("bufanda");
     await wrapper.get("#admin-tag-input").trigger("keydown", { key: "Enter" });
-    await wrapper.get('[data-testid="save-tags"]').trigger("click");
+    await flushPromises();
+
+    const putBodies = fetchMock.mock.calls
+      .filter(([, init]) => init?.method === "PUT")
+      .map(([url, init]) => ({ url, body: JSON.parse(String(init?.body)) }));
+
+    expect(putBodies).toEqual([
+      { url: "/api/videos/salsa/first.mp4/tags", body: { tags: ["salsa"] } },
+      { url: "/api/videos/salsa/first.mp4/tags", body: { tags: ["salsa", "bufanda"] } },
+    ]);
+    expect(wrapper.text()).not.toContain("Tags saved.");
+  });
+
+  it("saves when Add new tag is used", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/search") {
+        return jsonResponse({ query: { tags: [] }, count: 2, results: videos });
+      }
+
+      if (url === "/api/videos/untagged.mp4/tags" && init?.method === "PUT") {
+        const body = JSON.parse(String(init.body)) as { tags: string[] };
+        return jsonResponse({ tags: body.tags });
+      }
+
+      if (url === "/api/videos/untagged.mp4/tags") {
+        return jsonResponse({ tags: [] });
+      }
+
+      const adminResponse = adminEditorResponse(url);
+      if (adminResponse !== null) {
+        return adminResponse;
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    await router.push("/admin/videos/untagged.mp4");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideoEditView, router, { id: "untagged.mp4" });
+    await flushPromises();
+
+    await wrapper.get("#admin-tag-input").setValue("giro-nuevo");
+    await wrapper.get("#admin-tag-input").trigger("focus");
+    await nextTick();
+    await wrapper.get('[data-testid="add-new-tag"]').trigger("click");
     await flushPromises();
 
     const putCall = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
-    expect(putCall?.[0]).toBe("/api/videos/salsa/first.mp4/tags");
+    expect(putCall?.[0]).toBe("/api/videos/untagged.mp4/tags");
     expect(putCall?.[1]).toMatchObject({
       method: "PUT",
-      body: JSON.stringify({ tags: ["salsa", "bufanda"] }),
+      body: JSON.stringify({ tags: ["giro-nuevo"] }),
     });
-    expect(wrapper.text()).toContain("Tags saved.");
   });
 
-  it("keeps local changes and shows an error when PUT fails", async () => {
+  it("reverts the tag and shows an error when PUT fails", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
 
@@ -777,12 +854,11 @@ describe("admin video editor", () => {
 
     await wrapper.get("#admin-tag-input").setValue("salsa");
     await wrapper.get("#admin-tag-input").trigger("keydown", { key: "Enter" });
-    await wrapper.get('[data-testid="save-tags"]').trigger("click");
     await flushPromises();
 
     expect(wrapper.text()).toContain("Unable to save tags.");
     expect(wrapper.find("#admin-tag-input").exists()).toBe(true);
-    expect(wrapper.text()).toContain("salsa");
+    expect(wrapper.find('button[aria-label="Remove salsa"]').exists()).toBe(false);
   });
 
   it("asks for confirmation before deleting a video and reloads the catalog after success", async () => {
@@ -1060,7 +1136,6 @@ describe("admin untagged flow", () => {
 
     await wrapper.get("#admin-tag-input").setValue("salsa");
     await wrapper.get("#admin-tag-input").trigger("keydown", { key: "Enter" });
-    await wrapper.get('[data-testid="save-tags"]').trigger("click");
     await flushPromises();
 
     await router.push("/");

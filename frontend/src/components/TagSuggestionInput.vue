@@ -235,14 +235,14 @@ function selectTag(tag: string): void {
 
   emit("select", normalized);
   query.value = "";
-  highlightedIndex.value = -1;
-  showSuggestions.value = true;
-  void nextTick(() => focusInput());
+  closeSuggestions();
+  tagInput.value?.blur();
 }
 
 function removeTag(tag: string): void {
   emit("remove", tag);
-  focusInput();
+  closeSuggestions();
+  tagInput.value?.blur();
 }
 
 function confirmQuery(): void {
