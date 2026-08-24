@@ -1,6 +1,6 @@
 # REST API
 
-Version: 2.1
+Version: 2.2
 
 ---
 
@@ -25,7 +25,11 @@ The API should be:
 
 - simple
 - predictable
-- stateless
+- cookie-authenticated for writes
+
+Anonymous clients may read in phase 1 (`AUTH_PUBLIC_READ=true`, the default).
+`POST`, `PUT`, and `DELETE` require an `admin` session cookie. Set
+`AUTH_PUBLIC_READ=false` to require a `view` or `admin` session on GET as well.
 
 Tag editing writes to SQLite only. The API never modifies video files or
 TagSpaces sidecars.
@@ -49,6 +53,54 @@ Response
   "status": "ok"
 }
 ```
+
+---
+
+## Auth
+
+Create the first admin with the CLI (not via HTTP):
+
+```text
+pnpm --filter @media-library/backend create-admin -- --username admin --password PASS
+```
+
+```text
+POST /api/auth/login
+```
+
+Body: `{ "username": "admin", "password": "..." }`
+
+Sets an httpOnly `SameSite=Lax` session cookie (`media_library_session`).
+Invalid credentials return **401**.
+
+```text
+POST /api/auth/logout
+```
+
+Deletes the session and clears the cookie.
+
+```text
+GET /api/auth/me
+```
+
+Returns **200** even when anonymous:
+
+```json
+{ "authenticated": false }
+```
+
+or
+
+```json
+{
+  "authenticated": true,
+  "username": "admin",
+  "role": "admin"
+}
+```
+
+Mutating endpoints (`POST` / `PUT` / `DELETE` except login and logout) return
+**401** without a session and **403** when the session role is not `admin`.
 
 ---
 
@@ -467,6 +519,7 @@ Backend
 - thumbnail serving
 - video streaming
 - admin video upload, processing, and installation of new library files
+- session login and write authorization
 
 Frontend
 
@@ -476,5 +529,6 @@ Frontend
 - displaying results
 - displaying thumbnails
 - playing streamed videos
+- logging in and out; disabling writes when not admin
 
 Filesystem paths are never exposed to clients.

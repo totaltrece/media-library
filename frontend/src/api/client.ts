@@ -1,5 +1,6 @@
 import type {
   ApiErrorResponse,
+  AuthMe,
   CatalogTag,
   CatalogTagsResponse,
   RefreshLibraryResponse,
@@ -26,6 +27,13 @@ export function buildApiUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
   return `${API_PREFIX}${normalizedPath}`;
+}
+
+function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(buildApiUrl(path), {
+    credentials: "include",
+    ...init,
+  });
 }
 
 export function buildSearchUrl(tags: string[]): string {
@@ -78,19 +86,19 @@ async function readJsonResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchTags(): Promise<TagsResponse> {
-  const response = await fetch(buildApiUrl("/tags"));
+  const response = await apiFetch("/tags");
 
   return readJsonResponse<TagsResponse>(response);
 }
 
 export async function searchVideos(tags: string[]): Promise<SearchResponse> {
-  const response = await fetch(buildSearchUrl(tags));
+  const response = await apiFetch(buildSearchUrl(tags));
 
   return readJsonResponse<SearchResponse>(response);
 }
 
 export async function refreshLibrary(): Promise<RefreshLibraryResponse> {
-  const response = await fetch(buildApiUrl("/library/refresh"), {
+  const response = await apiFetch("/library/refresh", {
     method: "POST",
   });
 
@@ -106,7 +114,7 @@ export function buildVideoTagsUrl(mediaId: string): string {
 }
 
 export async function deleteVideo(mediaId: string): Promise<void> {
-  const response = await fetch(buildVideoUrl(mediaId), {
+  const response = await apiFetch(buildVideoUrl(mediaId), {
     method: "DELETE",
   });
 
@@ -114,13 +122,13 @@ export async function deleteVideo(mediaId: string): Promise<void> {
 }
 
 export async function fetchVideoTags(mediaId: string): Promise<VideoTagsResponse> {
-  const response = await fetch(buildVideoTagsUrl(mediaId));
+  const response = await apiFetch(buildVideoTagsUrl(mediaId));
 
   return readJsonResponse<VideoTagsResponse>(response);
 }
 
 export async function updateVideoTags(mediaId: string, tags: string[]): Promise<VideoTagsResponse> {
-  const response = await fetch(buildVideoTagsUrl(mediaId), {
+  const response = await apiFetch(buildVideoTagsUrl(mediaId), {
     headers: {
       "Content-Type": "application/json",
     },
@@ -132,7 +140,7 @@ export async function updateVideoTags(mediaId: string, tags: string[]): Promise<
 }
 
 export async function fetchTagCatalog(): Promise<CatalogTagsResponse> {
-  const response = await fetch(buildApiUrl("/admin/tags"));
+  const response = await apiFetch("/admin/tags");
 
   return readJsonResponse<CatalogTagsResponse>(response);
 }
@@ -142,7 +150,7 @@ export async function updateCatalogTag(
   name: string,
   typeId: number,
 ): Promise<CatalogTag> {
-  const response = await fetch(buildApiUrl(`/admin/tags/${tagId}`), {
+  const response = await apiFetch(`/admin/tags/${tagId}`, {
     headers: {
       "Content-Type": "application/json",
     },
@@ -154,7 +162,7 @@ export async function updateCatalogTag(
 }
 
 export async function deleteCatalogTag(tagId: number): Promise<void> {
-  const response = await fetch(buildApiUrl(`/admin/tags/${tagId}`), {
+  const response = await apiFetch(`/admin/tags/${tagId}`, {
     method: "DELETE",
   });
 
@@ -162,13 +170,13 @@ export async function deleteCatalogTag(tagId: number): Promise<void> {
 }
 
 export async function fetchTagTypes(): Promise<TagTypesResponse> {
-  const response = await fetch(buildApiUrl("/admin/tag-types"));
+  const response = await apiFetch("/admin/tag-types");
 
   return readJsonResponse<TagTypesResponse>(response);
 }
 
 export async function createTagType(name: string, color: string): Promise<TagType> {
-  const response = await fetch(buildApiUrl("/admin/tag-types"), {
+  const response = await apiFetch("/admin/tag-types", {
     headers: {
       "Content-Type": "application/json",
     },
@@ -180,7 +188,7 @@ export async function createTagType(name: string, color: string): Promise<TagTyp
 }
 
 export async function updateTagType(tagTypeId: number, name: string, color: string): Promise<TagType> {
-  const response = await fetch(buildApiUrl(`/admin/tag-types/${tagTypeId}`), {
+  const response = await apiFetch(`/admin/tag-types/${tagTypeId}`, {
     headers: {
       "Content-Type": "application/json",
     },
@@ -192,7 +200,7 @@ export async function updateTagType(tagTypeId: number, name: string, color: stri
 }
 
 export async function deleteTagType(tagTypeId: number): Promise<void> {
-  const response = await fetch(buildApiUrl(`/admin/tag-types/${tagTypeId}`), {
+  const response = await apiFetch(`/admin/tag-types/${tagTypeId}`, {
     method: "DELETE",
   });
 
@@ -211,7 +219,7 @@ export async function uploadVideo(file: File): Promise<UploadAcceptedResponse> {
   const body = new FormData();
   body.append("video", file);
 
-  const response = await fetch(buildApiUrl("/admin/uploads"), {
+  const response = await apiFetch("/admin/uploads", {
     method: "POST",
     body,
   });
@@ -220,17 +228,43 @@ export async function uploadVideo(file: File): Promise<UploadAcceptedResponse> {
 }
 
 export async function fetchUploadJob(jobId: string): Promise<UploadJobView> {
-  const response = await fetch(buildUploadJobUrl(jobId));
+  const response = await apiFetch(buildUploadJobUrl(jobId));
 
   return readJsonResponse<UploadJobView>(response);
 }
 
 export async function fetchActiveUploadJob(): Promise<UploadJobView | null> {
-  const response = await fetch(buildActiveUploadJobUrl());
+  const response = await apiFetch(buildActiveUploadJobUrl());
 
   if (response.status === 404) {
     return null;
   }
 
   return readJsonResponse<UploadJobView>(response);
+}
+
+export async function fetchAuthMe(): Promise<AuthMe> {
+  const response = await apiFetch("/auth/me");
+
+  return readJsonResponse<AuthMe>(response);
+}
+
+export async function login(username: string, password: string): Promise<AuthMe> {
+  const response = await apiFetch("/auth/login", {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+
+  return readJsonResponse<AuthMe>(response);
+}
+
+export async function logout(): Promise<AuthMe> {
+  const response = await apiFetch("/auth/logout", {
+    method: "POST",
+  });
+
+  return readJsonResponse<AuthMe>(response);
 }

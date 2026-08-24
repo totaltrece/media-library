@@ -6,7 +6,7 @@ import { InMemoryProcessingJobStore } from "./adapters/in-memory-processing-job-
 import { InMemoryVideoIndex } from "./adapters/in-memory-video-index.js";
 import { WorkspaceVideoDiscovery } from "./adapters/indexer/workspace-video-discovery.js";
 import { SqliteLibraryIndexer } from "./adapters/sqlite/sqlite-library-indexer.js";
-import { openSqliteLibraryStore } from "./adapters/sqlite/sqlite-library-store.js";
+import { openSqliteStores } from "./adapters/sqlite/sqlite-library-store.js";
 import { createApp } from "./app.js";
 import { EnsureLibraryMediaUseCase } from "./application/ensure-library-media.js";
 import { ProcessVideoJobUseCase } from "./application/process-video-job.js";
@@ -20,7 +20,8 @@ async function main(): Promise<void> {
   const libraryPath = config.libraryPath;
   const port = config.port;
   const staticRoot = resolveFrontendDistPath(import.meta.url);
-  const libraryStore = openSqliteLibraryStore(config.sqlitePath);
+  const stores = openSqliteStores(config.sqlitePath);
+  const libraryStore = stores.libraryStore;
   let storeOpen = true;
 
   const closeStore = (): void => {
@@ -29,7 +30,7 @@ async function main(): Promise<void> {
     }
 
     storeOpen = false;
-    libraryStore.close();
+    stores.close();
   };
 
   try {
@@ -59,6 +60,8 @@ async function main(): Promise<void> {
       videoIndex,
       libraryPath,
       libraryStore,
+      authStore: stores.authStore,
+      authPublicRead: config.authPublicRead,
       refreshLibraryUseCase,
       processVideoJobUseCase,
       processingJobStore,

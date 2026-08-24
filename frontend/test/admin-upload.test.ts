@@ -149,6 +149,7 @@ describe("admin video upload", () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads", {
+      credentials: "include",
       method: "POST",
       body: expect.any(FormData),
     });
@@ -684,7 +685,7 @@ describe("admin video upload", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads/active");
+    expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads/active", { credentials: "include" });
     expect(wrapper.text()).toContain("Video in progress");
     expect(wrapper.get('[data-testid="upload-file-name"]').text()).toBe("PXL_20260813_214135367.TS.mp4");
     expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
@@ -780,10 +781,9 @@ describe("admin video upload", () => {
     expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
     expect(wrapper.text()).not.toContain("Select video");
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
-    expect(fetchMock).toHaveBeenCalledWith("/api/tags");
-    expect(fetchMock).toHaveBeenCalledWith("/api/search");
-    expect(
-      fetchMock.mock.calls.some(([, init]) => init?.method === "POST"),
-    ).toBe(false);
+    expect(fetchMock).toHaveBeenCalledWith("/api/tags", { credentials: "include" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/search", { credentials: "include" });
+    const fetchCalls = fetchMock.mock.calls as Array<[RequestInfo | URL, RequestInit?]>;
+    expect(fetchCalls.some(([, init]) => init?.method === "POST")).toBe(false);
   });
 });

@@ -31,6 +31,12 @@ export interface ApiErrorResponse {
   };
 }
 
+export type AuthRole = "admin" | "view";
+
+export type AuthMe =
+  | { authenticated: false }
+  | { authenticated: true; username: string; role: AuthRole };
+
 export interface RefreshLibraryResponse {
   count: number;
 }

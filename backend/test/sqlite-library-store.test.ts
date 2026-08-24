@@ -39,7 +39,7 @@ test("schema migrations are idempotent", () => {
     .all()
     .map((row) => (row as { version: number }).version);
 
-  assert.deepEqual(versions, [1, 2, 3]);
+  assert.deepEqual(versions, [1, 2, 3, 4]);
 
   database.close();
 });
@@ -437,7 +437,7 @@ test("migration v2 adds recorded_at without dropping existing videos", () => {
     recorded_at: string | null;
   };
 
-  assert.deepEqual(versions, [1, 2, 3]);
+  assert.deepEqual(versions, [1, 2, 3, 4]);
   assert.equal(row.id, "clip.mp4");
   assert.equal(row.recorded_at, null);
   database.close();

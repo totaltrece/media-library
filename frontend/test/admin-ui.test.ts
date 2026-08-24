@@ -6,6 +6,7 @@ import { createMemoryHistory, createRouter, type Router } from "vue-router";
 import type { SearchResultItem } from "../src/api/types.js";
 import TagEditor from "../src/components/TagEditor.vue";
 import TagSearch from "../src/components/TagSearch.vue";
+import { ANONYMOUS_AUTH, setAuthSessionForTests } from "../src/auth/session.js";
 import { routes } from "../src/router.js";
 import AdminVideoEditView from "../src/views/AdminVideoEditView.vue";
 import AdminVideosView from "../src/views/AdminVideosView.vue";
@@ -190,7 +191,7 @@ describe("admin video list", () => {
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/search");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search", { credentials: "include" });
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
     expect(wrapper.text()).toContain("4 results");
     expect(wrapper.text()).toContain("Untagged (1)");
@@ -236,9 +237,9 @@ describe("admin video list", () => {
     await wrapper.get('button[aria-label="Refresh library"]').trigger("click");
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/library/refresh", { method: "POST" });
-    expect(fetchMock).toHaveBeenCalledWith("/api/search");
-    expect(fetchMock).toHaveBeenCalledWith("/api/tags");
+    expect(fetchMock).toHaveBeenCalledWith("/api/library/refresh", { credentials: "include", method: "POST" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/search", { credentials: "include" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/tags", { credentials: "include" });
     expect(wrapper.text()).toContain("4 results");
   });
 
@@ -262,7 +263,7 @@ describe("admin video list", () => {
     await addSearchTags(wrapper, ["zenit"]);
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=zenit");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=zenit", { credentials: "include" });
     expect(wrapper.text()).toContain("1 result");
     expect(hasVideoNamed(wrapper, "20260715.mp4")).toBe(true);
     expect(hasVideoNamed(wrapper, "zenit-practice.mp4")).toBe(false);
@@ -289,7 +290,7 @@ describe("admin video list", () => {
     await addSearchTags(wrapper, ["salsa", "jota"]);
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota", { credentials: "include" });
     expect(wrapper.text()).toContain("1 result");
     expect(hasVideoNamed(wrapper, "first.mp4")).toBe(true);
     expect(hasVideoNamed(wrapper, "zenit-practice.mp4")).toBe(false);
@@ -414,7 +415,7 @@ describe("admin video list", () => {
     await zenitTag.trigger("click");
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=zenit");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=zenit", { credentials: "include" });
     expect(wrapper.findAll(".selected-tags .tag-chip")).toHaveLength(1);
     expect(wrapper.get(".selected-tags").text()).toContain("zenit");
     expect(wrapper.text()).toContain("1 result");
@@ -458,8 +459,8 @@ describe("admin video list", () => {
     await wrapper.get('button[aria-label="Add jota to search"]').trigger("click");
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa");
-    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa", { credentials: "include" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota", { credentials: "include" });
     expect(wrapper.findAll(".selected-tags .tag-chip")).toHaveLength(2);
     expect(wrapper.text()).toContain("1 result");
     expect(hasVideoNamed(wrapper, "first.mp4")).toBe(true);
@@ -775,6 +776,41 @@ describe("admin video editor", () => {
     expect(wrapper.text()).not.toContain("Tags saved.");
   });
 
+  it("does not persist tags when the session is not admin", async () => {
+    setAuthSessionForTests(ANONYMOUS_AUTH);
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/search") {
+        return jsonResponse({ query: { tags: [] }, count: 2, results: videos });
+      }
+
+      if (url === "/api/videos/salsa/first.mp4/tags") {
+        return jsonResponse({ tags: ["salsa", "isa"] });
+      }
+
+      const adminResponse = adminEditorResponse(url);
+      if (adminResponse !== null) {
+        return adminResponse;
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    await router.push("/admin/videos/salsa/first.mp4");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideoEditView, router, { id: "salsa/first.mp4" });
+    await flushPromises();
+
+    expect(wrapper.get("#admin-tag-input").attributes("disabled")).toBeDefined();
+    expect(wrapper.find('button[aria-label="Remove isa"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="delete-video"]').attributes("disabled")).toBeDefined();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+  });
+
   it("saves when Add new tag is used", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -928,9 +964,9 @@ describe("admin video editor", () => {
     await wrapper.get('[data-testid="confirm-delete-video"]').trigger("click");
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/videos/salsa/first.mp4", { method: "DELETE" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/videos/salsa/first.mp4", { credentials: "include", method: "DELETE" });
     expect(router.currentRoute.value.name).toBe("home");
-    expect(fetchMock).toHaveBeenCalledWith("/api/search");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search", { credentials: "include" });
     expect(wrapper.text()).toContain("Untagged (1)");
     expect(hasVideoNamed(wrapper, "first.mp4")).toBe(false);
   });
@@ -1164,8 +1200,8 @@ describe("consumer search view", () => {
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/tags");
-    expect(fetchMock).toHaveBeenCalledWith("/api/search");
+    expect(fetchMock).toHaveBeenCalledWith("/api/tags", { credentials: "include" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/search", { credentials: "include" });
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);
     expect(wrapper.find(".search-results").exists()).toBe(true);
     expect(wrapper.text()).toContain("4 results");
@@ -1194,7 +1230,7 @@ describe("consumer search view", () => {
     await addSearchTags(wrapper, ["salsa"]);
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa", { credentials: "include" });
     expect(wrapper.text()).toContain("2 results");
 
     const clearButton = wrapper.findAll("button").find((button) => button.text() === "Clear tags");
@@ -1274,7 +1310,7 @@ describe("consumer search view", () => {
     await addSearchTags(wrapper, ["salsa"]);
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa", { credentials: "include" });
     expect(wrapper.find(".tag-search .primary-button").exists()).toBe(false);
 
     await wrapper.get('button[aria-label="Add jota to search"]').trigger("click");
@@ -1282,7 +1318,7 @@ describe("consumer search view", () => {
 
     expect(wrapper.get(".selected-tags").text()).toContain("salsa");
     expect(wrapper.get(".selected-tags").text()).toContain("jota");
-    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=salsa&tag=jota", { credentials: "include" });
     expect(
       fetchMock.mock.calls.some(([, init]) => init?.method === "PUT" || init?.method === "POST"),
     ).toBe(false);

@@ -1,3 +1,4 @@
+import cookie from "@fastify/cookie";
 import Fastify from "fastify";
 
 import { AddVideoTagUseCase } from "./application/add-video-tag.js";
@@ -27,6 +28,8 @@ import { FilesystemVideoStore } from "./adapters/filesystem/filesystem-video-sto
 import { TagSpacesThumbnailStore } from "./adapters/filesystem/tagspaces-thumbnail-store.js";
 import { registerAdminTagTypesRoutes } from "./adapters/http/admin-tag-types-controller.js";
 import { registerAdminTagsRoutes } from "./adapters/http/admin-tags-controller.js";
+import { registerAuthRoutes } from "./adapters/http/auth-controller.js";
+import { createAuthGuard } from "./adapters/http/auth-guard.js";
 import { registerLibraryRoutes } from "./adapters/http/library-controller.js";
 import { registerSearchRoutes } from "./adapters/http/search-controller.js";
 import { registerStaticFrontend } from "./adapters/http/register-static-frontend.js";
@@ -35,6 +38,9 @@ import { registerThumbnailRoutes } from "./adapters/http/thumbnail-controller.js
 import { registerUploadsRoutes } from "./adapters/http/uploads-controller.js";
 import { registerVideoRoutes } from "./adapters/http/video-controller.js";
 import { registerVideoTagsRoutes } from "./adapters/http/video-tags-controller.js";
+import { LoginUseCase } from "./application/login.js";
+import { LogoutUseCase } from "./application/logout.js";
+import type { AuthStore } from "./ports/auth-store.js";
 import type { LibraryMediaInstaller } from "./ports/library-media-installer.js";
 import type { LibraryStore } from "./ports/library-store.js";
 import type { ProcessingJobStore } from "./ports/processing-job-store.js";
@@ -51,6 +57,8 @@ export interface AppDependencies {
   libraryMediaInstaller?: LibraryMediaInstaller;
   backgroundUploadErrorLogger?: BackgroundUploadErrorLogger;
   uploadMaxBytes?: number;
+  authStore?: AuthStore;
+  authPublicRead?: boolean;
 }
 
 export async function createApp(dependencies: AppDependencies) {
@@ -69,7 +77,21 @@ export async function createApp(dependencies: AppDependencies) {
     new FilesystemVideoStore(dependencies.libraryPath),
   );
 
+  if (dependencies.authStore !== undefined) {
+    await app.register(cookie);
+  }
+
   await app.register(async (api) => {
+    if (dependencies.authStore !== undefined) {
+      const authStore = dependencies.authStore;
+      api.addHook("preHandler", createAuthGuard(authStore, dependencies.authPublicRead ?? true));
+      registerAuthRoutes(api, {
+        authStore,
+        loginUseCase: new LoginUseCase(authStore),
+        logoutUseCase: new LogoutUseCase(authStore),
+      });
+    }
+
     api.get("/health", async () => {
       return { status: "ok" };
     });

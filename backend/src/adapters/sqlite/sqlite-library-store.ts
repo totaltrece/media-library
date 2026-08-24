@@ -12,6 +12,7 @@ import type {
 } from "../../ports/library-store.js";
 
 import { sqliteMigrations } from "./migrations.js";
+import { SqliteAuthStore } from "./sqlite-auth-store.js";
 
 const TAG_SELECT = `
   SELECT
@@ -411,17 +412,36 @@ export class SqliteLibraryStore implements LibraryStore {
   }
 }
 
-export function openSqliteLibraryStore(databasePath: string): SqliteLibraryStore {
+export interface SqliteStores {
+  libraryStore: SqliteLibraryStore;
+  authStore: SqliteAuthStore;
+  close(): void;
+}
+
+export function openSqliteDatabase(databasePath: string): DatabaseSync {
   if (databasePath !== ":memory:") {
     mkdirSync(dirname(databasePath), { recursive: true });
   }
 
   const database = new DatabaseSync(databasePath);
-  const store = new SqliteLibraryStore(database);
+  applySqliteMigrations(database);
+  return database;
+}
 
-  store.initialize();
+export function openSqliteStores(databasePath: string): SqliteStores {
+  const database = openSqliteDatabase(databasePath);
 
-  return store;
+  return {
+    libraryStore: new SqliteLibraryStore(database),
+    authStore: new SqliteAuthStore(database),
+    close: () => {
+      database.close();
+    },
+  };
+}
+
+export function openSqliteLibraryStore(databasePath: string): SqliteLibraryStore {
+  return new SqliteLibraryStore(openSqliteDatabase(databasePath));
 }
 
 export function applySqliteMigrations(database: DatabaseSync): void {

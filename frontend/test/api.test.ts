@@ -40,7 +40,7 @@ describe("refreshLibrary", () => {
     const { refreshLibrary } = await import("../src/api/client.js");
     const response = await refreshLibrary();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/library/refresh", { method: "POST" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/library/refresh", { credentials: "include", method: "POST" });
     expect(response).toEqual({ count: 3 });
 
     vi.unstubAllGlobals();
@@ -74,8 +74,9 @@ describe("video tags API", () => {
       tags: ["salsa", "bufanda"],
     });
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/videos/salsa/first.mp4/tags");
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/videos/salsa/first.mp4/tags", { credentials: "include" });
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/videos/salsa/first.mp4/tags", {
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       method: "PUT",
       body: JSON.stringify({ tags: ["salsa", "bufanda"] }),
@@ -96,7 +97,7 @@ describe("video tags API", () => {
 
     expect(buildVideoUrl("salsa/first.mp4")).toBe("/api/videos/salsa/first.mp4");
     await expect(deleteVideo("salsa/first.mp4")).resolves.toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledWith("/api/videos/salsa/first.mp4", { method: "DELETE" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/videos/salsa/first.mp4", { credentials: "include", method: "DELETE" });
 
     vi.unstubAllGlobals();
   });
@@ -136,13 +137,14 @@ describe("tag catalog API", () => {
     });
     await expect(deleteCatalogTag(7)).resolves.toBeUndefined();
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/admin/tags");
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/admin/tags", { credentials: "include" });
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/admin/tags/7", {
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       method: "PUT",
       body: JSON.stringify({ name: "salsa-linea", typeId: 3 }),
     });
-    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/admin/tags/7", { method: "DELETE" });
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/admin/tags/7", { credentials: "include", method: "DELETE" });
 
     vi.unstubAllGlobals();
   });
@@ -163,6 +165,7 @@ describe("admin uploads API", () => {
     await expect(uploadVideo(file)).resolves.toEqual({ jobId: "job-1", status: "uploading" });
 
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads", {
+      credentials: "include",
       method: "POST",
       body: expect.any(FormData),
     });
@@ -195,7 +198,7 @@ describe("admin uploads API", () => {
       status: "processing",
       phase: "generating_thumbnail",
     });
-    expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads/job-1");
+    expect(fetchMock).toHaveBeenCalledWith("/api/admin/uploads/job-1", { credentials: "include" });
 
     vi.unstubAllGlobals();
   });
@@ -231,8 +234,8 @@ describe("admin uploads API", () => {
       jobId: "job-1",
       progress: 47,
     });
-    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/admin/uploads/active");
-    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/admin/uploads/active");
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/admin/uploads/active", { credentials: "include" });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/admin/uploads/active", { credentials: "include" });
 
     vi.unstubAllGlobals();
   });

@@ -20,7 +20,7 @@
           type="text"
         />
         <ColorPickerField v-model="createColor" />
-        <button class="primary-button" data-testid="add-tag-type" type="button" :disabled="saving" @click="addType">
+        <button class="primary-button" data-testid="add-tag-type" type="button" :disabled="saving || !canWrite" @click="addType">
           Add type
         </button>
       </form>
@@ -39,6 +39,7 @@
             :aria-label="`Edit ${type.name}`"
             class="admin-tag-action"
             type="button"
+            :disabled="saving"
             @click="startEdit(type)"
           >
             Edit
@@ -89,7 +90,7 @@
             class="primary-button"
             data-testid="save-tag-type"
             type="button"
-            :disabled="saving"
+            :disabled="saving || !canWrite"
             @click="saveEdit"
           >
             Save
@@ -118,7 +119,7 @@
             class="primary-button"
             data-testid="confirm-delete-tag-type"
             type="button"
-            :disabled="saving"
+            :disabled="saving || !canWrite"
             @click="confirmDelete"
           >
             Delete
@@ -134,6 +135,7 @@ import { computed, onMounted, ref } from "vue";
 
 import { createTagType, deleteTagType, fetchTagTypes, updateTagType } from "../api/client.js";
 import type { TagType } from "../api/types.js";
+import { useAuth } from "../auth/session.js";
 import AppHeader from "../components/AppHeader.vue";
 import ColorPickerField from "../components/ColorPickerField.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
@@ -141,6 +143,7 @@ import LoadingIndicator from "../components/LoadingIndicator.vue";
 import { DEFAULT_TAG_COLOR } from "../utils/tag-color.js";
 
 const types = ref<TagType[]>([]);
+const { canWrite } = useAuth();
 const loading = ref(true);
 const saving = ref(false);
 const error = ref<string | null>(null);
@@ -179,6 +182,10 @@ async function loadTypes(): Promise<void> {
 }
 
 async function addType(): Promise<void> {
+  if (!canWrite.value) {
+    return;
+  }
+
   saving.value = true;
   actionError.value = null;
 
@@ -207,7 +214,7 @@ function cancelEdit(): void {
 }
 
 async function saveEdit(): Promise<void> {
-  if (editingId.value === null) {
+  if (!canWrite.value || editingId.value === null) {
     return;
   }
 
@@ -241,7 +248,7 @@ function cancelDelete(): void {
 }
 
 async function confirmDelete(): Promise<void> {
-  if (confirmingId.value === null) {
+  if (!canWrite.value || confirmingId.value === null) {
     return;
   }
 

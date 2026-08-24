@@ -131,11 +131,7 @@
           @keydown.escape="cancelEdit"
         />
         <label class="admin-tag-field" for="edit-tag-type">Type</label>
-        <select id="edit-tag-type" v-model.number="editTypeId">
-          <option v-for="type in types" :key="type.id" :value="type.id">
-            {{ type.name }}
-          </option>
-        </select>
+        <TagTypeSelect id="edit-tag-type" v-model="editTypeId" :types="types" />
         <div class="search-actions">
           <button class="secondary-button" type="button" :disabled="saving" @click="cancelEdit">
             Cancel
@@ -144,7 +140,7 @@
             class="primary-button"
             data-testid="save-tag"
             type="button"
-            :disabled="saving"
+            :disabled="saving || !canWrite"
             @click="saveEdit"
           >
             Save
@@ -176,7 +172,7 @@
             class="primary-button"
             data-testid="confirm-delete-tag"
             type="button"
-            :disabled="saving"
+            :disabled="saving || !canWrite"
             @click="confirmDelete"
           >
             Delete
@@ -192,14 +188,17 @@ import { computed, onMounted, ref, watch } from "vue";
 
 import { deleteCatalogTag, fetchTagCatalog, fetchTagTypes, updateCatalogTag } from "../api/client.js";
 import type { CatalogTag, TagType } from "../api/types.js";
+import { useAuth } from "../auth/session.js";
 import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
+import TagTypeSelect from "../components/TagTypeSelect.vue";
 import { tagChipStyle } from "../utils/tag-color.js";
 
 type TagSort = "name-asc" | "name-desc" | "usage-desc" | "usage-asc" | "type-asc" | "type-desc";
 
 const tags = ref<CatalogTag[]>([]);
+const { canWrite } = useAuth();
 const types = ref<TagType[]>([]);
 const filterQuery = ref("");
 const sort = ref<TagSort>("name-asc");
@@ -307,7 +306,7 @@ function cancelEdit(): void {
 }
 
 async function saveEdit(): Promise<void> {
-  if (editingId.value === null) {
+  if (!canWrite.value || editingId.value === null) {
     return;
   }
 
@@ -337,7 +336,7 @@ function cancelDelete(): void {
 }
 
 async function confirmDelete(): Promise<void> {
-  if (confirmingId.value === null) {
+  if (!canWrite.value || confirmingId.value === null) {
     return;
   }
 
@@ -500,8 +499,7 @@ async function confirmDelete(): Promise<void> {
   font-weight: 600;
 }
 
-.admin-tag-confirm-modal input,
-.admin-tag-confirm-modal select {
+.admin-tag-confirm-modal input {
   border: 1px solid #dadce0;
   border-radius: 0.5rem;
   font-size: 0.875rem;

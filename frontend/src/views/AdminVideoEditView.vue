@@ -27,6 +27,7 @@
           <TagEditor
             :available-tags="availableTags"
             :default-color="defaultColor"
+            :disabled="!canWrite"
             :tag-colors="tagColors"
             :tags="draftTags"
             @update:tags="onTagsChange"
@@ -37,7 +38,7 @@
               class="danger-button"
               data-testid="delete-video"
               type="button"
-              :disabled="saving || deleting"
+              :disabled="saving || deleting || !canWrite"
               @click="openDeleteModal"
             >
               Delete video
@@ -81,7 +82,7 @@
             class="danger-button"
             data-testid="confirm-delete-video"
             type="button"
-            :disabled="deleting"
+            :disabled="deleting || !canWrite"
             @click="confirmDelete"
           >
             {{ deleting ? "Deleting..." : "Delete video" }}
@@ -107,6 +108,7 @@ import { useRouter } from "vue-router";
 
 import { ApiRequestError, deleteVideo, fetchTagCatalog, fetchTagTypes, fetchVideoTags, searchVideos, updateVideoTags } from "../api/client.js";
 import type { SearchResultItem as VideoResult } from "../api/types.js";
+import { useAuth } from "../auth/session.js";
 import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
@@ -120,6 +122,7 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
+const { canWrite } = useAuth();
 const video = ref<VideoResult | null>(null);
 const availableTags = ref<string[]>([]);
 const tagColors = ref<Record<string, string>>({});
@@ -209,6 +212,10 @@ function onTagsChange(tags: string[]): void {
 }
 
 async function persistTags(): Promise<void> {
+  if (!canWrite.value) {
+    return;
+  }
+
   if (saveInFlight) {
     saveQueued = true;
     return;

@@ -10,6 +10,7 @@
       :available-tags="availableTags"
       :default-color="defaultColor"
       :selected-tags="tags"
+      :disabled="disabled"
       :tag-colors="tagColors"
       @remove="removeTag"
       @select="addTag"
@@ -25,6 +26,7 @@ const props = defineProps<{
   availableTags: string[];
   tagColors?: Record<string, string>;
   defaultColor?: string;
+  disabled?: boolean;
 }>();
 
 const emit = defineEmits<{
