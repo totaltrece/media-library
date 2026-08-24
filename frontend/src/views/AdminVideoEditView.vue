@@ -27,7 +27,6 @@
           <TagEditor
             :available-tags="availableTags"
             :default-color="defaultColor"
-            :disabled="!canWrite"
             :tag-colors="tagColors"
             :tags="draftTags"
             @update:tags="onTagsChange"
@@ -107,7 +106,7 @@ import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import { ApiRequestError, deleteVideo, fetchTagCatalog, fetchTagTypes, fetchVideoTags, searchVideos, updateVideoTags } from "../api/client.js";
-import type { SearchResultItem as VideoResult } from "../api/types.js";
+import type { CatalogTag, SearchResultItem as VideoResult } from "../api/types.js";
 import { useAuth } from "../auth/session.js";
 import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
@@ -116,6 +115,7 @@ import SearchResultItem from "../components/SearchResultItem.vue";
 import TagEditor from "../components/TagEditor.vue";
 import VideoPlayer from "../components/VideoPlayer.vue";
 import { DEFAULT_TAG_COLOR, tagColorMap } from "../utils/tag-color.js";
+import { sortTagsByType } from "../utils/tag-order.js";
 
 const props = defineProps<{
   id: string;
@@ -125,8 +125,10 @@ const router = useRouter();
 const { canWrite } = useAuth();
 const video = ref<VideoResult | null>(null);
 const availableTags = ref<string[]>([]);
+const catalogTags = ref<CatalogTag[]>([]);
 const tagColors = ref<Record<string, string>>({});
 const defaultColor = ref(DEFAULT_TAG_COLOR);
+const defaultTypeSortOrder = ref(Number.MAX_SAFE_INTEGER);
 const savedTags = ref<string[]>([]);
 const draftTags = ref<string[]>([]);
 const loading = ref(true);
@@ -143,6 +145,14 @@ let saveQueued = false;
 const pageSubtitle = computed(
   () => `Edit tags for "${video.value?.name ?? props.id}"`,
 );
+
+const typeSortByName = computed(() =>
+  Object.fromEntries(catalogTags.value.map((tag) => [tag.name, tag.typeSortOrder])),
+);
+
+function orderedTags(tags: string[]): string[] {
+  return sortTagsByType(tags, typeSortByName.value, defaultTypeSortOrder.value);
+}
 
 const previewResult = computed(() => {
   if (video.value === null) {
@@ -194,8 +204,10 @@ async function loadVideo(): Promise<void> {
       tags: videoTags.tags,
       recordedAt: null,
     };
-    savedTags.value = [...videoTags.tags];
-    draftTags.value = [...videoTags.tags];
+    catalogTags.value = catalog.tags;
+    defaultTypeSortOrder.value = types.types.find((type) => type.isDefault)?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    savedTags.value = orderedTags(videoTags.tags);
+    draftTags.value = [...savedTags.value];
     availableTags.value = catalog.tags.map((tag) => tag.name);
     tagColors.value = tagColorMap(catalog.tags);
     defaultColor.value = types.types.find((type) => type.isDefault)?.color ?? DEFAULT_TAG_COLOR;
@@ -207,7 +219,7 @@ async function loadVideo(): Promise<void> {
 }
 
 function onTagsChange(tags: string[]): void {
-  draftTags.value = tags;
+  draftTags.value = orderedTags(tags);
   void persistTags();
 }
 
@@ -237,10 +249,10 @@ async function persistTags(): Promise<void> {
 
       try {
         const response = await updateVideoTags(props.id, tagsToSave);
-        savedTags.value = [...response.tags];
+        savedTags.value = orderedTags(response.tags);
 
         if (!saveQueued) {
-          draftTags.value = [...response.tags];
+          draftTags.value = [...savedTags.value];
         }
 
         availableTags.value = uniqueTags([...availableTags.value, ...response.tags]);

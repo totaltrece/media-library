@@ -24,6 +24,7 @@
           ref="videoElement"
           controls
           playsinline
+          :controlslist="canWrite ? undefined : 'nodownload'"
           :src="videoUrl"
           @error="onVideoError"
         />
@@ -47,6 +48,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import { buildApiUrl } from "../api/client.js";
+import { useAuth } from "../auth/session.js";
 import ErrorMessage from "./ErrorMessage.vue";
 import { colorForTag, DEFAULT_TAG_COLOR, tagChipStyle } from "../utils/tag-color.js";
 
@@ -67,6 +69,7 @@ const emit = defineEmits<{
   close: [];
 }>();
 
+const { canWrite } = useAuth();
 const videoElement = ref<HTMLVideoElement | null>(null);
 const playbackError = ref<string | null>(null);
 

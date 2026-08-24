@@ -83,7 +83,7 @@ test("new filesystem videos are inserted without changing existing tags", async 
 
     assert.deepEqual(result, { discovered: 5, inserted: 2 });
     assert.deepEqual(libraryStore.listVideosWithTags(), [
-      { id: "video1.mp4", recordedAt: null, tags: ["salsa", "bea"] },
+      { id: "video1.mp4", recordedAt: null, tags: ["bea", "salsa"] },
       { id: "video2.mp4", recordedAt: null, tags: ["bachata"] },
       { id: "video3.mp4", recordedAt: null, tags: ["linea"] },
       { id: "video4.mp4", recordedAt: null, tags: [] },

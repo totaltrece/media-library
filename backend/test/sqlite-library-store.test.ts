@@ -10,6 +10,18 @@ import {
   openSqliteLibraryStore,
 } from "../src/adapters/sqlite/sqlite-library-store.js";
 import { sqliteMigrations } from "../src/adapters/sqlite/migrations.js";
+import type { LibraryStore } from "../src/ports/library-store.js";
+
+function assignTagType(store: LibraryStore, tagName: string, typeName: string): void {
+  const tag = store.findTagByName(tagName);
+  const type = store.listTagTypes().find((item) => item.name === typeName);
+
+  if (tag === null || type === undefined) {
+    throw new Error(`Unable to assign ${tagName} to ${typeName}`);
+  }
+
+  store.updateTag(tag.id, tag.name, type.id);
+}
 
 test("openSqliteLibraryStore initializes the schema on a file database", async () => {
   const directory = await mkdtemp(join(tmpdir(), "media-library-sqlite-"));
@@ -77,20 +89,22 @@ test("tags keep their original names and reject exact duplicates", () => {
   }
 });
 
-test("video tags preserve order and replace previous assignments", () => {
+test("video tags are listed by type then name", () => {
   const store = openSqliteLibraryStore(":memory:");
 
   try {
     store.upsertVideo("salsa/first.mp4");
-    store.setVideoTags("salsa/first.mp4", ["salsa", "bea", "linea"]);
-    store.setVideoTags("salsa/first.mp4", ["bea", "salsa"]);
+    store.setVideoTags("salsa/first.mp4", ["isa", "bufanda", "salsa", "linea"]);
+    assignTagType(store, "salsa", "type");
+    assignTagType(store, "linea", "style");
+    assignTagType(store, "isa", "teacher");
 
-    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["bea", "salsa"]);
+    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["salsa", "linea", "isa", "bufanda"]);
     assert.deepEqual(store.listVideosWithTags(), [
       {
         id: "salsa/first.mp4",
         recordedAt: null,
-        tags: ["bea", "salsa"],
+        tags: ["salsa", "linea", "isa", "bufanda"],
       },
     ]);
   } finally {
@@ -239,7 +253,7 @@ test("empty video ids and tag names are rejected", () => {
   }
 });
 
-test("addVideoTag appends a new tag without changing existing order", () => {
+test("addVideoTag appends a new tag without duplicating it", () => {
   const store = openSqliteLibraryStore(":memory:");
 
   try {
@@ -248,7 +262,7 @@ test("addVideoTag appends a new tag without changing existing order", () => {
     store.addVideoTag("salsa/first.mp4", "bufanda");
     store.addVideoTag("salsa/first.mp4", "bufanda");
 
-    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["salsa", "isa", "jota", "bufanda"]);
+    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["bufanda", "isa", "jota", "salsa"]);
   } finally {
     store.close();
   }
@@ -276,7 +290,7 @@ test("removeVideoTag keeps remaining tags in order and leaves the catalog intact
     store.removeVideoTag("salsa/first.mp4", "isa");
     store.removeVideoTag("salsa/first.mp4", "missing");
 
-    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["salsa", "jota", "bufanda"]);
+    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["bufanda", "jota", "salsa"]);
     assert.deepEqual(
       store.listTags().map((tag) => tag.name),
       ["bufanda", "isa", "jota", "salsa"],
@@ -306,7 +320,7 @@ test("setVideoTags rolls back when a later tag is invalid", () => {
     store.setVideoTags("salsa/first.mp4", ["salsa", "isa"]);
 
     assert.throws(() => store.setVideoTags("salsa/first.mp4", ["jota", ""]), /Tag name must not be empty/);
-    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["salsa", "isa"]);
+    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["isa", "salsa"]);
     assert.equal(store.findTagByName("jota"), null);
   } finally {
     store.close();
@@ -346,7 +360,7 @@ test("updateTag changes the name and keeps the same id and video relations", () 
     assert.strictEqual(renamed.name, "jota-nueva");
     assert.strictEqual(renamed.typeId, teacher.id);
     assert.equal(store.findTagByName("jota"), null);
-    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["salsa", "jota-nueva"]);
+    assert.deepEqual(store.getVideoTags("salsa/first.mp4"), ["jota-nueva", "salsa"]);
   } finally {
     store.close();
   }
