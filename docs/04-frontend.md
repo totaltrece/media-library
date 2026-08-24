@@ -97,8 +97,9 @@ The frontend never downloads or copies media files.
 The catalog lives at `/`. It reuses `TagSearch` and `GET /api/search?tag=...`
 to find videos by tags, filter untagged items, and play them in a modal.
 The Edit video link between the thumbnail and tags goes to `/admin/videos/:id`.
-The edit screen updates tags through `GET /api/videos/:id/tags`, `GET /api/admin/tags`,
-`GET /api/admin/tag-types`, and `PUT /api/videos/:id/tags`. New tags default to
+The edit screen updates tags immediately through `GET /api/videos/:id/tags`,
+`GET /api/admin/tags`, `GET /api/admin/tag-types`, and `PUT /api/videos/:id/tags`
+whenever a tag is added or removed. There is no save button. New tags default to
 the resource type. It can also delete the video with
 `DELETE /api/videos/:id` after a confirmation modal. A successful delete
 returns to `/`, which reloads the catalog from `GET /api/search` and

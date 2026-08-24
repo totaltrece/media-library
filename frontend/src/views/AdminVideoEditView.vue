@@ -25,22 +25,14 @@
 
         <div class="admin-video-tags">
           <TagEditor
-            v-model:tags="draftTags"
             :available-tags="availableTags"
             :default-color="defaultColor"
             :tag-colors="tagColors"
+            :tags="draftTags"
+            @update:tags="onTagsChange"
           />
 
           <div class="search-actions">
-            <button
-              class="primary-button"
-              data-testid="save-tags"
-              type="button"
-              :disabled="saving || deleting || !isDirty"
-              @click="saveTags"
-            >
-              {{ saving ? "Saving..." : "Save changes" }}
-            </button>
             <button
               class="danger-button"
               data-testid="delete-video"
@@ -52,9 +44,6 @@
             </button>
           </div>
 
-          <p v-if="saveMessage" class="status-message info" role="status">
-            {{ saveMessage }}
-          </p>
           <ErrorMessage v-if="saveError" :message="saveError" />
           <ErrorMessage v-if="deleteError" :message="deleteError" />
         </div>
@@ -145,11 +134,8 @@ const showPlayer = ref(false);
 const error = ref<string | null>(null);
 const saveError = ref<string | null>(null);
 const deleteError = ref<string | null>(null);
-const saveMessage = ref<string | null>(null);
-
-const isDirty = computed(
-  () => JSON.stringify(draftTags.value) !== JSON.stringify(savedTags.value),
-);
+let saveInFlight = false;
+let saveQueued = false;
 
 const pageSubtitle = computed(
   () => `Edit tags for "${video.value?.name ?? props.id}"`,
@@ -186,7 +172,6 @@ async function loadVideo(): Promise<void> {
   error.value = null;
   saveError.value = null;
   deleteError.value = null;
-  saveMessage.value = null;
   confirmingDelete.value = false;
   showPlayer.value = false;
 
@@ -218,28 +203,56 @@ async function loadVideo(): Promise<void> {
   }
 }
 
-async function saveTags(): Promise<void> {
+function onTagsChange(tags: string[]): void {
+  draftTags.value = tags;
+  void persistTags();
+}
+
+async function persistTags(): Promise<void> {
+  if (saveInFlight) {
+    saveQueued = true;
+    return;
+  }
+
+  saveInFlight = true;
   saving.value = true;
-  saveError.value = null;
-  saveMessage.value = null;
 
   try {
-    const response = await updateVideoTags(props.id, draftTags.value);
-    savedTags.value = [...response.tags];
-    draftTags.value = [...response.tags];
-    availableTags.value = uniqueTags([...availableTags.value, ...response.tags]);
-    tagColors.value = {
-      ...tagColors.value,
-      ...Object.fromEntries(
-        response.tags
-          .filter((tag) => tagColors.value[tag] === undefined)
-          .map((tag) => [tag, defaultColor.value]),
-      ),
-    };
-    saveMessage.value = "Tags saved.";
-  } catch (updateError: unknown) {
-    saveError.value = updateError instanceof Error ? updateError.message : "Unable to save tags.";
+    do {
+      saveQueued = false;
+      const tagsToSave = [...draftTags.value];
+
+      if (JSON.stringify(tagsToSave) === JSON.stringify(savedTags.value)) {
+        continue;
+      }
+
+      saveError.value = null;
+
+      try {
+        const response = await updateVideoTags(props.id, tagsToSave);
+        savedTags.value = [...response.tags];
+
+        if (!saveQueued) {
+          draftTags.value = [...response.tags];
+        }
+
+        availableTags.value = uniqueTags([...availableTags.value, ...response.tags]);
+        tagColors.value = {
+          ...tagColors.value,
+          ...Object.fromEntries(
+            response.tags
+              .filter((tag) => tagColors.value[tag] === undefined)
+              .map((tag) => [tag, defaultColor.value]),
+          ),
+        };
+      } catch (updateError: unknown) {
+        draftTags.value = [...savedTags.value];
+        saveError.value = updateError instanceof Error ? updateError.message : "Unable to save tags.";
+        saveQueued = false;
+      }
+    } while (saveQueued);
   } finally {
+    saveInFlight = false;
     saving.value = false;
   }
 }
