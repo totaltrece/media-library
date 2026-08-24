@@ -325,12 +325,16 @@ POST /api/library/refresh
 ```
 
 Re-indexes the configured media library by discovering new video files on
-`LIBRARY_PATH`, inserting any missing videos into SQLite without tags, and
-replacing the in-memory video index from SQLite.
+`LIBRARY_PATH`, inserting any missing videos into SQLite without tags, filling
+missing `recorded_at` values (ffprobe metadata, then a YYYYMMDD in the
+filename), generating missing TagSpaces thumbnails under `.ts/`, and replacing
+the in-memory video index from SQLite.
 
-The endpoint does not read TagSpaces sidecars, modify existing tags, delete
-SQLite videos that are missing from disk, or change video files. If refresh
-fails, the existing in-memory index remains unchanged.
+The endpoint does not read TagSpaces sidecars, modify existing tags, overwrite
+existing dates or thumbnails, delete SQLite videos that are missing from disk,
+or change video files. If refresh fails during discovery, the existing
+in-memory index remains unchanged. Date or thumbnail repairs that fail for a
+single file are skipped so the rest of the library can still refresh.
 
 Response
 

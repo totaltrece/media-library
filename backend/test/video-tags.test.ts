@@ -15,6 +15,7 @@ import { createApp } from "../src/app.js";
 import type { LibraryStore } from "../src/ports/library-store.js";
 
 import { testLibraryPath } from "./fixtures.js";
+import { NoopEnsureLibraryMediaUseCase } from "./noop-ensure-library-media.js";
 import { tagsWithDefaultColor } from "./tag-colors.js";
 
 async function createAppWithStore(libraryStore: LibraryStore, libraryPath = testLibraryPath) {
@@ -292,6 +293,7 @@ test("refresh does not restore TagSpaces tags after a SQLite edit", async () => 
       libraryStore,
       refreshLibraryUseCase: new RefreshLibraryUseCase(
         new SyncNewVideosUseCase(new WorkspaceVideoDiscovery(libraryPath), libraryStore, libraryPath),
+        new NoopEnsureLibraryMediaUseCase(),
         new SqliteLibraryIndexer(libraryStore, libraryPath),
         videoIndex,
       ),

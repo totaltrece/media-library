@@ -31,7 +31,7 @@
 
 Detectar vídeos que aparecen en `LIBRARY_PATH` e incorporarlos a SQLite mediante `POST /api/library/refresh`.
 
-Un vídeo nuevo se registra con sus metadatos básicos y sin tags. Los tags existentes no se modifican. El desarrollo y las pruebas de M2 se hacen en local; rsync y el despliegue remoto no forman parte de este milestone.
+Un vídeo nuevo se registra con sus metadatos básicos y sin tags. Los tags existentes no se modifican. `POST /api/library/refresh` también rellena `recorded_at` ausente (ffprobe, si no fecha en el nombre) y genera thumbnails TagSpaces que falten, sin sobrescribir fechas ni JPG existentes.
 
 ---
 

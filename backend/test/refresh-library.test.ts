@@ -12,6 +12,7 @@ import type { LibraryIndexer } from "../src/ports/library-indexer.js";
 import type { VideoDiscovery } from "../src/ports/video-discovery.js";
 
 import { testLibraryPath, testVideos } from "./fixtures.js";
+import { NoopEnsureLibraryMediaUseCase } from "./noop-ensure-library-media.js";
 
 class StubVideoDiscovery implements VideoDiscovery {
   constructor(private readonly result: string[] | Error) {}
@@ -54,6 +55,7 @@ test("RefreshLibraryUseCase syncs new videos then reloads the SQLite snapshot", 
         libraryStore,
         testLibraryPath,
       ),
+      new NoopEnsureLibraryMediaUseCase(),
       new SqliteLibraryIndexer(libraryStore, testLibraryPath),
       videoIndex,
     );
@@ -91,6 +93,7 @@ test("RefreshLibraryUseCase leaves the existing index unchanged when discovery f
         libraryStore,
         testLibraryPath,
       ),
+      new NoopEnsureLibraryMediaUseCase(),
       new StubLibraryIndexer(testVideos),
       videoIndex,
     );

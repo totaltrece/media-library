@@ -16,6 +16,7 @@ import type { LibraryStore } from "../src/ports/library-store.js";
 import type { VideoDiscovery } from "../src/ports/video-discovery.js";
 
 import { testVideos } from "./fixtures.js";
+import { NoopEnsureLibraryMediaUseCase } from "./noop-ensure-library-media.js";
 import { tagsWithDefaultColor } from "./tag-colors.js";
 
 async function createLibrary(): Promise<string> {
@@ -33,6 +34,7 @@ async function writeVideo(libraryPath: string, relativePath: string): Promise<vo
 function createRefreshUseCase(libraryStore: LibraryStore, libraryPath: string, videoIndex: InMemoryVideoIndex) {
   return new RefreshLibraryUseCase(
     new SyncNewVideosUseCase(new WorkspaceVideoDiscovery(libraryPath), libraryStore, libraryPath),
+    new NoopEnsureLibraryMediaUseCase(),
     new SqliteLibraryIndexer(libraryStore, libraryPath),
     videoIndex,
   );
@@ -146,6 +148,7 @@ test("POST /api/library/refresh returns 500 and preserves the existing index on 
     libraryPath: join(tmpdir(), "media-library-refresh-missing"),
     refreshLibraryUseCase: new RefreshLibraryUseCase(
       new SyncNewVideosUseCase(failingDiscovery, libraryStore, join(tmpdir(), "media-library-refresh-missing")),
+      new NoopEnsureLibraryMediaUseCase(),
       new SqliteLibraryIndexer(libraryStore, join(tmpdir(), "media-library-refresh-missing")),
       videoIndex,
     ),

@@ -25,6 +25,8 @@ import type { LibraryStore } from "../src/ports/library-store.js";
 import type { ProcessingJob, ProcessingPhase } from "../src/ports/processing-job-store.js";
 import type { VideoProbeResult, VideoProcessor } from "../src/ports/video-processor.js";
 
+import { NoopEnsureLibraryMediaUseCase } from "./noop-ensure-library-media.js";
+
 const VIDEO_BYTES = Buffer.from("fake-video-bytes");
 const THUMBNAIL_BYTES = Buffer.from([0xff, 0xd8, 0xff]);
 
@@ -721,6 +723,7 @@ async function withUploadApp(
     libraryMediaInstaller: installer,
     refreshLibraryUseCase: new RefreshLibraryUseCase(
       new SyncNewVideosUseCase(new WorkspaceVideoDiscovery(libraryPath), libraryStore, libraryPath),
+      new NoopEnsureLibraryMediaUseCase(),
       new SqliteLibraryIndexer(libraryStore, libraryPath),
       videoIndex,
     ),

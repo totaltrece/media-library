@@ -1,13 +1,9 @@
-import { stat } from "node:fs/promises";
-
 import type { LibraryStore } from "../ports/library-store.js";
 import type { VideoProcessor } from "../ports/video-processor.js";
 
-import { resolveLibraryVideoPath } from "./library-media-paths.js";
-import { toStoredRecordedAt } from "./resolve-canonical-upload-name.js";
-import { recordedAtFromFileName } from "./filename-recorded-at-fallback.js";
+import { detectRecordedAt, type RecordedAtSource } from "./detect-recorded-at.js";
 
-export type RecordedAtSource = "ffprobe" | "filename-fallback" | "none";
+export type { RecordedAtSource };
 
 export interface BackfillRecordedAtPreview {
   videoId: string;
@@ -58,7 +54,7 @@ export class BackfillRecordedAtUseCase {
       result.processed += 1;
 
       try {
-        const { detected, source } = await this.detectRecordedAt(video.id);
+        const { detected, source } = await detectRecordedAt(video.id, this.libraryPath, this.processor);
         result.previews.push({
           videoId: video.id,
           source,
@@ -94,36 +90,5 @@ export class BackfillRecordedAtUseCase {
     }
 
     return result;
-  }
-
-  private async detectRecordedAt(
-    videoId: string,
-  ): Promise<{ detected: string | null; source: RecordedAtSource }> {
-    const videoPath = resolveLibraryVideoPath(this.libraryPath, videoId);
-
-    if (videoPath === undefined) {
-      throw new Error(`Invalid media id: ${videoId}`);
-    }
-
-    const file = await stat(videoPath);
-
-    if (!file.isFile()) {
-      throw new Error(`Library path is not a file: ${videoId}`);
-    }
-
-    const probe = await this.processor.probe(videoPath);
-    const fromProbe = toStoredRecordedAt(probe.recordingTime);
-
-    if (fromProbe !== null) {
-      return { detected: fromProbe, source: "ffprobe" };
-    }
-
-    const fromName = recordedAtFromFileName(videoId);
-
-    if (fromName !== null) {
-      return { detected: fromName, source: "filename-fallback" };
-    }
-
-    return { detected: null, source: "none" };
   }
 }

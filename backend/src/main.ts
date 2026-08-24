@@ -8,6 +8,7 @@ import { WorkspaceVideoDiscovery } from "./adapters/indexer/workspace-video-disc
 import { SqliteLibraryIndexer } from "./adapters/sqlite/sqlite-library-indexer.js";
 import { openSqliteLibraryStore } from "./adapters/sqlite/sqlite-library-store.js";
 import { createApp } from "./app.js";
+import { EnsureLibraryMediaUseCase } from "./application/ensure-library-media.js";
 import { ProcessVideoJobUseCase } from "./application/process-video-job.js";
 import { RefreshLibraryUseCase } from "./application/refresh-library.js";
 import { SyncNewVideosUseCase } from "./application/sync-new-videos.js";
@@ -35,22 +36,21 @@ async function main(): Promise<void> {
     const videoIndex = new InMemoryVideoIndex(
       toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath),
     );
+    const videoDiscovery = new WorkspaceVideoDiscovery(libraryPath);
+    const videoProcessor = new FfmpegVideoProcessor({
+      ffmpegPath: config.ffmpegPath,
+      ffprobePath: config.ffprobePath,
+    });
     const refreshLibraryUseCase = new RefreshLibraryUseCase(
-      new SyncNewVideosUseCase(
-        new WorkspaceVideoDiscovery(libraryPath),
-        libraryStore,
-        libraryPath,
-      ),
+      new SyncNewVideosUseCase(videoDiscovery, libraryStore, libraryPath),
+      new EnsureLibraryMediaUseCase(videoDiscovery, libraryStore, videoProcessor, libraryPath),
       new SqliteLibraryIndexer(libraryStore, libraryPath),
       videoIndex,
     );
 
     const processingJobStore = new InMemoryProcessingJobStore();
     const processVideoJobUseCase = new ProcessVideoJobUseCase(
-      new FfmpegVideoProcessor({
-        ffmpegPath: config.ffmpegPath,
-        ffprobePath: config.ffprobePath,
-      }),
+      videoProcessor,
       new FilesystemProcessingWorkspace(config.uploadTempPath),
       processingJobStore,
     );
