@@ -37,5 +37,6 @@ export const config = {
   libraryPath: requireEnv("LIBRARY_PATH"),
   port: Number(process.env.PORT ?? "3000"),
   sqlitePath,
+  authPublicRead: process.env.AUTH_PUBLIC_READ !== "false",
   ...resolveUploadProcessingConfig(process.env, { sqlitePath }),
 };

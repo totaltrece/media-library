@@ -2,7 +2,7 @@
   <div
     ref="tagInputWrapper"
     class="tag-input-wrapper tag-combobox"
-    :class="{ compact }"
+    :class="{ compact, disabled }"
     :style="{ '--tag-selector-ch': String(selectorWidthCh) }"
   >
     <label class="visually-hidden" :for="inputId">{{ label }}</label>
@@ -16,6 +16,7 @@
         >
           {{ tag }}
           <button
+            v-if="!disabled"
             :aria-label="`Remove ${tag}`"
             type="button"
             @click.stop="removeTag(tag)"
@@ -31,6 +32,7 @@
         autocomplete="off"
         class="tag-combobox-input"
         :placeholder="selectedTags.length === 0 ? placeholder : ''"
+        :disabled="disabled"
         :type="inputType"
         @focus="openSuggestions"
         @keydown="handleInputKeydown"
@@ -84,6 +86,7 @@ const props = withDefaults(
     allowCreate?: boolean;
     compact?: boolean;
     selectedLabel?: string;
+    disabled?: boolean;
     tagColors?: Record<string, string>;
     defaultColor?: string;
   }>(),
@@ -92,6 +95,7 @@ const props = withDefaults(
     allowCreate: false,
     compact: false,
     selectedLabel: "Selected tags",
+    disabled: false,
     tagColors: () => ({}),
     defaultColor: DEFAULT_TAG_COLOR,
   },
@@ -162,10 +166,18 @@ function isNewTag(tag: string): boolean {
 }
 
 function focusInput(): void {
+  if (props.disabled) {
+    return;
+  }
+
   tagInput.value?.focus();
 }
 
 function openSuggestions(): void {
+  if (props.disabled) {
+    return;
+  }
+
   showSuggestions.value = true;
 }
 
@@ -225,6 +237,9 @@ async function scrollHighlightedIntoView(): Promise<void> {
 }
 
 function selectTag(tag: string): void {
+  if (props.disabled) {
+    return;
+  }
   const normalized = tag.trim();
 
   if (normalized.length === 0 || props.selectedTags.includes(normalized)) {
@@ -240,6 +255,9 @@ function selectTag(tag: string): void {
 }
 
 function removeTag(tag: string): void {
+  if (props.disabled) {
+    return;
+  }
   emit("remove", tag);
   closeSuggestions();
   tagInput.value?.blur();
@@ -346,6 +364,11 @@ onUnmounted(() => {
 
 .tag-combobox-field:focus-within {
   border-color: #1a73e8;
+}
+
+.tag-combobox.disabled .tag-combobox-field {
+  background: #f8f9fa;
+  cursor: default;
 }
 
 .tag-combobox-field .selected-tags {

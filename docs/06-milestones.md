@@ -283,6 +283,21 @@ to resource.
 
 ---
 
+# Milestone 16 — Auth and roles
+
+Status: ✅ Completed
+
+Username/password admin session so writes are protected while the catalog
+stays publicly readable. Role `view` and a future read lock are modelled,
+not turned on. Detail in `docs/media-library-auth-development/`.
+
+Deliverable
+
+Login/logout in the header; POST/PUT/DELETE require an admin session;
+anonymous users can still browse.
+
+---
+
 # Milestone 15 — MVP Completion
 
 Status: ⏳ Planned

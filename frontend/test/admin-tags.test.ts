@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, nextTick } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
 
-import AdminTagsView from "../src/views/AdminTagsView.vue";
+import { ANONYMOUS_AUTH, setAuthSessionForTests } from "../src/auth/session.js";
 import { routes } from "../src/router.js";
+import AdminTagsView from "../src/views/AdminTagsView.vue";
 import { catalogTag, seedTagTypes, tagItems } from "./tag-fixtures.js";
 
 const catalog = {
@@ -161,12 +162,62 @@ describe("admin tag catalog", () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/tags/2", {
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       method: "PUT",
       body: JSON.stringify({ name: "jota-nueva", typeId: 3 }),
     });
     expect(wrapper.text()).toContain("jota-nueva (84)");
     expect(wrapper.text()).not.toContain("jota (84)");
+  });
+
+  it("shows a color circle for each type in the edit dropdown", async () => {
+    const fetchMock = adminTagsFetch((url, init) => {
+      if (url === "/api/admin/tags/2" && init?.method === "PUT") {
+        return jsonResponse({
+          ...catalog.tags[1],
+          typeId: 2,
+          typeName: "style",
+          color: "#f1948a",
+          typeSortOrder: 2,
+        });
+      }
+
+      return null;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    await router.push("/admin/tags");
+    await router.isReady();
+    const wrapper = mount(AdminTagsView, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    const jota = wrapper.findAll(".admin-tag-item").find((item) => item.text().includes("jota (84)"))!;
+    await jota.get('button[aria-label="Edit jota"]').trigger("click");
+    await nextTick();
+
+    const triggerSwatch = wrapper.get("#edit-tag-type .type-select-swatch");
+    expect(wrapper.get("#edit-tag-type").text()).toContain("teacher");
+    expect(triggerSwatch.attributes("style")).toContain("rgb(39, 174, 96)");
+
+    await wrapper.get("#edit-tag-type").trigger("click");
+    await nextTick();
+
+    const styleOption = wrapper.get('[data-testid="tag-type-option-style"]');
+    expect(styleOption.get(".type-select-swatch").attributes("style")).toContain("rgb(241, 148, 138)");
+    await styleOption.trigger("click");
+    await wrapper.get('[data-testid="save-tag"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/admin/tags/2", {
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      method: "PUT",
+      body: JSON.stringify({ name: "jota", typeId: 2 }),
+    });
   });
 
   it("shows a rename error and keeps the tag editable", async () => {
@@ -236,9 +287,51 @@ describe("admin tag catalog", () => {
     await wrapper.get('[data-testid="confirm-delete-tag"]').trigger("click");
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/admin/tags/2", { method: "DELETE" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/admin/tags/2", { credentials: "include", method: "DELETE" });
     expect(wrapper.text()).not.toContain("jota (84)");
     expect(wrapper.text()).toContain("salsa (127)");
+  });
+
+  it("opens edit and delete modals when anonymous, with save and delete disabled", async () => {
+    setAuthSessionForTests(ANONYMOUS_AUTH);
+    vi.stubGlobal("fetch", adminTagsFetch());
+
+    const router = createTestRouter();
+    await router.push("/admin/tags");
+    await router.isReady();
+    const wrapper = mount(AdminTagsView, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    const jota = wrapper.findAll(".admin-tag-item").find((item) => item.text().includes("jota (84)"))!;
+    expect(jota.get('button[aria-label="Edit jota"]').attributes("disabled")).toBeUndefined();
+    expect(jota.get('button[aria-label="Delete jota"]').attributes("disabled")).toBeUndefined();
+
+    await jota.get('button[aria-label="Edit jota"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.get("#edit-tag-name").element).toBeTruthy();
+    expect(wrapper.get('[data-testid="save-tag"]').attributes("disabled")).toBeDefined();
+
+    await wrapper.get("#edit-tag-name").trigger("keydown", { key: "Enter" });
+    await flushPromises();
+    expect(wrapper.find("#edit-tag-name").exists()).toBe(true);
+
+    await wrapper.get(".admin-tag-confirm-modal .secondary-button").trigger("click");
+    await nextTick();
+
+    const jotaAgain = wrapper.findAll(".admin-tag-item").find((item) => item.text().includes("jota (84)"))!;
+    await jotaAgain.get('button[aria-label="Delete jota"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.text()).toContain('Delete the tag "jota"?');
+    expect(wrapper.get('[data-testid="confirm-delete-tag"]').attributes("disabled")).toBeDefined();
+    await wrapper.get('[data-testid="confirm-delete-tag"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Delete the tag "jota"?');
+    expect(wrapper.text()).toContain("jota (84)");
   });
 
   it("filters the catalog as the search query is typed", async () => {
@@ -491,7 +584,7 @@ describe("admin tag catalog", () => {
 
     expect(router.currentRoute.value.name).toBe("home");
     expect(router.currentRoute.value.query).toEqual({ tag: "jota" });
-    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=jota");
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=jota", { credentials: "include" });
     expect(wrapper.get(".selected-tags").text()).toContain("jota");
     expect(wrapper.text()).toContain("1 result");
     expect(wrapper.find('a[aria-label="Edit tags for jota.mp4"]').exists()).toBe(true);

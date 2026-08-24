@@ -35,7 +35,7 @@
         class="primary-button admin-upload-button"
         type="button"
         data-testid="upload-submit"
-        :disabled="checking"
+        :disabled="checking || !canWrite"
         @click="submitUpload"
       >
         Upload video
@@ -81,6 +81,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 
 import { ApiRequestError, uploadVideo } from "../api/client.js";
+import { useAuth } from "../auth/session.js";
 import { useUploadJobPolling } from "../composables/use-upload-job-polling.js";
 import {
   buildUploadSteps,
@@ -96,6 +97,7 @@ const emit = defineEmits<{
   completed: [];
 }>();
 
+const { canWrite } = useAuth();
 const fileInput = ref<HTMLInputElement | null>(null);
 const selectedFile = ref<File | null>(null);
 const error = ref<string | null>(null);
@@ -128,7 +130,7 @@ function onFileChange(event: Event): void {
 }
 
 async function submitUpload(): Promise<void> {
-  if (submitting.value) {
+  if (!canWrite.value || submitting.value) {
     return;
   }
 

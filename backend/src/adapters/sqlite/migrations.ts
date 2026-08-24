@@ -73,4 +73,26 @@ export const sqliteMigrations: SqliteMigration[] = [
       ALTER TABLE tags_new RENAME TO tags;
     `,
   },
+  {
+    version: 4,
+    sql: `
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('admin', 'view')),
+        created_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE TABLE sessions (
+        token TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE INDEX sessions_user_id ON sessions(user_id);
+      CREATE INDEX sessions_expires_at ON sessions(expires_at);
+    `,
+  },
 ];
