@@ -69,7 +69,7 @@ test("imports a video with several TagSpaces tag titles", async () => {
       {
         id: "salsa/first.mp4",
         recordedAt: null,
-        tags: ["salsa", "bea", "linea"],
+        tags: ["bea", "linea", "salsa"],
       },
     ]);
   } finally {
@@ -125,7 +125,7 @@ test("deduplicates TagSpaces titles while preserving first-seen order", async ()
 
     await importLibrary(libraryPath, store);
 
-    assert.deepEqual(store.getVideoTags("dupes.mp4"), ["salsa", "casino", "clase"]);
+    assert.deepEqual(store.getVideoTags("dupes.mp4"), ["casino", "clase", "salsa"]);
   } finally {
     store.close();
     await rm(libraryPath, { recursive: true, force: true });
@@ -174,7 +174,7 @@ test("running the import twice does not duplicate videos, tags, or relations", a
       store.listTags().map((tag) => tag.name),
       ["bea", "salsa"],
     );
-    assert.deepEqual(store.getVideoTags("first.mp4"), ["salsa", "bea"]);
+    assert.deepEqual(store.getVideoTags("first.mp4"), ["bea", "salsa"]);
   } finally {
     store.close();
     await rm(libraryPath, { recursive: true, force: true });

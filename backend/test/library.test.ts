@@ -106,7 +106,7 @@ test("POST /api/library/refresh inserts new videos and keeps existing tags", asy
 
     assert.strictEqual(refreshResponse.statusCode, 200);
     assert.deepEqual(refreshResponse.json(), { count: 5 });
-    assert.deepEqual(libraryStore.getVideoTags("video1.mp4"), ["salsa", "bea"]);
+    assert.deepEqual(libraryStore.getVideoTags("video1.mp4"), ["bea", "salsa"]);
     assert.deepEqual(libraryStore.getVideoTags("video4.mp4"), []);
 
     const searchResponse = await app.inject({

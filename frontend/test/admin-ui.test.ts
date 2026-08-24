@@ -776,6 +776,95 @@ describe("admin video editor", () => {
     expect(wrapper.text()).not.toContain("Tags saved.");
   });
 
+  it("shows video tags ordered by type then name", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/search") {
+        return jsonResponse({ query: { tags: [] }, count: 2, results: videos });
+      }
+
+      if (url === "/api/videos/salsa/first.mp4/tags" && init?.method === "PUT") {
+        const body = JSON.parse(String(init.body)) as { tags: string[] };
+        return jsonResponse({ tags: body.tags });
+      }
+
+      if (url === "/api/videos/salsa/first.mp4/tags") {
+        return jsonResponse({ tags: ["isa", "salsa"] });
+      }
+
+      if (url === "/api/admin/tags") {
+        return jsonResponse({
+          count: 4,
+          tags: [
+            catalogTag({ id: 1, name: "bufanda" }),
+            catalogTag({
+              id: 2,
+              name: "isa",
+              typeId: 3,
+              typeName: "teacher",
+              color: "#27ae60",
+              typeSortOrder: 3,
+            }),
+            catalogTag({
+              id: 4,
+              name: "linea",
+              typeId: 2,
+              typeName: "style",
+              color: "#f1948a",
+              typeSortOrder: 2,
+            }),
+            catalogTag({
+              id: 3,
+              name: "salsa",
+              typeId: 1,
+              typeName: "type",
+              color: "#c0392b",
+              typeSortOrder: 1,
+            }),
+          ],
+        });
+      }
+
+      const adminResponse = adminEditorResponse(url);
+      if (adminResponse !== null) {
+        return adminResponse;
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    await router.push("/admin/videos/salsa/first.mp4");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideoEditView, router, { id: "salsa/first.mp4" });
+    await flushPromises();
+
+    expect(wrapper.findAll(".admin-video-preview .result-card-tag").map((chip) => chip.text())).toEqual([
+      "salsa",
+      "isa",
+    ]);
+    expect(
+      wrapper.findAll('.admin-video-tags button[aria-label^="Remove "]').map((button) => button.attributes("aria-label")),
+    ).toEqual(["Remove salsa", "Remove isa"]);
+
+    await wrapper.get("#admin-tag-input").setValue("linea");
+    await wrapper.get("#admin-tag-input").trigger("keydown", { key: "Enter" });
+    await flushPromises();
+
+    expect(wrapper.findAll(".admin-video-preview .result-card-tag").map((chip) => chip.text())).toEqual([
+      "salsa",
+      "linea",
+      "isa",
+    ]);
+    expect(
+      fetchMock.mock.calls
+        .filter(([, init]) => init?.method === "PUT")
+        .map(([, init]) => JSON.parse(String(init?.body))),
+    ).toEqual([{ tags: ["salsa", "linea", "isa"] }]);
+  });
+
   it("does not persist tags when the session is not admin", async () => {
     setAuthSessionForTests(ANONYMOUS_AUTH);
 
@@ -805,7 +894,17 @@ describe("admin video editor", () => {
     const wrapper = mountWithRouter(AdminVideoEditView, router, { id: "salsa/first.mp4" });
     await flushPromises();
 
-    expect(wrapper.get("#admin-tag-input").attributes("disabled")).toBeDefined();
+    expect(wrapper.get("#admin-tag-input").attributes("disabled")).toBeUndefined();
+    expect(wrapper.find('button[aria-label="Remove isa"]').exists()).toBe(true);
+
+    await wrapper.get('button[aria-label="Remove isa"]').trigger("click");
+    await flushPromises();
+    await wrapper.get("#admin-tag-input").setValue("bufanda");
+    await wrapper.get("#admin-tag-input").trigger("keydown", { key: "Enter" });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("salsa");
+    expect(wrapper.text()).toContain("bufanda");
     expect(wrapper.find('button[aria-label="Remove isa"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="delete-video"]').attributes("disabled")).toBeDefined();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);

@@ -90,7 +90,7 @@ test("PUT /api/admin/tags/:id renames a tag without changing its id or video rel
     });
     assert.equal(libraryStore.findTagByName("jota"), null);
     assert.strictEqual(libraryStore.findTagById(jota.id)?.name, "jota-nueva");
-    assert.deepEqual(libraryStore.getVideoTags("salsa/first.mp4"), ["salsa", "jota-nueva"]);
+    assert.deepEqual(libraryStore.getVideoTags("salsa/first.mp4"), ["jota-nueva", "salsa"]);
 
     const search = await app.inject({
       method: "GET",

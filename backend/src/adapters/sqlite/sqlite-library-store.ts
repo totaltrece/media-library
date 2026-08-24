@@ -378,8 +378,9 @@ export class SqliteLibraryStore implements LibraryStore {
           SELECT tags.name AS name
           FROM video_tags
           INNER JOIN tags ON tags.id = video_tags.tag_id
+          INNER JOIN tag_types ON tag_types.id = tags.tag_type_id
           WHERE video_tags.video_id = ?
-          ORDER BY video_tags.position
+          ORDER BY tag_types.sort_order ASC, tags.name COLLATE NOCASE ASC
         `,
       )
       .all(videoId);

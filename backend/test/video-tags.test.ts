@@ -15,6 +15,17 @@ import { createApp } from "../src/app.js";
 import type { LibraryStore } from "../src/ports/library-store.js";
 
 import { testLibraryPath } from "./fixtures.js";
+
+function assignTagType(store: LibraryStore, tagName: string, typeName: string): void {
+  const tag = store.findTagByName(tagName);
+  const type = store.listTagTypes().find((item) => item.name === typeName);
+
+  if (tag === null || type === undefined) {
+    throw new Error(`Unable to assign ${tagName} to ${typeName}`);
+  }
+
+  store.updateTag(tag.id, tag.name, type.id);
+}
 import { NoopEnsureLibraryMediaUseCase } from "./noop-ensure-library-media.js";
 import { tagsWithDefaultColor } from "./tag-colors.js";
 
@@ -28,12 +39,15 @@ async function createAppWithStore(libraryStore: LibraryStore, libraryPath = test
   });
 }
 
-test("GET /api/videos/:id/tags returns the video tags in stored order", async () => {
+test("GET /api/videos/:id/tags returns tags ordered by type then name", async () => {
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
     libraryStore.upsertVideo("salsa/first.mp4");
-    libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "isa", "jota", "codo"]);
+    libraryStore.setVideoTags("salsa/first.mp4", ["codo", "jota", "isa", "salsa"]);
+    assignTagType(libraryStore, "salsa", "type");
+    assignTagType(libraryStore, "isa", "teacher");
+    assignTagType(libraryStore, "jota", "teacher");
 
     const app = await createAppWithStore(libraryStore);
     const response = await app.inject({
@@ -69,7 +83,7 @@ test("POST /api/videos/:id/tags appends an existing catalog tag", async () => {
 
     assert.strictEqual(response.statusCode, 200);
     assert.deepEqual(response.json(), {
-      tags: ["salsa", "isa", "jota", "bufanda"],
+      tags: ["bufanda", "isa", "jota", "salsa"],
     });
 
     await app.close();
@@ -106,7 +120,7 @@ test("POST /api/videos/:id/tags creates a new catalog tag automatically", async 
   }
 });
 
-test("POST /api/videos/:id/tags is idempotent and preserves order", async () => {
+test("POST /api/videos/:id/tags is idempotent", async () => {
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
@@ -127,7 +141,7 @@ test("POST /api/videos/:id/tags is idempotent and preserves order", async () => 
 
     assert.strictEqual(response.statusCode, 200);
     assert.deepEqual(response.json(), {
-      tags: ["salsa", "isa", "jota", "bufanda"],
+      tags: ["bufanda", "isa", "jota", "salsa"],
     });
 
     await app.close();
@@ -155,10 +169,10 @@ test("DELETE /api/videos/:id/tags/:tag removes a tag without deleting the catalo
 
     assert.strictEqual(response.statusCode, 200);
     assert.deepEqual(response.json(), {
-      tags: ["salsa", "jota", "bufanda"],
+      tags: ["bufanda", "jota", "salsa"],
     });
     assert.deepEqual(missingResponse.json(), {
-      tags: ["salsa", "jota", "bufanda"],
+      tags: ["bufanda", "jota", "salsa"],
     });
     assert.ok(libraryStore.findTagByName("isa"));
 
@@ -208,7 +222,7 @@ test("PUT /api/videos/:id/tags replaces the complete tag list", async () => {
 
     assert.strictEqual(response.statusCode, 200);
     assert.deepEqual(response.json(), {
-      tags: ["salsa", "isa", "jota", "bufanda"],
+      tags: ["bufanda", "isa", "jota", "salsa"],
     });
     assert.ok(libraryStore.findTagByName("jota"));
     assert.ok(libraryStore.findTagByName("bufanda"));
@@ -239,7 +253,7 @@ test("video tag edits are visible immediately in search", async () => {
 
     assert.strictEqual(response.statusCode, 200);
     assert.strictEqual(response.json().count, 1);
-    assert.deepEqual(response.json().results[0]?.tags, ["salsa", "bufanda"]);
+    assert.deepEqual(response.json().results[0]?.tags, ["bufanda", "salsa"]);
 
     await app.close();
   } finally {

@@ -6,7 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { indexLibrary } from "@media-library/indexer";
+import { indexLibrary, type IndexedVideo } from "@media-library/indexer";
 import { searchVideos } from "@media-library/search";
 
 import { InMemoryVideoIndex } from "../src/adapters/in-memory-video-index.js";
@@ -55,6 +55,13 @@ function searchResultIds(body: { results: Array<{ id: string }> }): string[] {
   return body.results.map((result) => result.id);
 }
 
+function searchMatchSignature(videos: IndexedVideo[], tags: string[], libraryPath: string) {
+  return searchVideos(videos, { tags }).map((video) => ({
+    id: toMediaId(video.videoPath, libraryPath),
+    tags: [...video.tags].sort((firstTag, secondTag) => firstTag.localeCompare(secondTag)),
+  }));
+}
+
 test("the backend can start using a temporary SQLite database", async () => {
   const libraryPath = await createLibrary();
   const sqlitePath = join(libraryPath, "library.sqlite");
@@ -81,7 +88,7 @@ test("the backend can start using a temporary SQLite database", async () => {
     assert.strictEqual(searchResponse.statusCode, 200);
     assert.strictEqual(searchResponse.json().count, 1);
     assert.strictEqual(searchResponse.json().results[0]?.id, "salsa/first.mp4");
-    assert.deepEqual(searchResponse.json().results[0]?.tags, ["salsa", "bea"]);
+    assert.deepEqual(searchResponse.json().results[0]?.tags, ["bea", "salsa"]);
 
     await app.close();
   } finally {
@@ -221,7 +228,7 @@ test("searching several tags still requires every requested tag", async () => {
           name: "first.mp4",
           thumbnail: "/api/thumbnail/salsa/first.mp4",
           video: "/api/video/salsa/first.mp4",
-          tags: ["salsa", "bea", "linea"],
+          tags: ["bea", "linea", "salsa"],
           recordedAt: null,
         },
       ],
@@ -297,7 +304,7 @@ test("SQLite-backed search keeps the existing search endpoint contract", async (
           name: "first.mp4",
           thumbnail: "/api/thumbnail/salsa/first.mp4",
           video: "/api/video/salsa/first.mp4",
-          tags: ["salsa", "bea", "linea"],
+          tags: ["bea", "linea", "salsa"],
           recordedAt: null,
         },
       ],
@@ -360,18 +367,9 @@ test("imported TagSpaces libraries produce the same search results from SQLite",
     const sqliteVideos = toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath);
 
     for (const tags of queries) {
-      const previousMatches = searchVideos(previousVideos, { tags });
-      const sqliteMatches = searchVideos(sqliteVideos, { tags });
-
       assert.deepEqual(
-        sqliteMatches.map((video) => ({
-          id: toMediaId(video.videoPath, libraryPath),
-          tags: video.tags,
-        })),
-        previousMatches.map((video) => ({
-          id: toMediaId(video.videoPath, libraryPath),
-          tags: video.tags,
-        })),
+        searchMatchSignature(sqliteVideos, tags, libraryPath),
+        searchMatchSignature(previousVideos, tags, libraryPath),
       );
     }
   } finally {
@@ -398,18 +396,9 @@ test(
       const queries = [[], ["salsa"], ["gabriela"], ["salsa", "gabriela"], ["linea", "jota"]];
 
       for (const tags of queries) {
-        const previousMatches = searchVideos(previousVideos, { tags });
-        const sqliteMatches = searchVideos(sqliteVideos, { tags });
-
         assert.deepEqual(
-          sqliteMatches.map((video) => ({
-            id: toMediaId(video.videoPath, samplesLibraryPath),
-            tags: video.tags,
-          })),
-          previousMatches.map((video) => ({
-            id: toMediaId(video.videoPath, samplesLibraryPath),
-            tags: video.tags,
-          })),
+          searchMatchSignature(sqliteVideos, tags, samplesLibraryPath),
+          searchMatchSignature(previousVideos, tags, samplesLibraryPath),
         );
       }
     } finally {
