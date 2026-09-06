@@ -1422,4 +1422,101 @@ describe("consumer search view", () => {
       fetchMock.mock.calls.some(([, init]) => init?.method === "PUT" || init?.method === "POST"),
     ).toBe(false);
   });
+
+  it("writes selected tags to the url so the search can be shared", async () => {
+    const fetchMock = createCatalogFetchMock((url) => {
+      if (url === "/api/search?tag=salsa" || url === "/api/search?tag=salsa&tag=jota") {
+        return catalogVideos.filter((video) => video.tags.includes("salsa"));
+      }
+
+      return null;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter("/");
+    await router.push("/");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideosView, router);
+    await flushPromises();
+
+    await addSearchTags(wrapper, ["salsa", "jota"]);
+    await flushPromises();
+
+    expect(router.currentRoute.value.fullPath).toBe("/?tag=salsa&tag=jota");
+    expect(wrapper.get(".selected-tags").text()).toContain("salsa");
+    expect(wrapper.get(".selected-tags").text()).toContain("jota");
+  });
+
+  it("applies tags from the url on the first load", async () => {
+    const fetchMock = createCatalogFetchMock((url) => {
+      if (url === "/api/search?tag=zenit") {
+        return catalogVideos.filter((video) => video.tags.includes("zenit"));
+      }
+
+      return null;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter("/");
+    await router.push("/?tag=zenit");
+    await router.isReady();
+    const wrapper = mountWithRouter(AdminVideosView, router);
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/search?tag=zenit", { credentials: "include" });
+    expect(wrapper.get(".selected-tags").text()).toContain("zenit");
+    expect(wrapper.text()).toContain("1 result");
+  });
+
+  it("restores selected tags after leaving home and returning with View", async () => {
+    const catalogFetch = createCatalogFetchMock((url) => {
+      if (url === "/api/search?tag=zenit") {
+        return catalogVideos.filter((video) => video.tags.includes("zenit"));
+      }
+
+      return null;
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/videos/tagged-zenit.mp4/tags") {
+        return jsonResponse({ tags: ["zenit"] });
+      }
+
+      if (url === "/api/admin/tag-types" || url === "/api/admin/tags") {
+        return adminEditorResponse(url) ?? jsonResponse({ error: { message: "Not found" } }, false, 404);
+      }
+
+      return catalogFetch(input, init);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter();
+    const Root = defineComponent({
+      template: "<router-view />",
+    });
+    await router.push("/");
+    await router.isReady();
+    const wrapper = mount(Root, {
+      global: {
+        plugins: [router],
+      },
+    });
+    await flushPromises();
+
+    await addSearchTags(wrapper, ["zenit"]);
+    await flushPromises();
+    expect(router.currentRoute.value.fullPath).toBe("/?tag=zenit");
+
+    await wrapper.get('a[aria-label="Edit tags for 20260715.mp4"]').trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.name).toBe("admin-video-edit");
+
+    await wrapper.get('[data-testid="nav-view"]').trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.fullPath).toBe("/?tag=zenit");
+    expect(wrapper.get(".selected-tags").text()).toContain("zenit");
+    expect(wrapper.text()).toContain("1 result");
+  });
 });
