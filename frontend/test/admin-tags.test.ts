@@ -362,6 +362,35 @@ describe("admin tag catalog", () => {
     expect(wrapper.find(".admin-tag-catalog").exists()).toBe(false);
   });
 
+  it("restores the catalog filter after leaving the page and returning", async () => {
+    vi.stubGlobal("fetch", adminTagsFetch());
+
+    const router = createTestRouter();
+    await router.push("/admin/tags");
+    await router.isReady();
+    const first = mount(AdminTagsView, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    await first.get("#catalog-tag-filter").setValue("jo");
+    await nextTick();
+    expect(first.findAll(".admin-tag-item")).toHaveLength(1);
+    first.unmount();
+
+    await router.push("/admin/videos/upload");
+    await router.push("/admin/tags");
+    const second = mount(AdminTagsView, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    expect((second.get("#catalog-tag-filter").element as HTMLInputElement).value).toBe("jo");
+    expect(second.findAll(".admin-tag-item")).toHaveLength(1);
+    expect(second.text()).toContain("jota (84)");
+    expect(second.text()).not.toContain("salsa (127)");
+  });
+
   it("sorts tags alphabetically, by usage, and by type", async () => {
     const fetchMock = adminTagsFetch((url) => {
       if (url === "/api/admin/tags") {

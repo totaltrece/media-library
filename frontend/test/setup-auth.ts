@@ -4,4 +4,5 @@ import { ADMIN_AUTH, setAuthSessionForTests } from "../src/auth/session.js";
 
 beforeEach(() => {
   setAuthSessionForTests(ADMIN_AUTH);
+  sessionStorage.clear();
 });

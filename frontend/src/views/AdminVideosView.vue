@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 import { fetchTags, searchVideos } from "../api/client.js";
 import type { SearchResultItem } from "../api/types.js";
@@ -86,9 +86,12 @@ import SearchResults from "../components/SearchResults.vue";
 import TagSearch from "../components/TagSearch.vue";
 import VideoPlayer from "../components/VideoPlayer.vue";
 import { applyUntaggedFilter, countUntaggedVideos } from "../utils/admin-videos.js";
+import { homeSearchQuery, parseRouteTags, sameTags } from "../utils/home-search-query.js";
+import { HOME_SEARCH_TAGS_KEY, readStoredHomeTags, writeSessionJson } from "../utils/session-state.js";
 import { DEFAULT_TAG_COLOR, tagColorMap } from "../utils/tag-color.js";
 
 const route = useRoute();
+const router = useRouter();
 const catalogVideos = ref<SearchResultItem[]>([]);
 const searchResults = ref<SearchResultItem[]>([]);
 const availableTags = ref<string[]>([]);
@@ -141,14 +144,33 @@ function resetSearch(): void {
   syncSelectedVideo();
 }
 
+function persistHomeTags(tags: string[]): void {
+  writeSessionJson(HOME_SEARCH_TAGS_KEY, tags);
+}
+
+async function syncHomeLocation(tags: string[], untagged: boolean): Promise<void> {
+  persistHomeTags(untagged ? [] : tags);
+  const query = homeSearchQuery(tags, untagged);
+  const currentTags = parseRouteTags(route.query.tag);
+  const currentUntagged = route.query.untagged === "1";
+
+  if (currentUntagged === untagged && sameTags(currentTags, untagged ? [] : tags)) {
+    return;
+  }
+
+  await router.replace({ name: "home", query });
+}
+
 function showAllVideos(): void {
   untaggedOnly.value = false;
   syncSelectedVideo();
+  void syncHomeLocation(selectedTags.value, false);
 }
 
 function showUntaggedVideos(): void {
   resetSearch();
   untaggedOnly.value = true;
+  void syncHomeLocation([], true);
 }
 
 function addTag(tag: string): void {
@@ -157,6 +179,7 @@ function addTag(tag: string): void {
   }
 
   selectedTags.value = [...selectedTags.value, tag];
+  void syncHomeLocation(selectedTags.value, false);
   void runSearch();
 }
 
@@ -166,6 +189,7 @@ function selectResultTag(tag: string): void {
 
 function removeTag(tag: string): void {
   selectedTags.value = selectedTags.value.filter((selectedTag) => selectedTag !== tag);
+  void syncHomeLocation(selectedTags.value, false);
 
   if (selectedTags.value.length === 0) {
     searchGeneration += 1;
@@ -182,6 +206,7 @@ function removeTag(tag: string): void {
 
 function clearTags(): void {
   resetSearch();
+  void syncHomeLocation([], false);
 }
 
 async function runSearch(): Promise<void> {
@@ -220,40 +245,51 @@ async function runSearch(): Promise<void> {
   }
 }
 
-function parseRouteTags(value: unknown): string[] {
-  if (typeof value === "string" && value.length > 0) {
-    return [value];
-  }
-
-  if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === "string" && item.length > 0);
-  }
-
-  return [];
-}
-
 watch(
-  () => route.query.untagged,
-  (value) => {
-    if (value === "1") {
-      resetSearch();
-      untaggedOnly.value = true;
-    }
-  },
-  { immediate: true },
-);
-
-watch(
-  () => route.query.tag,
+  () => [route.query.tag, route.query.untagged] as const,
   async () => {
-    const tags = parseRouteTags(route.query.tag);
-
-    if (tags.length === 0) {
+    if (route.name !== undefined && route.name !== "home") {
       return;
     }
 
-    selectedTags.value = tags;
-    await runSearch();
+    const urlUntagged = route.query.untagged === "1";
+    const urlTags = parseRouteTags(route.query.tag);
+
+    if (urlUntagged) {
+      persistHomeTags([]);
+
+      if (!untaggedOnly.value || selectedTags.value.length > 0) {
+        resetSearch();
+        untaggedOnly.value = true;
+      }
+
+      return;
+    }
+
+    if (urlTags.length > 0) {
+      if (sameTags(selectedTags.value, urlTags) && hasSearched.value) {
+        return;
+      }
+
+      selectedTags.value = urlTags;
+      persistHomeTags(urlTags);
+      await runSearch();
+      return;
+    }
+
+    const storedTags = readStoredHomeTags();
+
+    if (storedTags.length > 0) {
+      selectedTags.value = storedTags;
+      await syncHomeLocation(storedTags, false);
+      await runSearch();
+      return;
+    }
+
+    if (selectedTags.value.length > 0 || untaggedOnly.value) {
+      resetSearch();
+      untaggedOnly.value = false;
+    }
   },
   { immediate: true },
 );

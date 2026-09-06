@@ -194,13 +194,14 @@ import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
 import TagTypeSelect from "../components/TagTypeSelect.vue";
 import { tagChipStyle } from "../utils/tag-color.js";
+import { ADMIN_TAGS_FILTER_KEY, readSessionString, writeSessionString } from "../utils/session-state.js";
 
 type TagSort = "name-asc" | "name-desc" | "usage-desc" | "usage-asc" | "type-asc" | "type-desc";
 
 const tags = ref<CatalogTag[]>([]);
 const { canWrite } = useAuth();
 const types = ref<TagType[]>([]);
-const filterQuery = ref("");
+const filterQuery = ref(readSessionString(ADMIN_TAGS_FILTER_KEY) ?? "");
 const sort = ref<TagSort>("name-asc");
 const loading = ref(true);
 const saving = ref(false);
@@ -263,7 +264,8 @@ function toggleTypeSort(): void {
   sort.value = sort.value === "type-asc" ? "type-desc" : "type-asc";
 }
 
-watch(filterQuery, () => {
+watch(filterQuery, (value) => {
+  writeSessionString(ADMIN_TAGS_FILTER_KEY, value);
   editingId.value = null;
   confirmingId.value = null;
   editName.value = "";
