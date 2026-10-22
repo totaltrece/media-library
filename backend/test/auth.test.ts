@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { InMemoryVideoIndex } from "../src/adapters/in-memory-video-index.js";
 import { openSqliteStores } from "../src/adapters/sqlite/sqlite-library-store.js";
 import { CreateAdminUseCase } from "../src/application/create-admin.js";
+import { CreateUserUseCase } from "../src/application/create-user.js";
 import { hashPassword } from "../src/application/password-hash.js";
 import { toIndexedVideos } from "../src/application/to-indexed-videos.js";
 import { createApp } from "../src/app.js";
@@ -182,6 +183,47 @@ test("GET requires a session when public-read is off", async () => {
       headers: cookieHeader(sessionTokenFromResponse(login)),
     });
     assert.strictEqual(allowed.statusCode, 200);
+
+    await app.close();
+  } finally {
+    stores.close();
+  }
+});
+
+test("view users can read but cannot write", async () => {
+  const stores = openSqliteStores(":memory:");
+
+  try {
+    new CreateUserUseCase(stores.authStore).execute({
+      username: "viewer",
+      password: ADMIN_PASSWORD,
+      role: "view",
+    });
+
+    const app = await createAuthApp({ ...stores, publicRead: false });
+
+    const login = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { username: "viewer", password: ADMIN_PASSWORD },
+    });
+
+    const token = sessionTokenFromResponse(login);
+
+    const allowedRead = await app.inject({
+      method: "GET",
+      url: "/api/tags",
+      headers: cookieHeader(token),
+    });
+    assert.strictEqual(allowedRead.statusCode, 200);
+
+    const forbiddenWrite = await app.inject({
+      method: "POST",
+      url: "/api/admin/tag-types",
+      headers: cookieHeader(token),
+      payload: { name: "workshop", color: "#112233" },
+    });
+    assert.strictEqual(forbiddenWrite.statusCode, 403);
 
     await app.close();
   } finally {

@@ -93,7 +93,7 @@ fi
 echo "Conexión OK."
 
 # ------------------------------------------------------------
-# VÍDEOS -> PC
+# VÃDEOS -> PC
 # ------------------------------------------------------------
 
 info "Sincronizando vídeos -> PC"
@@ -106,7 +106,7 @@ if ! rsync -avh --info=progress2 \
     exit 1
 fi
 
-echo "Vídeos sincronizados correctamente."
+echo "vídeos sincronizados correctamente."
 
 # ------------------------------------------------------------
 # THUMBNAILS -> PC
@@ -171,7 +171,7 @@ if [ -d "/mnt/d" ]; then
     echo "Destino externo: $EXTERNAL_BASE"
 
     # --------------------------------------------------------
-    # VÍDEOS -> D:
+    # VÃDEOS -> D:
     # --------------------------------------------------------
 
     info "Sincronizando vídeos -> D:"
@@ -184,7 +184,7 @@ if [ -d "/mnt/d" ]; then
         exit 1
     fi
 
-    echo "Vídeos sincronizados en D:."
+    echo "vídeos sincronizados en D:."
 
     # --------------------------------------------------------
     # THUMBNAILS -> D:
@@ -248,14 +248,14 @@ info "BACKUP COMPLETADO"
 echo "Servidor:        $SERVER"
 echo
 echo "PC:"
-echo "  Vídeos:        $LOCAL_BASE"
+echo "  vídeos:        $LOCAL_BASE"
 echo "  Thumbnails:    $LOCAL_BASE/.ts"
 echo "  SQLite:        $LOCAL_BASE/db/library.sqlite"
 
 if [ -d "/mnt/d" ]; then
     echo
     echo "Disco externo:"
-    echo "  Vídeos:        $EXTERNAL_BASE"
+    echo "  vídeos:        $EXTERNAL_BASE"
     echo "  Thumbnails:    $EXTERNAL_BASE/.ts"
     echo "  SQLite:        $EXTERNAL_BASE/db/library.sqlite"
 else

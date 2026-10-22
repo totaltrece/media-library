@@ -6,20 +6,34 @@
         <p>{{ subtitle }}</p>
       </div>
       <nav class="app-nav" aria-label="Main">
-        <template v-for="(item, index) in items" :key="item.id">
-          <span v-if="index > 0" class="app-nav-sep" aria-hidden="true">|</span>
-          <RouterLink
-            class="app-nav-link"
-            :data-testid="item.testId"
-            :class="{ active: current === item.id }"
-            :aria-current="current === item.id ? 'page' : undefined"
-            :to="item.to"
-          >
-            {{ item.label }}
-          </RouterLink>
+        <template v-if="canView">
+          <template v-for="(item, index) in items" :key="item.id">
+            <span v-if="index > 0" class="app-nav-sep" aria-hidden="true">|</span>
+            <RouterLink
+              class="app-nav-link"
+              :data-testid="item.testId"
+              :class="{ active: current === item.id }"
+              :aria-current="current === item.id ? 'page' : undefined"
+              :to="item.to"
+            >
+              {{ item.label }}
+            </RouterLink>
+          </template>
         </template>
-        <span class="app-nav-sep" aria-hidden="true">|</span>
+
+        <template v-else>
+          <button
+            class="app-nav-link auth-button"
+            data-testid="auth-login"
+            type="button"
+            @click="openLogin"
+          >
+            Log in
+          </button>
+        </template>
+
         <template v-if="username">
+          <span class="app-nav-sep" aria-hidden="true">|</span>
           <span class="auth-username" data-testid="auth-username">{{ username }}</span>
           <span class="app-nav-sep" aria-hidden="true">|</span>
           <button
@@ -32,30 +46,24 @@
             Log out
           </button>
         </template>
-        <button
-          v-else
-          class="app-nav-link auth-button"
-          data-testid="auth-login"
-          type="button"
-          @click="openLogin"
-        >
-          Log in
-        </button>
-        <span class="app-nav-sep" aria-hidden="true">|</span>
-        <button
-          class="refresh-button"
-          type="button"
-          aria-label="Refresh library"
-          title="Refresh library"
-          :aria-busy="refreshing"
-          :disabled="refreshing || !canWrite"
-          @click="refreshLibrary"
-        >
-          <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
-            <path d="M21 12a9 9 0 1 1-3.16-6.85" />
-            <path d="M21 3v6h-6" />
-          </svg>
-        </button>
+
+        <template v-if="canView">
+          <span class="app-nav-sep" aria-hidden="true">|</span>
+          <button
+            class="refresh-button"
+            type="button"
+            aria-label="Refresh library"
+            title="Refresh library"
+            :aria-busy="refreshing"
+            :disabled="refreshing || !canWrite"
+            @click="refreshLibrary"
+          >
+            <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 12a9 9 0 1 1-3.16-6.85" />
+              <path d="M21 3v6h-6" />
+            </svg>
+          </button>
+        </template>
       </nav>
     </div>
     <ErrorMessage v-if="refreshError" :message="refreshError" />
@@ -135,7 +143,7 @@ const items = [
 ] as const;
 
 const route = useRoute();
-const { canWrite, username, load, login, logout } = useAuth();
+const { canView, canWrite, username, load, login, logout } = useAuth();
 const refreshing = ref(false);
 const refreshError = ref<string | null>(null);
 const loginOpen = ref(false);

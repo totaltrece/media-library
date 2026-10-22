@@ -1,11 +1,13 @@
 import { config } from "./config.js";
 import { openSqliteStores } from "./adapters/sqlite/sqlite-library-store.js";
-import { CreateAdminUseCase } from "./application/create-admin.js";
+import { CreateUserUseCase } from "./application/create-user.js";
 import { UsernameConflictError } from "./application/username-conflict-error.js";
+import type { AuthRole } from "./ports/auth-store.js";
 
 interface CliOptions {
   username: string;
   password: string;
+  role: AuthRole;
 }
 
 async function main(): Promise<void> {
@@ -13,8 +15,8 @@ async function main(): Promise<void> {
   const stores = openSqliteStores(config.sqlitePath);
 
   try {
-    const user = new CreateAdminUseCase(stores.authStore).execute(options);
-    console.log(`Created admin user: ${user.username}`);
+    const user = new CreateUserUseCase(stores.authStore).execute(options);
+    console.log(`Created ${user.role} user: ${user.username}`);
   } catch (error: unknown) {
     if (error instanceof UsernameConflictError) {
       console.error(error.message);
@@ -39,7 +41,7 @@ function parseArgs(argv: string[]): CliOptions {
       process.exit(0);
     }
 
-    if (arg === "--username" || arg === "--password") {
+    if (arg === "--username" || arg === "--password" || arg === "--role") {
       const value = argv[index + 1];
 
       if (value === undefined || value.startsWith("--")) {
@@ -56,19 +58,24 @@ function parseArgs(argv: string[]): CliOptions {
 
   const username = flags.get("username");
   const password = flags.get("password");
+  const role = flags.get("role") ?? "admin";
 
   if (username === undefined || password === undefined) {
-    throw new Error("Usage: pnpm --filter @media-library/backend create-admin -- --username NAME --password PASS");
+    throw new Error("Usage: pnpm --filter @media-library/backend create-user -- --username NAME --password PASS [--role admin|view]");
   }
 
-  return { username, password };
+  if (role !== "admin" && role !== "view") {
+    throw new Error("Role must be either 'admin' or 'view'");
+  }
+
+  return { username, password, role };
 }
 
 function printHelp(): void {
-  console.log("Usage: pnpm --filter @media-library/backend create-admin -- --username NAME --password PASS");
+  console.log("Usage: pnpm --filter @media-library/backend create-user -- --username NAME --password PASS [--role admin|view]");
   console.log("");
-  console.log("Inserts an admin user with a scrypt password hash. Refuses if the username exists.");
-  console.log("Does not modify video files or TagSpaces metadata.");
+  console.log("Creates a user with the selected role. Defaults to admin when --role is omitted.");
+  console.log("Set --role view to allow read-only access without admin permissions.");
 }
 
 void main();

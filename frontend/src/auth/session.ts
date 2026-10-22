@@ -56,11 +56,15 @@ export function useAuth() {
   const canWrite = computed(
     () => session.value.authenticated && session.value.role === "admin",
   );
+  const canView = computed(
+    () => session.value.authenticated && (session.value.role === "view" || session.value.role === "admin"),
+  );
   const username = computed(() => (session.value.authenticated ? session.value.username : null));
 
   return {
     session,
     canWrite,
+    canView,
     username,
     load: loadAuthSession,
     login,
