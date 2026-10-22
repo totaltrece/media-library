@@ -7,29 +7,21 @@
     <div class="auth-gate-card" role="status" aria-live="polite">
       <p class="auth-gate-title">Access restricted</p>
       <p class="auth-gate-text">Sign in with a user with the <strong>view</strong> or <strong>admin</strong> role to access the library.</p>
-      <button class="primary-button" type="button" @click="openLogin">
-        Log in
-      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted } from "vue";
 
 import AppHeader from "./components/AppHeader.vue";
 import { loadAuthSession, useAuth } from "./auth/session.js";
 
-const { canView, login } = useAuth();
-const loginOpen = ref(false);
+const { canView } = useAuth();
 
 onMounted(() => {
   void loadAuthSession();
 });
-
-function openLogin(): void {
-  loginOpen.value = true;
-}
 </script>
 
 <style scoped>
@@ -58,10 +50,6 @@ function openLogin(): void {
 
 .auth-gate-text {
   color: #5f6368;
-  margin: 0 0 1rem;
-}
-
-.primary-button {
-  margin: 0 auto;
+  margin: 0;
 }
 </style>
