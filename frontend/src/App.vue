@@ -3,25 +3,33 @@
     <router-view />
   </div>
   <div v-else class="auth-gate-shell">
-    <AppHeader title="Media Library" subtitle="Log in with a view or admin account to access the library." />
-    <div class="auth-gate-message">
-      <p>Access restricted</p>
-      <p>Only users with the <strong>view</strong> or <strong>admin</strong> role can continue.</p>
+    <AppHeader title="Media Library" subtitle="Please log in to continue." />
+    <div class="auth-gate-card" role="status" aria-live="polite">
+      <p class="auth-gate-title">Access restricted</p>
+      <p class="auth-gate-text">Sign in with a user with the <strong>view</strong> or <strong>admin</strong> role to access the library.</p>
+      <button class="primary-button" type="button" @click="openLogin">
+        Log in
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 
 import AppHeader from "./components/AppHeader.vue";
 import { loadAuthSession, useAuth } from "./auth/session.js";
 
-const { canView } = useAuth();
+const { canView, login } = useAuth();
+const loginOpen = ref(false);
 
 onMounted(() => {
   void loadAuthSession();
 });
+
+function openLogin(): void {
+  loginOpen.value = true;
+}
 </script>
 
 <style scoped>
@@ -30,23 +38,30 @@ onMounted(() => {
   gap: 1rem;
 }
 
-.auth-gate-message {
+.auth-gate-card {
   background: #fff;
   border: 1px solid #dadce0;
   border-radius: 0.75rem;
-  color: #3c4043;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 8%);
   margin: 0 auto;
-  max-width: 32rem;
+  max-width: 28rem;
   padding: 1.5rem;
   text-align: center;
-  width: min(100%, 32rem);
+  width: min(100%, 28rem);
 }
 
-.auth-gate-message p {
-  margin: 0;
+.auth-gate-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
 }
 
-.auth-gate-message p + p {
-  margin-top: 0.5rem;
+.auth-gate-text {
+  color: #5f6368;
+  margin: 0 0 1rem;
+}
+
+.primary-button {
+  margin: 0 auto;
 }
 </style>
