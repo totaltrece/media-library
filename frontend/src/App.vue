@@ -1,9 +1,9 @@
 <template>
-  <div v-if="canView">
+  <div v-if="canView" class="app-shell">
     <router-view />
   </div>
-  <div v-else class="auth-gate-shell">
-    <AppHeader title="Media Library" subtitle="Please log in to continue." />
+  <div v-else class="app-shell auth-gate-shell">
+    <AppHeader title="Media Library" subtitle="" />
     <div class="auth-gate-card" role="status" aria-live="polite">
       <p class="auth-gate-title">Access restricted</p>
       <p class="auth-gate-text">Sign in with a user with the <strong>view</strong> or <strong>admin</strong> role to access the library.</p>
