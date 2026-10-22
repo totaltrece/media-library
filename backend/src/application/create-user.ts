@@ -12,7 +12,7 @@ export interface CreateUserInput {
 }
 
 export class CreateUserUseCase {
-  constructor(private readonly authStore: AuthStore) {}
+  constructor(private readonly authStore: AuthStore) { }
 
   execute(input: CreateUserInput): AuthUser {
     const username = input.username.trim();
