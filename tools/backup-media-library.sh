@@ -34,6 +34,11 @@ LOCAL_BASE="/mnt/c/Users/Carlos/Documents/baile"
 # En WSL, D: normalmente aparece como /mnt/d
 EXTERNAL_BASE="/mnt/d/baile"
 
+# Video rsync destinations also hold db/library.sqlite from this script
+# (and sync-baile.sh can upload that folder to the server videos tree).
+# Keep sqlite out of the video pass; it is copied in its own step.
+VIDEO_RSYNC_EXCLUDES=(--exclude='db/' --exclude='*.sqlite')
+
 # ------------------------------------------------------------
 # COLORES / MENSAJES
 # ------------------------------------------------------------
@@ -99,6 +104,7 @@ echo "Conexión OK."
 info "Sincronizando vídeos -> PC"
 
 if ! rsync -avh --info=progress2 \
+    "${VIDEO_RSYNC_EXCLUDES[@]}" \
     "$SERVER:$REMOTE_BASE/videos/" \
     "$LOCAL_BASE/"; then
 
@@ -177,6 +183,8 @@ if [ -d "/mnt/d" ]; then
     info "Sincronizando vídeos -> D:"
 
     if ! rsync -avh --info=progress2 \
+        --temp-dir=/tmp \
+        "${VIDEO_RSYNC_EXCLUDES[@]}" \
         "$SERVER:$REMOTE_BASE/videos/" \
         "$EXTERNAL_BASE/"; then
 
@@ -193,6 +201,7 @@ if [ -d "/mnt/d" ]; then
     info "Sincronizando thumbnails -> D:"
 
     if ! rsync -avh --info=progress2 \
+        --temp-dir=/tmp \
         "$SERVER:$REMOTE_BASE/videos/.ts/" \
         "$EXTERNAL_BASE/.ts/"; then
 
