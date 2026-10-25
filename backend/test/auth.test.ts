@@ -3,7 +3,6 @@ import { test } from "node:test";
 
 import { InMemoryVideoIndex } from "../src/adapters/in-memory-video-index.js";
 import { openSqliteStores } from "../src/adapters/sqlite/sqlite-library-store.js";
-import { CreateAdminUseCase } from "../src/application/create-admin.js";
 import { CreateUserUseCase } from "../src/application/create-user.js";
 import { hashPassword } from "../src/application/password-hash.js";
 import { toIndexedVideos } from "../src/application/to-indexed-videos.js";
@@ -22,7 +21,7 @@ async function createAuthApp(options: {
   publicRead?: boolean;
 }) {
   const videoIndex = new InMemoryVideoIndex(
-    toIndexedVideos(options.libraryStore.listVideosWithTags(), testLibraryPath),
+    toIndexedVideos(await options.libraryStore.listVideosWithTags(), testLibraryPath),
   );
 
   return createApp({
@@ -48,7 +47,7 @@ test("POST /api/auth/login sets a session cookie and GET /me returns the user", 
   const stores = openSqliteStores(":memory:");
 
   try {
-    new CreateAdminUseCase(stores.authStore).execute({ username: "admin", password: ADMIN_PASSWORD });
+    await new CreateUserUseCase(stores.authStore).execute({ username: "admin", password: ADMIN_PASSWORD });
     const app = await createAuthApp(stores);
 
     const failed = await app.inject({
@@ -99,7 +98,7 @@ test("POST /api/auth/login sets a session cookie and GET /me returns the user", 
 
     await app.close();
   } finally {
-    stores.close();
+    await stores.close();
   }
 });
 
@@ -107,8 +106,8 @@ test("mutating routes require an admin session", async () => {
   const stores = openSqliteStores(":memory:");
 
   try {
-    new CreateAdminUseCase(stores.authStore).execute({ username: "admin", password: ADMIN_PASSWORD });
-    stores.authStore.createUser("viewer", hashPassword(ADMIN_PASSWORD), "view");
+    await new CreateUserUseCase(stores.authStore).execute({ username: "admin", password: ADMIN_PASSWORD });
+    await stores.authStore.createUser("viewer", hashPassword(ADMIN_PASSWORD), "view");
     const app = await createAuthApp(stores);
 
     const anonymous = await app.inject({
@@ -155,7 +154,7 @@ test("mutating routes require an admin session", async () => {
 
     await app.close();
   } finally {
-    stores.close();
+    await stores.close();
   }
 });
 
@@ -163,7 +162,7 @@ test("GET requires a session when public-read is off", async () => {
   const stores = openSqliteStores(":memory:");
 
   try {
-    new CreateAdminUseCase(stores.authStore).execute({ username: "admin", password: ADMIN_PASSWORD });
+    await new CreateUserUseCase(stores.authStore).execute({ username: "admin", password: ADMIN_PASSWORD });
     const app = await createAuthApp({ ...stores, publicRead: false });
 
     const anonymous = await app.inject({
@@ -184,9 +183,16 @@ test("GET requires a session when public-read is off", async () => {
     });
     assert.strictEqual(allowed.statusCode, 200);
 
+    const health = await app.inject({
+      method: "GET",
+      url: "/api/health",
+    });
+    assert.strictEqual(health.statusCode, 200);
+    assert.deepEqual(health.json(), { status: "ok" });
+
     await app.close();
   } finally {
-    stores.close();
+    await stores.close();
   }
 });
 
@@ -194,7 +200,7 @@ test("view users can read but cannot write", async () => {
   const stores = openSqliteStores(":memory:");
 
   try {
-    new CreateUserUseCase(stores.authStore).execute({
+    await new CreateUserUseCase(stores.authStore).execute({
       username: "viewer",
       password: ADMIN_PASSWORD,
       role: "view",
@@ -227,6 +233,6 @@ test("view users can read but cannot write", async () => {
 
     await app.close();
   } finally {
-    stores.close();
+    await stores.close();
   }
 });

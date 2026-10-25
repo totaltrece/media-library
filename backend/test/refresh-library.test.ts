@@ -42,8 +42,8 @@ test("RefreshLibraryUseCase syncs new videos then reloads the SQLite snapshot", 
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
-    libraryStore.upsertVideo("salsa/first.mp4");
-    libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "bea"]);
+    await libraryStore.upsertVideo("salsa/first.mp4");
+    await libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "bea"]);
 
     const videoIndex = new InMemoryVideoIndex(testVideos);
     const useCase = new RefreshLibraryUseCase(
@@ -62,7 +62,7 @@ test("RefreshLibraryUseCase syncs new videos then reloads the SQLite snapshot", 
 
     const response = await useCase.execute();
 
-    assert.deepEqual(libraryStore.listVideosWithTags(), [
+    assert.deepEqual(await libraryStore.listVideosWithTags(), [
       { id: "salsa/first.mp4", recordedAt: null, tags: ["bea", "salsa"] },
       { id: "salsa/fourth.mp4", recordedAt: null, tags: [] },
     ]);
@@ -78,7 +78,7 @@ test("RefreshLibraryUseCase syncs new videos then reloads the SQLite snapshot", 
       ],
     );
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 });
 
@@ -100,8 +100,8 @@ test("RefreshLibraryUseCase leaves the existing index unchanged when discovery f
 
     await assert.rejects(() => useCase.execute(), /Discovery failed/);
     assert.deepEqual(videoIndex.getVideos(), testVideos);
-    assert.deepEqual(libraryStore.listVideos(), []);
+    assert.deepEqual(await libraryStore.listVideos(), []);
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 });

@@ -50,7 +50,7 @@ export class BackfillRecordedAtUseCase {
       previews: [],
     };
 
-    for (const video of this.libraryStore.listVideos()) {
+    for (const video of await this.libraryStore.listVideos()) {
       result.processed += 1;
 
       try {
@@ -77,7 +77,7 @@ export class BackfillRecordedAtUseCase {
         }
 
         if (!options.dryRun) {
-          this.libraryStore.setVideoRecordedAt(video.id, detected);
+          await this.libraryStore.setVideoRecordedAt(video.id, detected);
         }
 
         result.updated += 1;

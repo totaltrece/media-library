@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import { clampConversionProgress, conversionProgressPercent } from "../src/application/conversion-progress.js";
 
-test("clampConversionProgress keeps values between 0 and 100", () => {
+test("clampConversionProgress keeps values between 0 and 100", async () => {
   assert.equal(clampConversionProgress(0), 0);
   assert.equal(clampConversionProgress(47.4), 47);
   assert.equal(clampConversionProgress(47.5), 48);
@@ -13,7 +13,7 @@ test("clampConversionProgress keeps values between 0 and 100", () => {
   assert.equal(clampConversionProgress(Number.NaN), 0);
 });
 
-test("conversionProgressPercent is out_time divided by duration", () => {
+test("conversionProgressPercent is out_time divided by duration", async () => {
   assert.equal(conversionProgressPercent(0, 10), 0);
   assert.equal(conversionProgressPercent(4.7, 10), 47);
   assert.equal(conversionProgressPercent(10, 10), 100);

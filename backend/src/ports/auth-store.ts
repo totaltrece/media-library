@@ -22,10 +22,10 @@ export interface AuthSessionWithUser extends AuthSession {
 }
 
 export interface AuthStore {
-  createUser(username: string, passwordHash: string, role: AuthRole): AuthUser;
-  findUserByUsername(username: string): AuthUserRecord | null;
-  findUserById(id: number): AuthUser | null;
-  createSession(userId: number, token: string, expiresAt: Date): AuthSession;
-  findValidSession(token: string, now?: Date): AuthSessionWithUser | null;
-  deleteSession(token: string): void;
+  createUser(username: string, passwordHash: string, role: AuthRole): Promise<AuthUser>;
+  findUserByUsername(username: string): Promise<AuthUserRecord | null>;
+  findUserById(id: number): Promise<AuthUser | null>;
+  createSession(userId: number, token: string, expiresAt: Date): Promise<AuthSession>;
+  findValidSession(token: string, now?: Date): Promise<AuthSessionWithUser | null>;
+  deleteSession(token: string): Promise<void>;
 }

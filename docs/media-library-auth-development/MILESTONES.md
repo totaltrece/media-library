@@ -7,18 +7,22 @@ before the UI, so a disabled button is never the only protection. M1 is
 schema-only and shippable; M2 already protects the API; M3 is the visible
 login/logout behaviour.
 
+**Current product (after these slices):** `AUTH_PUBLIC_READ=false` in the
+environment, so catalog GET requires `view` or `admin`. The first UI screen
+is an access-restricted notice until sign-in. Users are created with
+`create-user` (`--role admin|view`). See `README.md` and `DECISIONS.md`.
+
 ## Decisions to lock
 
-- Roles in SQLite: `admin` | `view`. Only `admin` is used for writes now.
-- Phase 1: anonymous **read** is allowed. Anonymous **write** is denied.
-- Future: `AUTH_PUBLIC_READ=false` can require at least `view` on GET.
-  Login-first page and extra `view` users are then UI/data work, not a
-  new auth model.
-- No user CRUD UI. First admin inserted with the create-admin CLI.
-- Session cookie + SQLite `sessions`; scrypt hashes; `@fastify/cookie`.
+- Roles: `admin` | `view`. Only `admin` may write.
+- Deployed read lock: `AUTH_PUBLIC_READ=false` (existing flag, not a new
+  auth system). Anonymous **write** was already denied.
+- No user CRUD UI. Operators use `create-user`.
+- Session cookie + store `sessions`; scrypt hashes; `@fastify/cookie`.
 - Logout in the header. Session ~30 days until logout or expiry.
 - Mutating APIs (below) return 401 without a valid session and 403 if
   the session is not `admin`.
+- `GET /api/health` stays unauthenticated (ping).
 
 Mutating endpoints to protect:
 
@@ -29,16 +33,17 @@ Mutating endpoints to protect:
 - `PUT|DELETE /api/admin/tags/:id`
 - `POST|PUT|DELETE /api/admin/tag-types`
 
-GET (including search, tags, stream, thumbnails, upload status) stay
-public in phase 1.
+GET (including search, tags, stream, thumbnails, upload status) was
+public in phase 1. Production now sets `AUTH_PUBLIC_READ=false`.
 
 ## Objective
 
-Anonymous visitors can watch and browse. An admin session enables
-editing. The server rejects forged write calls. The data model already
-knows `view` users and a future read lock.
+Signed-in `view` or `admin` users can watch and browse. An admin session
+enables editing. The server rejects forged write calls and anonymous
+catalog reads when public-read is off.
 
-TagSpaces metadata and source media stay read-only.
+Source media stays read-only except for explicit admin install/delete.
+Tag metadata lives in the application database.
 
 ## M1 — Schema, hashing, session store, CLI
 
@@ -48,7 +53,8 @@ TagSpaces metadata and source media stay read-only.
 - Role check constraint: `admin` | `view`.
 - Port + SQLite adapter for users/sessions.
 - Hash/verify helpers (`scrypt`).
-- CLI to insert the first admin. No row in the migration SQL.
+- CLI to insert users (`create-user`, optional `--role`). No row in the
+  migration SQL.
 - Unit tests for hash verify, unique username, session create/delete.
 
 No HTTP auth yet. Existing app behaviour unchanged.
@@ -62,11 +68,10 @@ No HTTP auth yet. Existing app behaviour unchanged.
   when anonymous, with `authenticated: false`).
 - Shared authorize helper: `canRead` / `canWrite` using
   `AUTH_PUBLIC_READ`.
-- All mutating routes call `canWrite`; tests cover 401/403 and that GET
-  still works without a cookie while public-read is on.
-- Document the env flag for turning public-read off later (test that
-  GET then returns 401 without a session). That test can force the flag
-  in isolation; production default stays public-read.
+- All mutating routes call `canWrite`; tests cover 401/403 and GET with
+  public-read on or off.
+- Document `AUTH_PUBLIC_READ`. Tests can force the flag in isolation.
+  Deployed environments set it to `false`.
 
 ## M3 — Frontend: login, logout, disable writes
 
@@ -78,12 +83,13 @@ No HTTP auth yet. Existing app behaviour unchanged.
   admin.
 - Skip video-tag `PUT` (and other client writes) when not admin.
 - Disable upload submit and library refresh when not admin.
-- Screens remain reachable without login.
+- Catalog UI is gated until a `view` or `admin` session exists
+  (`AUTH_PUBLIC_READ=false`).
 - Tests: anonymous cannot persist tags; admin login enables writes;
-  logout disables them again.
+  logout disables them again; GET returns 401 when public-read is off.
 
 ### Completion
 
-Writes are admin-only on API and UI. Catalog works logged out. `view`
-and `AUTH_PUBLIC_READ=false` are in the model and policy, unused as the
-default product behaviour. Tests, typecheck, and build pass.
+Writes are admin-only on API and UI. Catalog GET requires `view` or
+`admin` when `AUTH_PUBLIC_READ=false`. Users are created with
+`create-user`. Tests, typecheck, and build pass.

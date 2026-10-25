@@ -14,7 +14,7 @@ export interface CreateUserInput {
 export class CreateUserUseCase {
   constructor(private readonly authStore: AuthStore) { }
 
-  execute(input: CreateUserInput): AuthUser {
+  async execute(input: CreateUserInput): Promise<AuthUser> {
     const username = input.username.trim();
     const password = input.password;
     const role = input.role ?? "admin";
@@ -35,7 +35,7 @@ export class CreateUserUseCase {
       throw new Error("Role must be either 'admin' or 'view'");
     }
 
-    if (this.authStore.findUserByUsername(username) !== null) {
+    if (await this.authStore.findUserByUsername(username) !== null) {
       throw new UsernameConflictError(username);
     }
 

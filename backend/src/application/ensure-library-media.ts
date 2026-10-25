@@ -52,7 +52,7 @@ export class EnsureLibraryMediaUseCase implements EnsureLibraryMedia {
       result.processed += 1;
 
       try {
-        const video = this.libraryStore.findVideo(videoId);
+        const video = await this.libraryStore.findVideo(videoId);
 
         if (video === null) {
           continue;
@@ -62,7 +62,7 @@ export class EnsureLibraryMediaUseCase implements EnsureLibraryMedia {
           const { detected } = await detectRecordedAt(videoId, this.libraryPath, this.processor);
 
           if (detected !== null) {
-            this.libraryStore.setVideoRecordedAt(videoId, detected);
+            await this.libraryStore.setVideoRecordedAt(videoId, detected);
             result.datesFilled += 1;
           }
         }

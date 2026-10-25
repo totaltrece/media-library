@@ -10,9 +10,9 @@
     "ffmpeg-test": "tsx src/ffmpeg-test.ts",
     "process-video": "tsx src/process-video.ts",
     "backfill-recorded-at": "tsx src/backfill-recorded-at.ts",
-    "create-admin": "tsx src/create-admin.ts",
     "create-user": "tsx src/create-user.ts",
-    "test": "pnpm --filter @media-library/indexer build && pnpm --filter @media-library/search build && tsc --project tsconfig.test.json && node --test dist-test/test/health.test.js dist-test/test/auth.test.js"
+    "migrate-sqlite-to-mariadb": "tsx src/migrate-sqlite-to-mariadb.ts",
+    "test": "pnpm --filter @media-library/indexer build && pnpm --filter @media-library/search build && tsc --project tsconfig.test.json && node --test dist-test/test/health.test.js dist-test/test/auth.test.js dist-test/test/database-config.test.js dist-test/test/sqlite-store.contract.test.js dist-test/test/sqlite-catalog-dump.test.js dist-test/test/mariadb-stores.test.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
@@ -21,6 +21,7 @@
     "@media-library/indexer": "workspace:*",
     "@media-library/search": "workspace:*",
     "dotenv": "^17.4.2",
-    "fastify": "^5.7.4"
+    "fastify": "^5.7.4",
+    "mysql2": "^3.24.6"
   }
 }

@@ -25,16 +25,16 @@ test("DELETE /api/videos/:id removes the video, thumbnail, SQLite row, and tag r
     await writeFile(join(libraryPath, ".ts", "first.mp4.jpg"), "target-thumb");
     await writeFile(join(libraryPath, ".ts", "other.mp4.jpg"), "other-thumb");
 
-    libraryStore.upsertVideo("salsa/first.mp4");
-    libraryStore.upsertVideo("other.mp4");
-    libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
-    libraryStore.setVideoTags("other.mp4", ["salsa"]);
-    libraryStore.upsertTag("bufanda");
+    await libraryStore.upsertVideo("salsa/first.mp4");
+    await libraryStore.upsertVideo("other.mp4");
+    await libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
+    await libraryStore.setVideoTags("other.mp4", ["salsa"]);
+    await libraryStore.upsertTag("bufanda");
 
-    const salsa = libraryStore.findTagByName("salsa")!;
-    const jota = libraryStore.findTagByName("jota")!;
-    const bufanda = libraryStore.findTagByName("bufanda")!;
-    const videoIndex = new InMemoryVideoIndex(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath));
+    const salsa = (await libraryStore.findTagByName("salsa"))!;
+    const jota = (await libraryStore.findTagByName("jota"))!;
+    const bufanda = (await libraryStore.findTagByName("bufanda"))!;
+    const videoIndex = new InMemoryVideoIndex(toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath));
     const app = await createApp({
       videoIndex,
       libraryPath,
@@ -48,12 +48,12 @@ test("DELETE /api/videos/:id removes the video, thumbnail, SQLite row, and tag r
 
     assert.strictEqual(response.statusCode, 200);
     assert.deepEqual(response.json(), { id: "salsa/first.mp4" });
-    assert.equal(libraryStore.findVideo("salsa/first.mp4"), null);
-    assert.equal(libraryStore.findVideo("other.mp4")?.id, "other.mp4");
-    assert.deepEqual(libraryStore.getVideoTags("other.mp4"), ["salsa"]);
-    assert.deepEqual(libraryStore.findTagById(salsa.id), salsa);
-    assert.deepEqual(libraryStore.findTagById(jota.id), jota);
-    assert.deepEqual(libraryStore.findTagById(bufanda.id), bufanda);
+    assert.equal(await libraryStore.findVideo("salsa/first.mp4"), null);
+    assert.equal((await libraryStore.findVideo("other.mp4"))?.id, "other.mp4");
+    assert.deepEqual(await libraryStore.getVideoTags("other.mp4"), ["salsa"]);
+    assert.deepEqual(await libraryStore.findTagById(salsa.id), salsa);
+    assert.deepEqual(await libraryStore.findTagById(jota.id), jota);
+    assert.deepEqual(await libraryStore.findTagById(bufanda.id), bufanda);
     await assert.rejects(() => access(join(libraryPath, "salsa", "first.mp4")));
     await assert.rejects(() => access(join(libraryPath, ".ts", "first.mp4.jpg")));
     assert.equal(await readFile(join(libraryPath, "other.mp4"), "utf8"), "other-video");
@@ -77,7 +77,7 @@ test("DELETE /api/videos/:id removes the video, thumbnail, SQLite row, and tag r
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -88,10 +88,10 @@ test("DELETE /api/videos/:id returns 404 when the video is not in SQLite", async
 
   try {
     await writeFile(join(libraryPath, "orphan.mp4"), "orphan");
-    libraryStore.upsertVideo("other.mp4");
+    await libraryStore.upsertVideo("other.mp4");
 
     const app = await createApp({
-      videoIndex: new InMemoryVideoIndex(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath)),
+      videoIndex: new InMemoryVideoIndex(toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath)),
       libraryPath,
       libraryStore,
     });
@@ -108,11 +108,11 @@ test("DELETE /api/videos/:id returns 404 when the video is not in SQLite", async
       },
     });
     assert.equal(await readFile(join(libraryPath, "orphan.mp4"), "utf8"), "orphan");
-    assert.equal(libraryStore.findVideo("other.mp4")?.id, "other.mp4");
+    assert.equal((await libraryStore.findVideo("other.mp4"))?.id, "other.mp4");
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -123,10 +123,10 @@ test("DELETE /api/videos/:id rejects path traversal and does not delete library 
 
   try {
     await writeFile(join(libraryPath, "clip.mp4"), "clip");
-    libraryStore.upsertVideo("clip.mp4");
+    await libraryStore.upsertVideo("clip.mp4");
 
     const app = await createApp({
-      videoIndex: new InMemoryVideoIndex(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath)),
+      videoIndex: new InMemoryVideoIndex(toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath)),
       libraryPath,
       libraryStore,
     });
@@ -142,45 +142,45 @@ test("DELETE /api/videos/:id rejects path traversal and does not delete library 
         message: "Invalid video id",
       },
     });
-    assert.equal(libraryStore.findVideo("clip.mp4")?.id, "clip.mp4");
+    assert.equal((await libraryStore.findVideo("clip.mp4"))?.id, "clip.mp4");
     assert.equal(await readFile(join(libraryPath, "clip.mp4"), "utf8"), "clip");
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
 
 test("DeleteVideoUseCase keeps SQLite when removing the video file fails", async () => {
   const { useCase, installer, libraryStore } = createDeleteHarness();
-  libraryStore.upsertVideo("clip.mp4");
-  libraryStore.setVideoTags("clip.mp4", ["salsa"]);
+  await libraryStore.upsertVideo("clip.mp4");
+  await libraryStore.setVideoTags("clip.mp4", ["salsa"]);
   installer.failAt = "video";
 
   await assert.rejects(() => useCase.execute("clip.mp4"), /video remove failed/);
-  assert.equal(libraryStore.findVideo("clip.mp4")?.id, "clip.mp4");
-  assert.deepEqual(libraryStore.getVideoTags("clip.mp4"), ["salsa"]);
+  assert.equal((await libraryStore.findVideo("clip.mp4"))?.id, "clip.mp4");
+  assert.deepEqual(await libraryStore.getVideoTags("clip.mp4"), ["salsa"]);
   assert.equal(installer.removedVideo, false);
   assert.equal(installer.removedThumbnail, false);
 });
 
 test("DeleteVideoUseCase keeps SQLite when removing the thumbnail fails", async () => {
   const { useCase, installer, libraryStore } = createDeleteHarness();
-  libraryStore.upsertVideo("clip.mp4");
-  libraryStore.setVideoTags("clip.mp4", ["salsa"]);
+  await libraryStore.upsertVideo("clip.mp4");
+  await libraryStore.setVideoTags("clip.mp4", ["salsa"]);
   installer.failAt = "thumbnail";
 
   await assert.rejects(() => useCase.execute("clip.mp4"), /thumbnail remove failed/);
-  assert.equal(libraryStore.findVideo("clip.mp4")?.id, "clip.mp4");
-  assert.deepEqual(libraryStore.getVideoTags("clip.mp4"), ["salsa"]);
+  assert.equal((await libraryStore.findVideo("clip.mp4"))?.id, "clip.mp4");
+  assert.deepEqual(await libraryStore.getVideoTags("clip.mp4"), ["salsa"]);
   assert.equal(installer.removedVideo, true);
   assert.equal(installer.removedThumbnail, false);
 });
 
 test("DeleteVideoUseCase rejects unknown and unsafe ids before touching files", async () => {
   const { useCase, installer, libraryStore } = createDeleteHarness();
-  libraryStore.upsertVideo("clip.mp4");
+  await libraryStore.upsertVideo("clip.mp4");
 
   await assert.rejects(() => useCase.execute("missing.mp4"), (error: unknown) => {
     assert.ok(error instanceof VideoNotFoundError);
@@ -192,15 +192,15 @@ test("DeleteVideoUseCase rejects unknown and unsafe ids before touching files", 
   });
   assert.equal(installer.removedVideo, false);
   assert.equal(installer.removedThumbnail, false);
-  assert.equal(libraryStore.findVideo("clip.mp4")?.id, "clip.mp4");
+  assert.equal((await libraryStore.findVideo("clip.mp4"))?.id, "clip.mp4");
 });
 
 test("DeleteVideoUseCase leaves files removed if SQLite delete fails", async () => {
   const libraryStore = openSqliteLibraryStore(":memory:");
   const installer = new FakeLibraryMediaInstaller();
   const videoIndex = new InMemoryVideoIndex([]);
-  libraryStore.upsertVideo("clip.mp4");
-  libraryStore.setVideoTags("clip.mp4", ["salsa"]);
+  await libraryStore.upsertVideo("clip.mp4");
+  await libraryStore.setVideoTags("clip.mp4", ["salsa"]);
 
   const failingStore = new Proxy(libraryStore, {
     get(target, property, receiver) {
@@ -219,8 +219,8 @@ test("DeleteVideoUseCase leaves files removed if SQLite delete fails", async () 
   await assert.rejects(() => useCase.execute("clip.mp4"), /sqlite down/);
   assert.equal(installer.removedVideo, true);
   assert.equal(installer.removedThumbnail, true);
-  assert.equal(libraryStore.findVideo("clip.mp4")?.id, "clip.mp4");
-  assert.deepEqual(libraryStore.getVideoTags("clip.mp4"), ["salsa"]);
+  assert.equal((await libraryStore.findVideo("clip.mp4"))?.id, "clip.mp4");
+  assert.deepEqual(await libraryStore.getVideoTags("clip.mp4"), ["salsa"]);
 });
 
 function createDeleteHarness() {

@@ -1,6 +1,6 @@
 # REST API
 
-Version: 2.2
+Version: 2.3
 
 ---
 
@@ -25,14 +25,19 @@ The API should be:
 
 - simple
 - predictable
-- cookie-authenticated for writes
+- cookie-authenticated
 
-Anonymous clients may read in phase 1 (`AUTH_PUBLIC_READ=true`, the default).
-`POST`, `PUT`, and `DELETE` require an `admin` session cookie. Set
-`AUTH_PUBLIC_READ=false` to require a `view` or `admin` session on GET as well.
+Deployed environments set `AUTH_PUBLIC_READ=false`, so GET/HEAD for library
+content require a `view` or `admin` session cookie. `POST`, `PUT`, and
+`DELETE` require an `admin` session. Auth login, logout, `GET /api/auth/me`, and `GET /api/health` (ping)
+remain reachable without a session.
 
-Tag editing writes to SQLite only. The API never modifies video files or
-TagSpaces sidecars.
+If `AUTH_PUBLIC_READ` is omitted, the backend still defaults to public GET.
+Do not omit the flag in production.
+
+Tag editing writes to the application database only. The API never modifies
+video files except through admin upload install and video delete. It does not
+read or write TagSpaces sidecars.
 
 All responses use JSON except media streaming endpoints.
 
@@ -46,6 +51,8 @@ All responses use JSON except media streaming endpoints.
 GET /api/health
 ```
 
+Unauthenticated ping. Always allowed, including when `AUTH_PUBLIC_READ=false`.
+
 Response
 
 ```json
@@ -58,11 +65,13 @@ Response
 
 ## Auth
 
-Create the first admin with the CLI (not via HTTP):
+Create users with the CLI (not via HTTP):
 
 ```text
-pnpm --filter @media-library/backend create-admin -- --username admin --password PASS
+pnpm --filter @media-library/backend create-user -- --username NAME --password PASS [--role admin|view]
 ```
+
+`--role` defaults to `admin`. `view` may browse and watch but cannot mutate.
 
 ```text
 POST /api/auth/login
@@ -247,7 +256,7 @@ missing SQLite row returns **404 Not Found**.
 On success the backend:
 
 1. deletes the video file under `LIBRARY_PATH`;
-2. deletes its TagSpaces thumbnail under `LIBRARY_PATH/.ts/`;
+2. deletes its thumbnail under `LIBRARY_PATH/.ts/`;
 3. deletes the `videos` row (SQLite `ON DELETE CASCADE` removes `video_tags`);
 4. reloads the in-memory search index.
 
@@ -330,7 +339,7 @@ to another tag returns **409 Conflict**. A missing id or type returns **404 Not 
 `video_tags` relations. Videos and other tags are left in place. A missing id
 returns **404 Not Found**.
 
-These endpoints never write media files or TagSpaces metadata.
+These endpoints never write media files.
 
 ---
 
@@ -379,8 +388,8 @@ POST /api/library/refresh
 Re-indexes the configured media library by discovering new video files on
 `LIBRARY_PATH`, inserting any missing videos into SQLite without tags, filling
 missing `recorded_at` values (ffprobe metadata, then a YYYYMMDD in the
-filename), generating missing TagSpaces thumbnails under `.ts/`, and replacing
-the in-memory video index from SQLite.
+filename), generating missing thumbnails under `.ts/`, and replacing
+the in-memory video index from the library store.
 
 The endpoint does not read TagSpaces sidecars, modify existing tags, overwrite
 existing dates or thumbnails, delete SQLite videos that are missing from disk,
@@ -404,7 +413,8 @@ Response
 GET /api/thumbnail/:id
 ```
 
-Returns the existing TagSpaces thumbnail associated with the requested media.
+Returns the existing thumbnail associated with the requested media
+(`LIBRARY_PATH/.ts/<basename>.jpg`).
 
 If no thumbnail exists, the endpoint returns **404 Not Found**.
 

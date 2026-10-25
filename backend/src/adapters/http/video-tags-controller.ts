@@ -165,9 +165,9 @@ function sendBadRequest(reply: FastifyReply, message: string) {
   });
 }
 
-function executeVideoTags(reply: FastifyReply, execute: () => { tags: string[] }) {
+async function executeVideoTags(reply: FastifyReply, execute: () => Promise<{ tags: string[] }>) {
   try {
-    return execute();
+    return await execute();
   } catch (error: unknown) {
     if (error instanceof VideoNotFoundError) {
       return reply.status(404).send({

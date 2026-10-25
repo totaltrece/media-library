@@ -11,7 +11,7 @@ import {
   transitionProcessingJob,
 } from "../src/application/processing-job.js";
 
-test("createProcessingJob starts idle and rejects an empty name", () => {
+test("createProcessingJob starts idle and rejects an empty name", async () => {
   const job = createProcessingJob({
     originalName: "  clip.mp4  ",
     id: "job-1",
@@ -31,7 +31,7 @@ test("createProcessingJob starts idle and rejects an empty name", () => {
   assert.throws(() => createProcessingJob({ originalName: "   " }), /original name must not be empty/);
 });
 
-test("processing jobs follow the upload to completed path", () => {
+test("processing jobs follow the upload to completed path", async () => {
   let job = createProcessingJob({ originalName: "clip.mp4", id: "job-1" });
 
   job = transitionProcessingJob(job, { status: "uploading" });
@@ -57,7 +57,7 @@ test("processing jobs follow the upload to completed path", () => {
   );
 });
 
-test("a processing job can fail from an active step without skipping ahead", () => {
+test("a processing job can fail from an active step without skipping ahead", async () => {
   const uploading = transitionProcessingJob(createProcessingJob({ originalName: "clip.mp4" }), {
     status: "uploading",
   });

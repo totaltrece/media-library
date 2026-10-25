@@ -1,10 +1,11 @@
-import { config } from "./config.js";
 import { WorkspaceLibraryIndexer } from "./adapters/indexer/workspace-library-indexer.js";
-import { openSqliteLibraryStore } from "./adapters/sqlite/sqlite-library-store.js";
+import { openStores } from "./adapters/persistence/open-stores.js";
 import { ImportLibraryUseCase } from "./application/import-library.js";
+import { config } from "./config.js";
 
 async function main(): Promise<void> {
-  const libraryStore = openSqliteLibraryStore(config.sqlitePath);
+  const stores = await openStores(config.database);
+  const libraryStore = stores.libraryStore;
 
   try {
     const result = await new ImportLibraryUseCase(
@@ -13,11 +14,11 @@ async function main(): Promise<void> {
       config.libraryPath,
     ).execute();
 
-    const videos = libraryStore.listVideosWithTags();
+    const videos = await libraryStore.listVideosWithTags();
     const relationCount = videos.reduce((count, video) => count + video.tags.length, 0);
 
     console.log(`Library: ${config.libraryPath}`);
-    console.log(`SQLite:  ${config.sqlitePath}`);
+    console.log(`Database: ${describeDatabase()}`);
     console.log("");
     console.log(`Videos discovered:     ${result.discovered}`);
     console.log(`Videos imported:       ${result.imported}`);
@@ -27,7 +28,7 @@ async function main(): Promise<void> {
     console.log(`Import errors:         ${result.errors.length}`);
     console.log("");
     console.log(`SQLite videos:     ${videos.length}`);
-    console.log(`SQLite tags:       ${libraryStore.listTags().length}`);
+    console.log(`SQLite tags:       ${(await libraryStore.listTags()).length}`);
     console.log(`SQLite relations:  ${relationCount}`);
 
     if (videos.length > 0) {
@@ -51,8 +52,14 @@ async function main(): Promise<void> {
       process.exitCode = 1;
     }
   } finally {
-    libraryStore.close();
+    await stores.close();
   }
+}
+
+function describeDatabase(): string {
+  return config.database.engine === "sqlite"
+    ? config.database.sqlitePath
+    : `${config.database.host}:${config.database.port}/${config.database.database}`;
 }
 
 void main();

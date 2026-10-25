@@ -1,16 +1,18 @@
 # Vision
 
-Version: 2.0
+Version: 2.1
 
 ---
 
 # Purpose
 
-Media Library is a self-hosted web application for browsing and streaming
-TagSpaces video libraries.
+Media Library is a self-hosted web application for browsing, searching, and
+streaming a personal video library.
 
-It allows users to search videos by their TagSpaces tags and watch them from
-other devices without copying or modifying the original media library.
+It allows signed-in users to search videos by tags stored in the application
+database and watch them from other devices without copying the original media
+files. TagSpaces is not part of the product architecture; it is only a
+historical origin of the library.
 
 The application is designed for personal use across devices connected to the
 same network, while remaining extensible for future remote access.
@@ -19,18 +21,13 @@ same network, while remaining extensible for future remote access.
 
 # The Problem
 
-TagSpaces provides an excellent way to organize videos using tags.
+The video files live on a dedicated machine. Tagging and playback should work
+from tablets, phones, and other computers through a web browser, without
+treating a third-party desktop tagger as the source of truth.
 
-However, its primary workflow assumes that the media library is accessed
-directly from the local machine.
-
-Media Library solves a different problem.
-
-It allows the original TagSpaces library to remain on a dedicated computer while
-making the tagged videos easily accessible from tablets, phones or other
-computers through a web browser.
-
-The original organization and metadata remain entirely managed by TagSpaces.
+Media Library keeps metadata in its own database and streams files from the
+library path. Existing media files are not rewritten except through explicit
+admin operations.
 
 ---
 
@@ -38,12 +35,12 @@ The original organization and metadata remain entirely managed by TagSpaces.
 
 The application must:
 
-- browse existing TagSpaces libraries
-- search videos using TagSpaces tags
+- browse the library catalog in its own database
+- search videos using application tags
 - stream videos without copying them
-- preserve the original library
+- preserve existing media files except for explicit admin install/delete
 - work from any device with a web browser
-- remain simple to deploy on a home network
+- remain simple to deploy on a home network or a hosted server
 
 ---
 
@@ -51,45 +48,27 @@ The application must:
 
 Media Library is not intended to:
 
-- replace TagSpaces
-- edit TagSpaces metadata
-- organize media
-- rename files
-- move files
-- import media into its own database
-- become a media server for movies or TV shows
-
-TagSpaces remains responsible for organizing and tagging the library.
+- integrate with TagSpaces or any other desktop tagger
+- rename or move files outside admin install/delete
+- become a generic media server for movies or TV shows
 
 ---
 
-# Read-only Philosophy
+# Media files
 
-The original media library is the source of truth.
+Video files on disk remain the media source. Metadata (tags, types, users) is
+the application database.
 
-Media Library never modifies:
-
-- video files
-- TagSpaces JSON metadata
-- TagSpaces thumbnails
-- directory structure
-
-All operations are strictly read-only.
+The application must not overwrite existing videos except through admin
+upload installation or video delete. It must not read or write TagSpaces JSON
+sidecars. Thumbnails may remain under `.ts/` as a filesystem layout only.
 
 ---
 
 # Typical Workflow
 
 ```text
-Tag videos with TagSpaces
-
-↓
-
-Leave the library on the server PC
-
-↓
-
-Open Media Library from another device
+Sign in (`view` or `admin`)
 
 ↓
 
@@ -98,6 +77,10 @@ Search videos by tag
 ↓
 
 Watch the selected video by streaming
+
+↓
+
+Admins edit tags and catalog in the application
 ```
 
 ---
@@ -106,10 +89,9 @@ Watch the selected video by streaming
 
 Typical deployment:
 
-- Mini PC (AceMagic)
-- Windows
-- TagSpaces installed
-- Video library stored locally
+- Mini PC (AceMagic) and/or a Linux host
+- Windows or Linux
+- Video library stored on disk (`LIBRARY_PATH`)
 - Fastify backend
 - Vue frontend
 
@@ -131,13 +113,13 @@ Media Library should remain:
 - self-hosted
 - easy to understand
 - easy to maintain
-- independent from TagSpaces internals whenever possible
+- independent from TagSpaces
 
 ---
 
 # Success Criteria
 
-The MVP is successful when a user can:
+The MVP is successful when a signed-in user can:
 
 1. open the web application from another device
 2. search videos by tag

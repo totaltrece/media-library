@@ -25,7 +25,7 @@ test("parseFfprobeJson reads codec, duration, and resolution from JSON", () => {
   );
 });
 
-test("parseFfprobeJson falls back to stream duration and allows missing audio", () => {
+test("parseFfprobeJson falls back to stream duration and allows missing audio", async () => {
   assert.deepEqual(
     parseFfprobeJson(
       JSON.stringify({
@@ -43,7 +43,7 @@ test("parseFfprobeJson falls back to stream duration and allows missing audio", 
   );
 });
 
-test("parseFfprobeJson reads creation_time from format tags", () => {
+test("parseFfprobeJson reads creation_time from format tags", async () => {
   assert.equal(
     parseFfprobeJson(
       JSON.stringify({
@@ -58,7 +58,7 @@ test("parseFfprobeJson reads creation_time from format tags", () => {
   );
 });
 
-test("parseFfprobeJson prefers format creation_time over stream tags", () => {
+test("parseFfprobeJson prefers format creation_time over stream tags", async () => {
   assert.equal(
     parseFfprobeJson(
       JSON.stringify({
@@ -77,7 +77,7 @@ test("parseFfprobeJson prefers format creation_time over stream tags", () => {
   );
 });
 
-test("parseFfprobeJson falls back to QuickTime and video stream creation tags", () => {
+test("parseFfprobeJson falls back to QuickTime and video stream creation tags", async () => {
   assert.equal(
     parseFfprobeJson(
       JSON.stringify({
@@ -106,7 +106,7 @@ test("parseFfprobeJson falls back to QuickTime and video stream creation tags", 
   );
 });
 
-test("parseFfprobeJson rejects invalid payloads", () => {
+test("parseFfprobeJson rejects invalid payloads", async () => {
   assert.throws(() => parseFfprobeJson("not-json"), /invalid JSON/);
   assert.throws(() => parseFfprobeJson("{}"), /video stream/);
   assert.throws(

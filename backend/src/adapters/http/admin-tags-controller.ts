@@ -44,8 +44,8 @@ export function registerAdminTagsRoutes(
       return sendBadRequest(reply, "Tag id is required");
     }
 
-    return executeAdminTag(reply, () => {
-      options.deleteTagUseCase.execute(tagId);
+    return executeAdminTag(reply, async () => {
+      await options.deleteTagUseCase.execute(tagId);
       return { id: tagId };
     });
   });
@@ -85,9 +85,9 @@ function sendBadRequest(reply: FastifyReply, message: string) {
   });
 }
 
-function executeAdminTag<T>(reply: FastifyReply, execute: () => T) {
+async function executeAdminTag<T>(reply: FastifyReply, execute: () => Promise<T>) {
   try {
-    return execute();
+    return await execute();
   } catch (error: unknown) {
     if (error instanceof TagNotFoundError || error instanceof TagTypeNotFoundError) {
       return reply.status(404).send({

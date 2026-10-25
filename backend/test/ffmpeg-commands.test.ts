@@ -18,7 +18,7 @@ import {
 } from "../src/adapters/ffmpeg/ffmpeg-commands.js";
 import { defaultThumbnailGenerationOptions } from "../src/application/thumbnail-generation-options.js";
 
-test("ffprobe and ffmpeg command builders pass paths as single arguments without a shell", () => {
+test("ffprobe and ffmpeg command builders pass paths as single arguments without a shell", async () => {
   const inputPath = join("C:", "My Videos", "clip 01.mp4");
   const outputPath = join("upload temp", "job 1", "converted.mp4");
   const thumbnailPath = join("upload temp", "job 1", "thumbnail.jpg");
@@ -46,7 +46,7 @@ test("ffprobe and ffmpeg command builders pass paths as single arguments without
   }
 });
 
-test("convert args match the PowerShell HEVC to H.264 flags", () => {
+test("convert args match the PowerShell HEVC to H.264 flags", async () => {
   const args = buildFfmpegConvertArgs("in.mp4", "out.converting.mp4");
 
   assert.deepEqual(args, [
@@ -85,7 +85,7 @@ test("convert args match the PowerShell HEVC to H.264 flags", () => {
   assert.equal(FFMPEG_AAC_AUDIO_BITRATE, "128k");
 });
 
-test("thumbnail args match the PowerShell scale/crop JPEG flags", () => {
+test("thumbnail args match the PowerShell scale/crop JPEG flags", async () => {
   const options = defaultThumbnailGenerationOptions();
   const args = buildFfmpegThumbnailArgs("converted.mp4", "thumb.generating.jpg", options, 12.5);
 

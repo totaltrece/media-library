@@ -21,6 +21,10 @@ export function isAuthExemptPath(method: string, path: string): boolean {
     return true;
   }
 
+  if (isReadMethod(method) && normalized.endsWith("/health")) {
+    return true;
+  }
+
   return method === "GET" && normalized.endsWith("/auth/me");
 }
 

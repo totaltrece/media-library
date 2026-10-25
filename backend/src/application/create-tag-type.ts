@@ -7,7 +7,7 @@ import { normalizeTagTypeColor } from "./tag-type-color.js";
 export class CreateTagTypeUseCase {
   constructor(private readonly libraryStore: LibraryStore) {}
 
-  execute(name: string, color: string): LibraryTagType {
+  async execute(name: string, color: string): Promise<LibraryTagType> {
     const typeName = name.trim();
 
     if (typeName.length === 0) {
@@ -20,7 +20,7 @@ export class CreateTagTypeUseCase {
       throw new InvalidTagTypeColorError();
     }
 
-    const conflict = this.libraryStore.listTagTypes().find((type) => type.name === typeName);
+    const conflict = (await this.libraryStore.listTagTypes()).find((type) => type.name === typeName);
 
     if (conflict !== undefined) {
       throw new TagTypeNameConflictError(typeName);

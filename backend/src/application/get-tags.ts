@@ -32,10 +32,12 @@ export class GetTagsUseCase {
     private readonly libraryStore?: LibraryStore,
   ) {}
 
-  execute(): TagsResponse {
+  async execute(): Promise<TagsResponse> {
     const names = collectDistinctTags(this.videoIndex.getVideos());
-    const colors = new Map((this.libraryStore?.listTags() ?? []).map((tag) => [tag.name, tag.color]));
-    const defaultColor = this.libraryStore?.findDefaultTagType()?.color ?? DEFAULT_TAG_COLOR;
+    const storedTags = this.libraryStore === undefined ? [] : await this.libraryStore.listTags();
+    const colors = new Map(storedTags.map((tag) => [tag.name, tag.color]));
+    const defaultType = this.libraryStore === undefined ? null : await this.libraryStore.findDefaultTagType();
+    const defaultColor = defaultType?.color ?? DEFAULT_TAG_COLOR;
 
     return {
       count: names.length,

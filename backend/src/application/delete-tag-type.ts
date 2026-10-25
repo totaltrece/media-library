@@ -7,8 +7,8 @@ import { TagTypeNotFoundError } from "./tag-type-not-found-error.js";
 export class DeleteTagTypeUseCase {
   constructor(private readonly libraryStore: LibraryStore) {}
 
-  execute(tagTypeId: number): void {
-    const current = this.libraryStore.findTagTypeById(tagTypeId);
+  async execute(tagTypeId: number): Promise<void> {
+    const current = await this.libraryStore.findTagTypeById(tagTypeId);
 
     if (current === null) {
       throw new TagTypeNotFoundError(tagTypeId);
@@ -22,6 +22,6 @@ export class DeleteTagTypeUseCase {
       throw new TagTypeInUseError(current.name);
     }
 
-    this.libraryStore.deleteTagType(tagTypeId);
+    await this.libraryStore.deleteTagType(tagTypeId);
   }
 }

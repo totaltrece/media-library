@@ -2,10 +2,24 @@
 
 ## Project Overview
 
-Media Library is a read-only application for browsing and querying multimedia
-libraries tagged with TagSpaces. It must never modify videos, media files, or
-TagSpaces metadata. The repository is a TypeScript monorepo managed with pnpm
-and Turborepo.
+Media Library is a self-hosted application for browsing, searching, and
+managing a personal video library. Metadata (videos, tags, tag types, users,
+and sessions) lives in the application database. The source of truth is that
+database, not TagSpaces.
+
+Existing video files must not be overwritten, renamed, or deleted except
+through the product’s own admin operations (for example installing a new
+upload or deleting a video). Do not read or write TagSpaces sidecars. Do not
+add TagSpaces as an architectural dependency. Thumbnail files may still sit
+under a `.ts/` directory as a filesystem layout; that convention is not a
+TagSpaces integration.
+
+The repository is a TypeScript monorepo managed with pnpm and Turborepo.
+
+Authentication uses the existing session cookie, roles (`view` | `admin`), and
+`AUTH_PUBLIC_READ`. Deployed environments set `AUTH_PUBLIC_READ=false` so
+catalog queries require a signed-in user. See
+`docs/media-library-auth-development/`.
 
 ## Goals
 
@@ -25,7 +39,7 @@ Use hexagonal architecture (ports and adapters) as the project evolves.
 - **Application:** use cases that coordinate domain logic through explicit
   input/output ports.
 - **Ports:** TypeScript interfaces describing capabilities required by use cases
-  (for example, searching indexed media or reading TagSpaces metadata).
+  (for example, searching indexed media or persisting the library catalog).
 - **Adapters:** implementations of ports for filesystem access, indexing,
   persistence, HTTP, or presentation. Adapters depend inward; the domain does
   not depend outward.
@@ -33,8 +47,9 @@ Use hexagonal architecture (ports and adapters) as the project evolves.
   application services. Keep dependency construction at the edge of each app.
 
 Do not couple domain or application code directly to transport, persistence, or
-framework-specific types. Keep TagSpaces and filesystem integration behind
-adapters, and preserve the read-only guarantee in every implementation.
+framework-specific types. Keep filesystem and database integration behind
+adapters. Preserve the guarantee that existing media files are not mutated
+except by explicit admin use cases.
 
 ## Monorepo Structure
 
@@ -63,8 +78,9 @@ still matches the architecture and that the package has a clear responsibility.
 - Keep modules focused and names explicit. Prefer clear code over clever code.
 - Avoid unrelated formatting changes and broad mechanical rewrites.
 - Handle expected failures deliberately; do not silently ignore errors.
-- Treat media files and TagSpaces metadata as immutable inputs. Any operation
-  that could write, rename, delete, or alter them is out of scope.
+- Treat existing media files as immutable inputs except where an admin use
+  case explicitly installs or deletes library media. Do not read or write
+  TagSpaces metadata files.
 - Update relevant documentation or ADRs when an agreed architectural decision
   changes.
 
@@ -105,7 +121,8 @@ still matches the architecture and that the package has a clear responsibility.
   changes that affect multiple architectural layers.
 - Keep changes scoped to the requested outcome. Flag assumptions and risks when
   requirements are incomplete.
-- Never introduce writes to source media or TagSpaces files.
+- Never introduce writes to TagSpaces sidecars. Never overwrite existing
+  source media except through the existing admin install/delete paths.
 
 ## Testing Philosophy
 

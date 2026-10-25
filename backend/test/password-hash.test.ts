@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import { hashPassword, verifyPassword } from "../src/application/password-hash.js";
 
-test("hashPassword produces a verifiable scrypt hash", () => {
+test("hashPassword produces a verifiable scrypt hash", async () => {
   const hash = hashPassword("correct-horse");
 
   assert.match(hash, /^scrypt\$16384\$8\$1\$[0-9a-f]+\$[0-9a-f]+$/);
@@ -11,7 +11,7 @@ test("hashPassword produces a verifiable scrypt hash", () => {
   assert.equal(verifyPassword("wrong-password", hash), false);
 });
 
-test("verifyPassword rejects malformed stored hashes", () => {
+test("verifyPassword rejects malformed stored hashes", async () => {
   assert.equal(verifyPassword("secret", "not-a-hash"), false);
   assert.equal(verifyPassword("secret", "scrypt$1$1$1$zz$zz"), false);
 });

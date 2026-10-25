@@ -28,7 +28,7 @@ export class ImportLibraryUseCase {
 
   async execute(): Promise<ImportLibraryResult> {
     const indexedVideos = await this.libraryIndexer.index();
-    const tagsBeforeImport = new Set(this.libraryStore.listTags().map((tag) => tag.name));
+    const tagsBeforeImport = new Set((await this.libraryStore.listTags()).map((tag) => tag.name));
 
     const result: ImportLibraryResult = {
       discovered: indexedVideos.length,
@@ -52,8 +52,8 @@ export class ImportLibraryUseCase {
       }
 
       try {
-        this.libraryStore.upsertVideo(videoId);
-        this.libraryStore.setVideoTags(videoId, tags);
+        await this.libraryStore.upsertVideo(videoId);
+        await this.libraryStore.setVideoTags(videoId, tags);
         result.imported += 1;
       } catch (error: unknown) {
         result.errors.push({
@@ -64,8 +64,7 @@ export class ImportLibraryUseCase {
       }
     }
 
-    result.tagsCreated = this.libraryStore
-      .listTags()
+    result.tagsCreated = (await this.libraryStore.listTags())
       .filter((tag) => !tagsBeforeImport.has(tag.name)).length;
 
     return result;

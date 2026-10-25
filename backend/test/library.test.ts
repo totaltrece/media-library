@@ -41,7 +41,7 @@ function createRefreshUseCase(libraryStore: LibraryStore, libraryPath: string, v
 }
 
 async function createRefreshApp(libraryStore: LibraryStore, libraryPath: string) {
-  const videoIndex = new InMemoryVideoIndex(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath));
+  const videoIndex = new InMemoryVideoIndex(toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath));
 
   return createApp({
     videoIndex,
@@ -68,13 +68,13 @@ test("POST /api/library/refresh inserts filesystem videos into an empty SQLite s
     assert.strictEqual(response.statusCode, 200);
     assert.deepEqual(response.json(), { count: 3 });
     assert.deepEqual(
-      libraryStore.listVideosWithTags().map((video) => video.tags),
+      (await libraryStore.listVideosWithTags()).map((video) => video.tags),
       [[], [], []],
     );
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -87,12 +87,12 @@ test("POST /api/library/refresh inserts new videos and keeps existing tags", asy
     await writeVideo(libraryPath, "video1.mp4");
     await writeVideo(libraryPath, "video2.mp4");
     await writeVideo(libraryPath, "video3.mp4");
-    libraryStore.upsertVideo("video1.mp4");
-    libraryStore.setVideoTags("video1.mp4", ["salsa", "bea"]);
-    libraryStore.upsertVideo("video2.mp4");
-    libraryStore.setVideoTags("video2.mp4", ["bachata"]);
-    libraryStore.upsertVideo("video3.mp4");
-    libraryStore.setVideoTags("video3.mp4", ["linea"]);
+    await libraryStore.upsertVideo("video1.mp4");
+    await libraryStore.setVideoTags("video1.mp4", ["salsa", "bea"]);
+    await libraryStore.upsertVideo("video2.mp4");
+    await libraryStore.setVideoTags("video2.mp4", ["bachata"]);
+    await libraryStore.upsertVideo("video3.mp4");
+    await libraryStore.setVideoTags("video3.mp4", ["linea"]);
 
     const app = await createRefreshApp(libraryStore, libraryPath);
 
@@ -106,8 +106,8 @@ test("POST /api/library/refresh inserts new videos and keeps existing tags", asy
 
     assert.strictEqual(refreshResponse.statusCode, 200);
     assert.deepEqual(refreshResponse.json(), { count: 5 });
-    assert.deepEqual(libraryStore.getVideoTags("video1.mp4"), ["bea", "salsa"]);
-    assert.deepEqual(libraryStore.getVideoTags("video4.mp4"), []);
+    assert.deepEqual(await libraryStore.getVideoTags("video1.mp4"), ["bea", "salsa"]);
+    assert.deepEqual(await libraryStore.getVideoTags("video4.mp4"), []);
 
     const searchResponse = await app.inject({
       method: "GET",
@@ -129,7 +129,7 @@ test("POST /api/library/refresh inserts new videos and keeps existing tags", asy
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -174,6 +174,6 @@ test("POST /api/library/refresh returns 500 and preserves the existing index on 
     });
   } finally {
     await app.close();
-    libraryStore.close();
+    await libraryStore.close();
   }
 });

@@ -8,7 +8,7 @@ import {
   resolveThumbnailGenerationOptions,
 } from "../src/application/thumbnail-generation-options.js";
 
-test("resolveThumbnailGenerationOptions uses the current 281x500 defaults", () => {
+test("resolveThumbnailGenerationOptions uses the current 281x500 defaults", async () => {
   assert.deepEqual(resolveThumbnailGenerationOptions(), {
     width: DEFAULT_THUMBNAIL_WIDTH,
     height: DEFAULT_THUMBNAIL_HEIGHT,
@@ -21,7 +21,7 @@ test("resolveThumbnailGenerationOptions uses the current 281x500 defaults", () =
   });
 });
 
-test("resolveThumbnailGenerationOptions rejects invalid dimensions and positions", () => {
+test("resolveThumbnailGenerationOptions rejects invalid dimensions and positions", async () => {
   assert.throws(() => resolveThumbnailGenerationOptions({ width: 0 }), /width must be a positive integer/);
   assert.throws(() => resolveThumbnailGenerationOptions({ height: -1 }), /height must be a positive integer/);
   assert.throws(() => resolveThumbnailGenerationOptions({ positionRatio: 1.1 }), /position ratio must be between 0 and 1/);

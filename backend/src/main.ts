@@ -5,8 +5,8 @@ import { FilesystemProcessingWorkspace } from "./adapters/filesystem/filesystem-
 import { InMemoryProcessingJobStore } from "./adapters/in-memory-processing-job-store.js";
 import { InMemoryVideoIndex } from "./adapters/in-memory-video-index.js";
 import { WorkspaceVideoDiscovery } from "./adapters/indexer/workspace-video-discovery.js";
+import { openStores } from "./adapters/persistence/open-stores.js";
 import { SqliteLibraryIndexer } from "./adapters/sqlite/sqlite-library-indexer.js";
-import { openSqliteStores } from "./adapters/sqlite/sqlite-library-store.js";
 import { createApp } from "./app.js";
 import { EnsureLibraryMediaUseCase } from "./application/ensure-library-media.js";
 import { ProcessVideoJobUseCase } from "./application/process-video-job.js";
@@ -20,22 +20,29 @@ async function main(): Promise<void> {
   const libraryPath = config.libraryPath;
   const port = config.port;
   const staticRoot = resolveFrontendDistPath(import.meta.url);
-  const stores = openSqliteStores(config.sqlitePath);
+  const stores = await openStores(config.database);
   const libraryStore = stores.libraryStore;
   let storeOpen = true;
 
-  const closeStore = (): void => {
+  let reloadTimer: ReturnType<typeof setInterval> | undefined;
+
+  const closeStore = async (): Promise<void> => {
+    if (reloadTimer !== undefined) {
+      clearInterval(reloadTimer);
+      reloadTimer = undefined;
+    }
+
     if (!storeOpen) {
       return;
     }
 
     storeOpen = false;
-    stores.close();
+    await stores.close();
   };
 
   try {
     const videoIndex = new InMemoryVideoIndex(
-      toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath),
+      toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath),
     );
     const videoDiscovery = new WorkspaceVideoDiscovery(libraryPath);
     const videoProcessor = new FfmpegVideoProcessor({
@@ -69,8 +76,22 @@ async function main(): Promise<void> {
       staticRoot: existsSync(staticRoot) ? staticRoot : undefined,
     });
 
+    if (config.indexReloadIntervalMs > 0) {
+      reloadTimer = setInterval(() => {
+        void libraryStore
+          .listVideosWithTags()
+          .then((videos) => {
+            videoIndex.replaceVideos(toIndexedVideos(videos, libraryPath));
+          })
+          .catch((error: unknown) => {
+            console.error("Failed to reload in-memory video index", error);
+          });
+      }, config.indexReloadIntervalMs);
+      reloadTimer.unref();
+    }
+
     app.addHook("onClose", async () => {
-      closeStore();
+      await closeStore();
     });
 
     if (!existsSync(staticRoot)) {
@@ -83,7 +104,7 @@ async function main(): Promise<void> {
   } catch (error: unknown) {
     console.error(error);
     process.exitCode = 1;
-    closeStore();
+    await closeStore();
   }
 }
 

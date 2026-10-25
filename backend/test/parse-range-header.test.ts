@@ -3,36 +3,36 @@ import { test } from "node:test";
 
 import { parseRangeHeader } from "../src/application/parse-range-header.js";
 
-test("parseRangeHeader returns full when Range header is absent", () => {
+test("parseRangeHeader returns full when Range header is absent", async () => {
   assert.deepEqual(parseRangeHeader(undefined, 100), { kind: "full" });
 });
 
-test("parseRangeHeader parses a closed byte range", () => {
+test("parseRangeHeader parses a closed byte range", async () => {
   assert.deepEqual(parseRangeHeader("bytes=0-4", 10), {
     kind: "partial",
     range: { start: 0, end: 4 },
   });
 });
 
-test("parseRangeHeader parses an open-ended byte range", () => {
+test("parseRangeHeader parses an open-ended byte range", async () => {
   assert.deepEqual(parseRangeHeader("bytes=5-", 10), {
     kind: "partial",
     range: { start: 5, end: 9 },
   });
 });
 
-test("parseRangeHeader parses a suffix byte range", () => {
+test("parseRangeHeader parses a suffix byte range", async () => {
   assert.deepEqual(parseRangeHeader("bytes=-3", 10), {
     kind: "partial",
     range: { start: 7, end: 9 },
   });
 });
 
-test("parseRangeHeader returns unsatisfiable for invalid range syntax", () => {
+test("parseRangeHeader returns unsatisfiable for invalid range syntax", async () => {
   assert.deepEqual(parseRangeHeader("invalid", 10), { kind: "unsatisfiable" });
   assert.deepEqual(parseRangeHeader("bytes=-", 10), { kind: "unsatisfiable" });
 });
 
-test("parseRangeHeader returns unsatisfiable when the range starts beyond the file", () => {
+test("parseRangeHeader returns unsatisfiable when the range starts beyond the file", async () => {
   assert.deepEqual(parseRangeHeader("bytes=10-20", 10), { kind: "unsatisfiable" });
 });

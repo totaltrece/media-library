@@ -1,5 +1,5 @@
 import { FfmpegVideoProcessor } from "./adapters/ffmpeg/ffmpeg-video-processor.js";
-import { openSqliteLibraryStore } from "./adapters/sqlite/sqlite-library-store.js";
+import { openStores } from "./adapters/persistence/open-stores.js";
 import { BackfillRecordedAtUseCase } from "./application/backfill-recorded-at.js";
 import { config } from "./config.js";
 
@@ -9,7 +9,8 @@ interface CliOptions {
 
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
-  const libraryStore = openSqliteLibraryStore(config.sqlitePath);
+  const stores = await openStores(config.database);
+  const libraryStore = stores.libraryStore;
 
   try {
     const result = await new BackfillRecordedAtUseCase(
@@ -24,7 +25,7 @@ async function main(): Promise<void> {
     console.log(options.dryRun ? "Backfill recorded_at (dry-run)" : "Backfill recorded_at");
     console.log("");
     console.log(`Library: ${config.libraryPath}`);
-    console.log(`SQLite:  ${config.sqlitePath}`);
+    console.log(`Database: ${describeDatabase()}`);
     console.log("");
 
     for (const preview of result.previews) {
@@ -54,8 +55,14 @@ async function main(): Promise<void> {
       process.exitCode = 1;
     }
   } finally {
-    libraryStore.close();
+    await stores.close();
   }
+}
+
+function describeDatabase(): string {
+  return config.database.engine === "sqlite"
+    ? config.database.sqlitePath
+    : `${config.database.host}:${config.database.port}/${config.database.database}`;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -83,11 +90,11 @@ function parseArgs(argv: string[]): CliOptions {
 function printHelp(): void {
   console.log("Usage: pnpm --filter @media-library/backend backfill-recorded-at -- [--dry-run]");
   console.log("");
-  console.log("Fills SQLite recorded_at from ffprobe metadata of existing library videos.");
+  console.log("Fills recorded_at from ffprobe metadata of existing library videos.");
   console.log("Names with YYYYMMDD may fall back to that day at 20:00 Europe/Madrid.");
   console.log("Does not modify video files, thumbnails, or tags.");
   console.log("");
-  console.log("  --dry-run   Probe and print dates without writing to SQLite");
+  console.log("  --dry-run   Probe and print dates without writing to the database");
 }
 
 void main();

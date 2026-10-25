@@ -41,15 +41,15 @@ const TAG_TYPE_SELECT = `
 export class SqliteLibraryStore implements LibraryStore {
   constructor(private readonly database: DatabaseSync) {}
 
-  initialize(): void {
+  async initialize(): Promise<void> {
     applySqliteMigrations(this.database);
   }
 
-  close(): void {
+  async close(): Promise<void> {
     this.database.close();
   }
 
-  upsertVideo(id: string, recordedAt: string | null = null): LibraryVideo {
+  async upsertVideo(id: string, recordedAt: string | null = null): Promise<LibraryVideo> {
     const videoId = requireNonEmpty(id, "Video id");
 
     this.database
@@ -61,7 +61,7 @@ export class SqliteLibraryStore implements LibraryStore {
       )
       .run(videoId, recordedAt);
 
-    const video = this.findVideo(videoId);
+    const video = await this.findVideo(videoId);
 
     if (video === null) {
       throw new Error(`Unable to persist video ${videoId}`);
@@ -70,19 +70,19 @@ export class SqliteLibraryStore implements LibraryStore {
     return video;
   }
 
-  findVideo(id: string): LibraryVideo | null {
+  async findVideo(id: string): Promise<LibraryVideo | null> {
     const row = this.database.prepare("SELECT id, recorded_at FROM videos WHERE id = ?").get(id);
 
     return isVideoRow(row) ? toLibraryVideo(row) : null;
   }
 
-  listVideos(): LibraryVideo[] {
+  async listVideos(): Promise<LibraryVideo[]> {
     const rows = this.database.prepare("SELECT id, recorded_at FROM videos ORDER BY id").all();
 
     return rows.filter(isVideoRow).map((row) => toLibraryVideo(row));
   }
 
-  setVideoRecordedAt(id: string, recordedAt: string | null): LibraryVideo {
+  async setVideoRecordedAt(id: string, recordedAt: string | null): Promise<LibraryVideo> {
     const videoId = requireNonEmpty(id, "Video id");
     const result = this.database.prepare("UPDATE videos SET recorded_at = ? WHERE id = ?").run(recordedAt, videoId);
 
@@ -90,7 +90,7 @@ export class SqliteLibraryStore implements LibraryStore {
       throw new Error(`Video not found: ${videoId}`);
     }
 
-    const video = this.findVideo(videoId);
+    const video = await this.findVideo(videoId);
 
     if (video === null) {
       throw new Error(`Unable to persist video ${videoId}`);
@@ -99,7 +99,7 @@ export class SqliteLibraryStore implements LibraryStore {
     return video;
   }
 
-  deleteVideo(id: string): void {
+  async deleteVideo(id: string): Promise<void> {
     const result = this.database.prepare("DELETE FROM videos WHERE id = ?").run(id);
 
     if (result.changes === 0) {
@@ -107,15 +107,15 @@ export class SqliteLibraryStore implements LibraryStore {
     }
   }
 
-  upsertTag(name: string): LibraryTag {
+  async upsertTag(name: string): Promise<LibraryTag> {
     const tagName = requireNonEmpty(name, "Tag name");
-    const defaultType = this.requireDefaultTagType();
+    const defaultType = await this.requireDefaultTagType();
 
     this.database
       .prepare("INSERT INTO tags (name, tag_type_id) VALUES (?, ?) ON CONFLICT(name) DO NOTHING")
       .run(tagName, defaultType.id);
 
-    const tag = this.findTagByName(tagName);
+    const tag = await this.findTagByName(tagName);
 
     if (tag === null) {
       throw new Error(`Unable to persist tag ${tagName}`);
@@ -124,25 +124,25 @@ export class SqliteLibraryStore implements LibraryStore {
     return tag;
   }
 
-  findTagByName(name: string): LibraryTag | null {
+  async findTagByName(name: string): Promise<LibraryTag | null> {
     const row = this.database.prepare(`${TAG_SELECT} WHERE tags.name = ?`).get(name);
 
     return isTagRow(row) ? toLibraryTag(row) : null;
   }
 
-  findTagById(id: number): LibraryTag | null {
+  async findTagById(id: number): Promise<LibraryTag | null> {
     const row = this.database.prepare(`${TAG_SELECT} WHERE tags.id = ?`).get(id);
 
     return isTagRow(row) ? toLibraryTag(row) : null;
   }
 
-  listTags(): LibraryTag[] {
+  async listTags(): Promise<LibraryTag[]> {
     const rows = this.database.prepare(`${TAG_SELECT} ORDER BY tags.name`).all();
 
     return rows.filter(isTagRow).map((row) => toLibraryTag(row));
   }
 
-  listTagUsages(): LibraryTagUsage[] {
+  async listTagUsages(): Promise<LibraryTagUsage[]> {
     const rows = this.database
       .prepare(
         `
@@ -166,20 +166,20 @@ export class SqliteLibraryStore implements LibraryStore {
     return rows.filter(isTagUsageRow).map((row) => toLibraryTagUsage(row));
   }
 
-  updateTag(id: number, name: string, typeId: number): LibraryTag {
+  async updateTag(id: number, name: string, typeId: number): Promise<LibraryTag> {
     const tagName = requireNonEmpty(name, "Tag name");
-    const current = this.findTagById(id);
+    const current = await this.findTagById(id);
 
     if (current === null) {
       throw new Error(`Tag not found: ${id}`);
     }
 
-    if (this.findTagTypeById(typeId) === null) {
+    if (await this.findTagTypeById(typeId) === null) {
       throw new Error(`Tag type not found: ${typeId}`);
     }
 
     if (current.name !== tagName) {
-      const conflict = this.findTagByName(tagName);
+      const conflict = await this.findTagByName(tagName);
 
       if (conflict !== null) {
         throw new Error(`Tag name already exists: ${tagName}`);
@@ -190,7 +190,7 @@ export class SqliteLibraryStore implements LibraryStore {
       .prepare("UPDATE tags SET name = ?, tag_type_id = ? WHERE id = ?")
       .run(tagName, typeId, id);
 
-    const updated = this.findTagById(id);
+    const updated = await this.findTagById(id);
 
     if (updated === null) {
       throw new Error(`Unable to update tag ${id}`);
@@ -199,7 +199,7 @@ export class SqliteLibraryStore implements LibraryStore {
     return updated;
   }
 
-  deleteTag(id: number): void {
+  async deleteTag(id: number): Promise<void> {
     const result = this.database.prepare("DELETE FROM tags WHERE id = ?").run(id);
 
     if (result.changes === 0) {
@@ -207,7 +207,7 @@ export class SqliteLibraryStore implements LibraryStore {
     }
   }
 
-  listTagTypes(): LibraryTagType[] {
+  async listTagTypes(): Promise<LibraryTagType[]> {
     const rows = this.database
       .prepare(`${TAG_TYPE_SELECT} GROUP BY tag_types.id ORDER BY tag_types.sort_order, tag_types.name`)
       .all();
@@ -215,13 +215,13 @@ export class SqliteLibraryStore implements LibraryStore {
     return rows.filter(isTagTypeRow).map((row) => toLibraryTagType(row));
   }
 
-  findTagTypeById(id: number): LibraryTagType | null {
+  async findTagTypeById(id: number): Promise<LibraryTagType | null> {
     const row = this.database.prepare(`${TAG_TYPE_SELECT} WHERE tag_types.id = ? GROUP BY tag_types.id`).get(id);
 
     return isTagTypeRow(row) ? toLibraryTagType(row) : null;
   }
 
-  findDefaultTagType(): LibraryTagType | null {
+  async findDefaultTagType(): Promise<LibraryTagType | null> {
     const row = this.database
       .prepare(`${TAG_TYPE_SELECT} WHERE tag_types.is_default = 1 GROUP BY tag_types.id`)
       .get();
@@ -229,7 +229,7 @@ export class SqliteLibraryStore implements LibraryStore {
     return isTagTypeRow(row) ? toLibraryTagType(row) : null;
   }
 
-  createTagType(name: string, color: string): LibraryTagType {
+  async createTagType(name: string, color: string): Promise<LibraryTagType> {
     const typeName = requireNonEmpty(name, "Tag type name");
     const conflict = this.findTagTypeByName(typeName);
 
@@ -246,7 +246,7 @@ export class SqliteLibraryStore implements LibraryStore {
       .prepare("INSERT INTO tag_types (name, color, is_default, sort_order) VALUES (?, ?, 0, ?)")
       .run(typeName, color, sortOrder);
 
-    const created = this.findTagTypeById(Number(result.lastInsertRowid));
+    const created = await this.findTagTypeById(Number(result.lastInsertRowid));
 
     if (created === null) {
       throw new Error(`Unable to persist tag type ${typeName}`);
@@ -255,9 +255,9 @@ export class SqliteLibraryStore implements LibraryStore {
     return created;
   }
 
-  updateTagType(id: number, name: string, color: string): LibraryTagType {
+  async updateTagType(id: number, name: string, color: string): Promise<LibraryTagType> {
     const typeName = requireNonEmpty(name, "Tag type name");
-    const current = this.findTagTypeById(id);
+    const current = await this.findTagTypeById(id);
 
     if (current === null) {
       throw new Error(`Tag type not found: ${id}`);
@@ -271,7 +271,7 @@ export class SqliteLibraryStore implements LibraryStore {
 
     this.database.prepare("UPDATE tag_types SET name = ?, color = ? WHERE id = ?").run(typeName, color, id);
 
-    const updated = this.findTagTypeById(id);
+    const updated = await this.findTagTypeById(id);
 
     if (updated === null) {
       throw new Error(`Unable to update tag type ${id}`);
@@ -280,8 +280,8 @@ export class SqliteLibraryStore implements LibraryStore {
     return updated;
   }
 
-  deleteTagType(id: number): void {
-    const current = this.findTagTypeById(id);
+  async deleteTagType(id: number): Promise<void> {
+    const current = await this.findTagTypeById(id);
 
     if (current === null) {
       throw new Error(`Tag type not found: ${id}`);
@@ -298,8 +298,8 @@ export class SqliteLibraryStore implements LibraryStore {
     this.database.prepare("DELETE FROM tag_types WHERE id = ?").run(id);
   }
 
-  setVideoTags(videoId: string, tagNames: string[]): void {
-    const video = this.findVideo(videoId);
+  async setVideoTags(videoId: string, tagNames: string[]): Promise<void> {
+    const video = await this.findVideo(videoId);
 
     if (video === null) {
       throw new Error(`Video not found: ${videoId}`);
@@ -310,13 +310,13 @@ export class SqliteLibraryStore implements LibraryStore {
     try {
       this.database.prepare("DELETE FROM video_tags WHERE video_id = ?").run(videoId);
 
-      tagNames.forEach((tagName, position) => {
-        const tag = this.upsertTag(tagName);
+      for (const [position, tagName] of tagNames.entries()) {
+        const tag = await this.upsertTag(tagName);
 
         this.database
           .prepare("INSERT INTO video_tags (video_id, tag_id, position) VALUES (?, ?, ?)")
           .run(videoId, tag.id, position);
-      });
+      }
 
       this.database.exec("COMMIT");
     } catch (error: unknown) {
@@ -325,14 +325,14 @@ export class SqliteLibraryStore implements LibraryStore {
     }
   }
 
-  addVideoTag(videoId: string, tagName: string): void {
-    const video = this.findVideo(videoId);
+  async addVideoTag(videoId: string, tagName: string): Promise<void> {
+    const video = await this.findVideo(videoId);
 
     if (video === null) {
       throw new Error(`Video not found: ${videoId}`);
     }
 
-    const currentTags = this.getVideoTags(videoId);
+    const currentTags = await this.getVideoTags(videoId);
 
     if (currentTags.includes(tagName)) {
       return;
@@ -341,7 +341,7 @@ export class SqliteLibraryStore implements LibraryStore {
     this.database.exec("BEGIN");
 
     try {
-      const tag = this.upsertTag(tagName);
+      const tag = await this.upsertTag(tagName);
       const nextPosition = nextVideoTagPosition(this.database, videoId);
 
       this.database
@@ -355,14 +355,14 @@ export class SqliteLibraryStore implements LibraryStore {
     }
   }
 
-  removeVideoTag(videoId: string, tagName: string): void {
-    const video = this.findVideo(videoId);
+  async removeVideoTag(videoId: string, tagName: string): Promise<void> {
+    const video = await this.findVideo(videoId);
 
     if (video === null) {
       throw new Error(`Video not found: ${videoId}`);
     }
 
-    const tag = this.findTagByName(tagName);
+    const tag = await this.findTagByName(tagName);
 
     if (tag === null) {
       return;
@@ -371,7 +371,7 @@ export class SqliteLibraryStore implements LibraryStore {
     this.database.prepare("DELETE FROM video_tags WHERE video_id = ? AND tag_id = ?").run(videoId, tag.id);
   }
 
-  getVideoTags(videoId: string): string[] {
+  async getVideoTags(videoId: string): Promise<string[]> {
     const rows = this.database
       .prepare(
         `
@@ -388,12 +388,19 @@ export class SqliteLibraryStore implements LibraryStore {
     return rows.filter(isNameRow).map((row) => row.name);
   }
 
-  listVideosWithTags(): LibraryVideoWithTags[] {
-    return this.listVideos().map((video) => ({
-      id: video.id,
-      recordedAt: video.recordedAt,
-      tags: this.getVideoTags(video.id),
-    }));
+  async listVideosWithTags(): Promise<LibraryVideoWithTags[]> {
+    const videos = await this.listVideos();
+    const result: LibraryVideoWithTags[] = [];
+
+    for (const video of videos) {
+      result.push({
+        id: video.id,
+        recordedAt: video.recordedAt,
+        tags: await this.getVideoTags(video.id),
+      });
+    }
+
+    return result;
   }
 
   private findTagTypeByName(name: string): LibraryTagType | null {
@@ -402,8 +409,8 @@ export class SqliteLibraryStore implements LibraryStore {
     return isTagTypeRow(row) ? toLibraryTagType(row) : null;
   }
 
-  private requireDefaultTagType(): LibraryTagType {
-    const defaultType = this.findDefaultTagType();
+  private async requireDefaultTagType(): Promise<LibraryTagType> {
+    const defaultType = await this.findDefaultTagType();
 
     if (defaultType === null) {
       throw new Error("Default tag type is missing");
@@ -416,7 +423,7 @@ export class SqliteLibraryStore implements LibraryStore {
 export interface SqliteStores {
   libraryStore: SqliteLibraryStore;
   authStore: SqliteAuthStore;
-  close(): void;
+  close(): Promise<void>;
 }
 
 export function openSqliteDatabase(databasePath: string): DatabaseSync {
@@ -435,7 +442,7 @@ export function openSqliteStores(databasePath: string): SqliteStores {
   return {
     libraryStore: new SqliteLibraryStore(database),
     authStore: new SqliteAuthStore(database),
-    close: () => {
+    close: async () => {
       database.close();
     },
   };

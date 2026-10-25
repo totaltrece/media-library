@@ -33,9 +33,9 @@ test("installs processed video and thumbnail, then registers SQLite without tags
   assert.equal(result.videoId, "clip.mp4");
   assert.equal(installer.installedVideo, "clip.mp4");
   assert.equal(installer.installedThumbnail, "clip.mp4");
-  assert.equal(libraryStore.findVideo("clip.mp4")?.id, "clip.mp4");
-  assert.equal(libraryStore.findVideo("clip.mp4")?.recordedAt, null);
-  assert.deepEqual(libraryStore.getVideoTags("clip.mp4"), []);
+  assert.equal((await libraryStore.findVideo("clip.mp4"))?.id, "clip.mp4");
+  assert.equal((await libraryStore.findVideo("clip.mp4"))?.recordedAt, null);
+  assert.deepEqual(await libraryStore.getVideoTags("clip.mp4"), []);
   assert.deepEqual(result.job.state, { status: "completed", videoId: "clip.mp4" });
 });
 
@@ -47,14 +47,14 @@ test("install stores recorded_at from ffprobe metadata", async () => {
 
   assert.equal(result.status, "completed");
   assert.equal(
-    libraryStore.findVideo("clip.mp4")?.recordedAt,
+    (await libraryStore.findVideo("clip.mp4"))?.recordedAt,
     toStoredRecordedAt("2026-03-14T19:04:31.123Z"),
   );
 });
 
 test("rejects a video id that already exists in SQLite", async () => {
   const { useCase, installer, libraryStore, jobs } = createHarness();
-  libraryStore.upsertVideo("clip.mp4");
+  await libraryStore.upsertVideo("clip.mp4");
   const processed = stagedJob(jobs, "clip.mp4", "job-dup-db");
 
   await assert.rejects(() => useCase.assertAvailable("clip.mp4"), (error: unknown) => {
@@ -70,7 +70,7 @@ test("rejects a video id that already exists in SQLite", async () => {
 
   assert.equal(result.conflict, true);
   assert.equal(installer.installedVideo, null);
-  assert.equal(libraryStore.listVideos().length, 1);
+  assert.equal((await libraryStore.listVideos()).length, 1);
 });
 
 test("rejects a destination that already exists on the filesystem", async () => {
@@ -86,7 +86,7 @@ test("rejects a destination that already exists on the filesystem", async () => 
 
   assert.equal(result.conflict, true);
   assert.equal(installer.installedVideo, null);
-  assert.equal(libraryStore.findVideo("clip.mp4"), null);
+  assert.equal(await libraryStore.findVideo("clip.mp4"), null);
 });
 
 test("removes a newly copied video when thumbnail install fails", async () => {
@@ -103,7 +103,7 @@ test("removes a newly copied video when thumbnail install fails", async () => {
   assert.equal(result.conflict, false);
   assert.equal(installer.removedVideo, true);
   assert.equal(installer.presence.video, false);
-  assert.equal(libraryStore.findVideo("clip.mp4"), null);
+  assert.equal(await libraryStore.findVideo("clip.mp4"), null);
   assert.equal(result.job.state.status, "failed");
 });
 
@@ -116,7 +116,7 @@ test("does not leave a partial video when video install fails", async () => {
   assert.equal(result.status, "failed");
   assert.equal(installer.installedVideo, null);
   assert.equal(installer.removedVideo, false);
-  assert.equal(libraryStore.findVideo("clip.mp4"), null);
+  assert.equal(await libraryStore.findVideo("clip.mp4"), null);
 });
 
 test("compensates installed files when SQLite upsert fails", async () => {
@@ -131,7 +131,7 @@ test("compensates installed files when SQLite upsert fails", async () => {
   assert.equal(installer.presence.video, false);
   assert.equal(installer.presence.thumbnail, false);
   failUpsert.current = false;
-  assert.equal(libraryStore.findVideo("clip.mp4"), null);
+  assert.equal(await libraryStore.findVideo("clip.mp4"), null);
 });
 
 test("keeps pre-existing files when compensation would otherwise run", async () => {

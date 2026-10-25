@@ -35,8 +35,8 @@ test("POST /api/admin/uploads returns 202 and finishes HEVC install asynchronous
     const clientPath = join(context.clientDir, "PXL_clip.mp4");
     await writeFile(clientPath, VIDEO_BYTES);
     const beforeClient = await stat(clientPath);
-    const tagsBefore = context.libraryStore.listTags().length;
-    const relationsBefore = relationCount(context.libraryStore);
+    const tagsBefore = (await context.libraryStore.listTags()).length;
+    const relationsBefore = await relationCount(context.libraryStore);
 
     const response = await context.app.inject({
       method: "POST",
@@ -76,11 +76,11 @@ test("POST /api/admin/uploads returns 202 and finishes HEVC install asynchronous
     assert.equal(afterClient.mtimeMs, beforeClient.mtimeMs);
     assert.equal(context.processor.convertCalls, 1);
 
-    const recorded = context.libraryStore.findVideo("PXL_clip.mp4");
+    const recorded = await context.libraryStore.findVideo("PXL_clip.mp4");
     assert.equal(recorded?.id, "PXL_clip.mp4");
-    assert.deepEqual(context.libraryStore.getVideoTags("PXL_clip.mp4"), []);
-    assert.equal(context.libraryStore.listTags().length, tagsBefore);
-    assert.equal(relationCount(context.libraryStore), relationsBefore);
+    assert.deepEqual(await context.libraryStore.getVideoTags("PXL_clip.mp4"), []);
+    assert.equal((await context.libraryStore.listTags()).length, tagsBefore);
+    assert.equal(await relationCount(context.libraryStore), relationsBefore);
 
     const search = await context.app.inject({ method: "GET", url: "/api/search" });
     assert.equal(search.statusCode, 200);
@@ -138,7 +138,7 @@ test("POST /api/admin/uploads keeps a PXL name that already contains a recording
     if (job.state.status === "completed") {
       assert.equal(job.state.videoId, originalName);
     }
-    assert.equal(context.libraryStore.findVideo(originalName)?.id, originalName);
+    assert.equal((await context.libraryStore.findVideo(originalName))?.id, originalName);
     assert.equal(await readFile(join(context.libraryPath, originalName), "utf8"), VIDEO_BYTES.toString());
   });
 });
@@ -162,9 +162,9 @@ test("POST /api/admin/uploads names an Android MediaStore file from video metada
       assert.equal(job.state.videoId, expected);
     }
     assert.match(expected, /^PXL_\d{8}_\d{9}\.mp4$/);
-    assert.equal(context.libraryStore.findVideo("1000141506.mp4"), null);
-    assert.equal(context.libraryStore.findVideo(expected)?.id, expected);
-    assert.equal(context.libraryStore.findVideo(expected)?.recordedAt, toStoredRecordedAt(recordingTime));
+    assert.equal(await context.libraryStore.findVideo("1000141506.mp4"), null);
+    assert.equal((await context.libraryStore.findVideo(expected))?.id, expected);
+    assert.equal((await context.libraryStore.findVideo(expected))?.recordedAt, toStoredRecordedAt(recordingTime));
     assert.equal(await readFile(join(context.libraryPath, expected), "utf8"), VIDEO_BYTES.toString());
     assert.deepEqual(await readFile(join(context.libraryPath, ".ts", `${expected}.jpg`)), THUMBNAIL_BYTES);
 
@@ -194,8 +194,8 @@ test("POST /api/admin/uploads keeps a MediaStore name when metadata has no relia
     if (job.state.status === "completed") {
       assert.equal(job.state.videoId, "1000141506.mp4");
     }
-    assert.equal(context.libraryStore.findVideo("1000141506.mp4")?.id, "1000141506.mp4");
-    assert.equal(context.libraryStore.findVideo("1000141506.mp4")?.recordedAt, null);
+    assert.equal((await context.libraryStore.findVideo("1000141506.mp4"))?.id, "1000141506.mp4");
+    assert.equal((await context.libraryStore.findVideo("1000141506.mp4"))?.recordedAt, null);
     assert.equal((await readdir(context.libraryPath)).some((name) => name.startsWith("PXL_")), false);
   });
 });
@@ -211,7 +211,7 @@ test("POST /api/admin/uploads does not wait for processing when the pipeline is 
     assert.equal(response.statusCode, 202);
     const jobId = String(response.json().jobId);
     assert.notEqual(context.jobs.findById(jobId)?.state.status, "completed");
-    assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
+    assert.equal(await context.libraryStore.findVideo("clip.mp4"), null);
 
     const status = await context.app.inject({
       method: "GET",
@@ -223,7 +223,7 @@ test("POST /api/admin/uploads does not wait for processing when the pipeline is 
     context.processor.release();
     const job = await waitForTerminalJob(context.jobs, jobId);
     assert.equal(job.state.status, "completed");
-    assert.equal(context.libraryStore.findVideo("clip.mp4")?.id, "clip.mp4");
+    assert.equal((await context.libraryStore.findVideo("clip.mp4"))?.id, "clip.mp4");
   });
 });
 
@@ -249,7 +249,7 @@ test("POST /api/admin/uploads installs an H.264 video without conversion", async
 
     assert.equal(await readFile(join(context.libraryPath, "clip.mp4"), "utf8"), VIDEO_BYTES.toString());
     assert.ok(await readFile(join(context.libraryPath, ".ts", "clip.mp4.jpg")));
-    assert.deepEqual(context.libraryStore.getVideoTags("clip.mp4"), []);
+    assert.deepEqual(await context.libraryStore.getVideoTags("clip.mp4"), []);
   });
 });
 
@@ -330,7 +330,7 @@ test("POST /api/admin/uploads rejects a second active job", async () => {
     assert.equal(response.statusCode, 409);
     assert.equal(response.json().error.message, "A video processing job is already active.");
     assert.equal(response.json().jobId, "busy");
-    assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
+    assert.equal(await context.libraryStore.findVideo("clip.mp4"), null);
   });
 });
 
@@ -352,7 +352,7 @@ test("POST /api/admin/uploads returns 409 while a gated job is still active", as
     assert.equal(second.statusCode, 409);
     assert.equal(second.json().error.message, "A video processing job is already active.");
     assert.equal(second.json().jobId, firstJobId);
-    assert.equal(context.libraryStore.findVideo("two.mp4"), null);
+    assert.equal(await context.libraryStore.findVideo("two.mp4"), null);
     assert.equal((await readdir(context.libraryPath)).includes("two.mp4"), false);
 
     context.processor.release();
@@ -378,8 +378,8 @@ test("POST /api/admin/uploads accepts another file after the previous job comple
     });
     assert.equal(second.statusCode, 202);
     assert.equal((await waitForTerminalJob(context.jobs, String(second.json().jobId))).state.status, "completed");
-    assert.equal(context.libraryStore.findVideo("one.mp4")?.id, "one.mp4");
-    assert.equal(context.libraryStore.findVideo("two.mp4")?.id, "two.mp4");
+    assert.equal((await context.libraryStore.findVideo("one.mp4"))?.id, "one.mp4");
+    assert.equal((await context.libraryStore.findVideo("two.mp4"))?.id, "two.mp4");
   });
 });
 
@@ -535,7 +535,7 @@ test("failed processing is visible on GET without exposing internal paths", asyn
     assert.equal(status.json().status, "failed");
     assert.equal(status.json().error.message, PUBLIC_PROCESSING_FAILED_MESSAGE);
     assert.equal(JSON.stringify(status.json()).includes("C:\\secret"), false);
-    assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
+    assert.equal(await context.libraryStore.findVideo("clip.mp4"), null);
     assert.equal((await readdir(context.libraryPath)).includes("clip.mp4"), false);
   });
 });
@@ -552,7 +552,7 @@ test("POST /api/admin/uploads rejects a duplicate video without overwriting", as
 
     const original = await readFile(join(context.libraryPath, "clip.mp4"));
     const originalThumb = await readFile(join(context.libraryPath, ".ts", "clip.mp4.jpg"));
-    const videosBefore = context.libraryStore.listVideos().length;
+    const videosBefore = (await context.libraryStore.listVideos()).length;
 
     const second = await context.app.inject({
       method: "POST",
@@ -565,15 +565,15 @@ test("POST /api/admin/uploads rejects a duplicate video without overwriting", as
     assert.equal(second.json().jobId, undefined);
     assert.deepEqual(await readFile(join(context.libraryPath, "clip.mp4")), original);
     assert.deepEqual(await readFile(join(context.libraryPath, ".ts", "clip.mp4.jpg")), originalThumb);
-    assert.equal(context.libraryStore.listVideos().length, videosBefore);
-    assert.deepEqual(context.libraryStore.getVideoTags("clip.mp4"), []);
+    assert.equal((await context.libraryStore.listVideos()).length, videosBefore);
+    assert.deepEqual(await context.libraryStore.getVideoTags("clip.mp4"), []);
   });
 });
 
 test("POST /api/admin/uploads rejects a filesystem video that is not in SQLite", async () => {
   await withUploadApp({ codec: "h264" }, async (context) => {
     await writeFile(join(context.libraryPath, "orphan.mp4"), "keep-me");
-    const videosBefore = context.libraryStore.listVideos().map((video) => video.id);
+    const videosBefore = (await context.libraryStore.listVideos()).map((video) => video.id);
 
     const response = await context.app.inject({
       method: "POST",
@@ -584,8 +584,8 @@ test("POST /api/admin/uploads rejects a filesystem video that is not in SQLite",
     assert.equal(response.statusCode, 409);
     assert.equal(response.json().error.message, PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE);
     assert.equal(await readFile(join(context.libraryPath, "orphan.mp4"), "utf8"), "keep-me");
-    assert.deepEqual(context.libraryStore.listVideos().map((video) => video.id), videosBefore);
-    assert.equal(context.libraryStore.findVideo("orphan.mp4"), null);
+    assert.deepEqual((await context.libraryStore.listVideos()).map((video) => video.id), videosBefore);
+    assert.equal(await context.libraryStore.findVideo("orphan.mp4"), null);
   });
 });
 
@@ -602,7 +602,7 @@ test("POST /api/admin/uploads cleans up a partial video when thumbnail install f
     const job = await waitForTerminalJob(context.jobs, jobId);
     assert.equal(job.state.status, "failed");
     assert.equal((await readdir(context.libraryPath)).includes("clip.mp4"), false);
-    assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
+    assert.equal(await context.libraryStore.findVideo("clip.mp4"), null);
     assert.ok((await readdir(join(context.uploadTempPath, jobId))).includes("source"));
 
     const status = await context.app.inject({
@@ -626,7 +626,7 @@ test("POST /api/admin/uploads does not leave a library video when video install 
     const job = await waitForTerminalJob(context.jobs, String(response.json().jobId));
     assert.equal(job.state.status, "failed");
     assert.equal((await readdir(context.libraryPath)).includes("clip.mp4"), false);
-    assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
+    assert.equal(await context.libraryStore.findVideo("clip.mp4"), null);
   });
 });
 
@@ -644,7 +644,7 @@ test("POST /api/admin/uploads compensates files when SQLite fails after install"
     assert.equal(job.state.status, "failed");
     assert.equal((await readdir(context.libraryPath)).includes("clip.mp4"), false);
     assert.equal(await readFile(join(context.libraryPath, "keep.mp4"), "utf8"), "preexisting");
-    assert.equal(context.libraryStore.findVideo("clip.mp4"), null);
+    assert.equal(await context.libraryStore.findVideo("clip.mp4"), null);
   });
 });
 
@@ -664,7 +664,7 @@ test("POST /api/library/refresh after upload does not duplicate the video or add
     });
     assert.equal(refresh.statusCode, 200);
 
-    const matches = context.libraryStore.listVideosWithTags().filter((video) => video.id === "clip.mp4");
+    const matches = (await context.libraryStore.listVideosWithTags()).filter((video) => video.id === "clip.mp4");
     assert.equal(matches.length, 1);
     assert.deepEqual(matches[0]?.tags, []);
 
@@ -704,14 +704,14 @@ async function withUploadApp(
   const failUpsert = { current: false };
   const innerStore = openSqliteLibraryStore(":memory:");
   const libraryStore = wrapLibraryStore(innerStore, failUpsert);
-  libraryStore.upsertVideo("existing.mp4");
+  await libraryStore.upsertVideo("existing.mp4");
   failUpsert.current = options.failSqlite === true;
   const jobs = new InMemoryProcessingJobStore();
   const processor = new RecordingVideoProcessor(options.codec, options.failAt, options.recordingTime ?? null);
   if (options.holdProcessing === true) {
     processor.hold();
   }
-  const videoIndex = new InMemoryVideoIndex(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath));
+  const videoIndex = new InMemoryVideoIndex(toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath));
   const installer: LibraryMediaInstaller = new FailingLibraryMediaInstaller(
     new FilesystemLibraryMediaInstaller(libraryPath),
     options.failInstallAt,
@@ -835,8 +835,8 @@ function seedJob(
   return job;
 }
 
-function relationCount(libraryStore: LibraryStore): number {
-  return libraryStore.listVideosWithTags().reduce((count, video) => count + video.tags.length, 0);
+async function relationCount(libraryStore: LibraryStore): Promise<number> {
+  return (await libraryStore.listVideosWithTags()).reduce((count, video) => count + video.tags.length, 0);
 }
 
 function wrapLibraryStore(inner: LibraryStore, failUpsert: { current: boolean }): LibraryStore {

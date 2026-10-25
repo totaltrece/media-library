@@ -6,8 +6,8 @@ teacher, location, resource) instead of using a single blue.
 Documents:
 - `MILESTONES.md` — implementation slices and agreed decisions
 
-The physical library and TagSpaces files remain read-only. Types live in SQLite
-with the existing tag catalog.
+Existing media files remain read-only except for admin install/delete. Types
+live in the application database with the existing tag catalog.
 
 ## Goal
 

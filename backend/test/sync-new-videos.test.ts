@@ -50,13 +50,13 @@ test("an empty SQLite store inserts every video discovered on the filesystem", a
     const result = await syncNewVideos(libraryPath, libraryStore);
 
     assert.deepEqual(result, { discovered: 3, inserted: 3 });
-    assert.deepEqual(libraryStore.listVideosWithTags(), [
+    assert.deepEqual(await libraryStore.listVideosWithTags(), [
       { id: "video1.mp4", recordedAt: null, tags: [] },
       { id: "video2.mp4", recordedAt: null, tags: [] },
       { id: "video3.mp4", recordedAt: null, tags: [] },
     ]);
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -69,12 +69,12 @@ test("new filesystem videos are inserted without changing existing tags", async 
     await writeVideo(libraryPath, "video1.mp4");
     await writeVideo(libraryPath, "video2.mp4");
     await writeVideo(libraryPath, "video3.mp4");
-    libraryStore.upsertVideo("video1.mp4");
-    libraryStore.setVideoTags("video1.mp4", ["salsa", "bea"]);
-    libraryStore.upsertVideo("video2.mp4");
-    libraryStore.setVideoTags("video2.mp4", ["bachata"]);
-    libraryStore.upsertVideo("video3.mp4");
-    libraryStore.setVideoTags("video3.mp4", ["linea"]);
+    await libraryStore.upsertVideo("video1.mp4");
+    await libraryStore.setVideoTags("video1.mp4", ["salsa", "bea"]);
+    await libraryStore.upsertVideo("video2.mp4");
+    await libraryStore.setVideoTags("video2.mp4", ["bachata"]);
+    await libraryStore.upsertVideo("video3.mp4");
+    await libraryStore.setVideoTags("video3.mp4", ["linea"]);
 
     await writeVideo(libraryPath, "video4.mp4");
     await writeVideo(libraryPath, "video5.mp4");
@@ -82,7 +82,7 @@ test("new filesystem videos are inserted without changing existing tags", async 
     const result = await syncNewVideos(libraryPath, libraryStore);
 
     assert.deepEqual(result, { discovered: 5, inserted: 2 });
-    assert.deepEqual(libraryStore.listVideosWithTags(), [
+    assert.deepEqual(await libraryStore.listVideosWithTags(), [
       { id: "video1.mp4", recordedAt: null, tags: ["bea", "salsa"] },
       { id: "video2.mp4", recordedAt: null, tags: ["bachata"] },
       { id: "video3.mp4", recordedAt: null, tags: ["linea"] },
@@ -90,7 +90,7 @@ test("new filesystem videos are inserted without changing existing tags", async 
       { id: "video5.mp4", recordedAt: null, tags: [] },
     ]);
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -101,18 +101,18 @@ test("running the sync twice does not duplicate videos or change tags", async ()
 
   try {
     await writeVideo(libraryPath, "video1.mp4");
-    libraryStore.upsertVideo("video1.mp4");
-    libraryStore.setVideoTags("video1.mp4", ["salsa"]);
+    await libraryStore.upsertVideo("video1.mp4");
+    await libraryStore.setVideoTags("video1.mp4", ["salsa"]);
 
     const firstResult = await syncNewVideos(libraryPath, libraryStore);
     const secondResult = await syncNewVideos(libraryPath, libraryStore);
 
     assert.deepEqual(firstResult, { discovered: 1, inserted: 0 });
     assert.deepEqual(secondResult, { discovered: 1, inserted: 0 });
-    assert.deepEqual(libraryStore.listVideos(), [{ id: "video1.mp4", recordedAt: null }]);
-    assert.deepEqual(libraryStore.getVideoTags("video1.mp4"), ["salsa"]);
+    assert.deepEqual(await libraryStore.listVideos(), [{ id: "video1.mp4", recordedAt: null }]);
+    assert.deepEqual(await libraryStore.getVideoTags("video1.mp4"), ["salsa"]);
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -127,9 +127,9 @@ test("a video without a TagSpaces sidecar is still inserted", async () => {
     const result = await syncNewVideos(libraryPath, libraryStore);
 
     assert.deepEqual(result, { discovered: 1, inserted: 1 });
-    assert.deepEqual(libraryStore.listVideosWithTags(), [{ id: "missing.mp4", recordedAt: null, tags: [] }]);
+    assert.deepEqual(await libraryStore.listVideosWithTags(), [{ id: "missing.mp4", recordedAt: null, tags: [] }]);
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -140,20 +140,20 @@ test("videos missing from the filesystem are not deleted from SQLite", async () 
 
   try {
     await writeVideo(libraryPath, "kept.mp4");
-    libraryStore.upsertVideo("kept.mp4");
-    libraryStore.setVideoTags("kept.mp4", ["salsa"]);
-    libraryStore.upsertVideo("removed.mp4");
-    libraryStore.setVideoTags("removed.mp4", ["bachata"]);
+    await libraryStore.upsertVideo("kept.mp4");
+    await libraryStore.setVideoTags("kept.mp4", ["salsa"]);
+    await libraryStore.upsertVideo("removed.mp4");
+    await libraryStore.setVideoTags("removed.mp4", ["bachata"]);
 
     const result = await syncNewVideos(libraryPath, libraryStore);
 
     assert.deepEqual(result, { discovered: 1, inserted: 0 });
-    assert.deepEqual(libraryStore.listVideosWithTags(), [
+    assert.deepEqual(await libraryStore.listVideosWithTags(), [
       { id: "kept.mp4", recordedAt: null, tags: ["salsa"] },
       { id: "removed.mp4", recordedAt: null, tags: ["bachata"] },
     ]);
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -167,15 +167,15 @@ test("existing TagSpaces sidecars are not used to assign tags during sync", asyn
     await writeVideo(libraryPath, "new-video.mp4");
     await writeTagSpacesMetadata(libraryPath, "existing.mp4", ["tagspaces-existing"]);
     await writeTagSpacesMetadata(libraryPath, "new-video.mp4", ["tagspaces-new"]);
-    libraryStore.upsertVideo("existing.mp4");
-    libraryStore.setVideoTags("existing.mp4", ["sqlite-tag"]);
+    await libraryStore.upsertVideo("existing.mp4");
+    await libraryStore.setVideoTags("existing.mp4", ["sqlite-tag"]);
 
     await syncNewVideos(libraryPath, libraryStore);
 
-    assert.deepEqual(libraryStore.getVideoTags("existing.mp4"), ["sqlite-tag"]);
-    assert.deepEqual(libraryStore.getVideoTags("new-video.mp4"), []);
+    assert.deepEqual(await libraryStore.getVideoTags("existing.mp4"), ["sqlite-tag"]);
+    assert.deepEqual(await libraryStore.getVideoTags("new-video.mp4"), []);
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });

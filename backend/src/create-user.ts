@@ -1,5 +1,5 @@
+import { openStores } from "./adapters/persistence/open-stores.js";
 import { config } from "./config.js";
-import { openSqliteStores } from "./adapters/sqlite/sqlite-library-store.js";
 import { CreateUserUseCase } from "./application/create-user.js";
 import { UsernameConflictError } from "./application/username-conflict-error.js";
 import type { AuthRole } from "./ports/auth-store.js";
@@ -12,10 +12,10 @@ interface CliOptions {
 
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
-  const stores = openSqliteStores(config.sqlitePath);
+  const stores = await openStores(config.database);
 
   try {
-    const user = new CreateUserUseCase(stores.authStore).execute(options);
+    const user = await new CreateUserUseCase(stores.authStore).execute(options);
     console.log(`Created ${user.role} user: ${user.username}`);
   } catch (error: unknown) {
     if (error instanceof UsernameConflictError) {
@@ -26,7 +26,7 @@ async function main(): Promise<void> {
 
     throw error;
   } finally {
-    stores.close();
+    await stores.close();
   }
 }
 

@@ -7,7 +7,7 @@ import { readSessionToken } from "./auth-controller.js";
 
 export function createAuthGuard(authStore: AuthStore, publicRead: boolean) {
   return async function authGuard(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const principal = resolveSessionUser(authStore, readSessionToken(request));
+    const principal = await resolveSessionUser(authStore, readSessionToken(request));
     const decision = authorizeRequest({
       method: request.method,
       path: request.url,

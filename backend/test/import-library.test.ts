@@ -39,7 +39,7 @@ async function importLibrary(libraryPath: string, libraryStore: LibraryStore) {
   ).execute();
 }
 
-test("uniquePreserveOrder keeps the first occurrence of each value", () => {
+test("uniquePreserveOrder keeps the first occurrence of each value", async () => {
   assert.deepEqual(uniquePreserveOrder(["salsa", "casino", "salsa", "clase"]), [
     "salsa",
     "casino",
@@ -65,7 +65,7 @@ test("imports a video with several TagSpaces tag titles", async () => {
       tagsCreated: 3,
       errors: [],
     });
-    assert.deepEqual(store.listVideosWithTags(), [
+    assert.deepEqual(await store.listVideosWithTags(), [
       {
         id: "salsa/first.mp4",
         recordedAt: null,
@@ -73,7 +73,7 @@ test("imports a video with several TagSpaces tag titles", async () => {
       },
     ]);
   } finally {
-    store.close();
+    await store.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -89,9 +89,9 @@ test("imports a video without TagSpaces metadata and leaves tags empty", async (
 
     assert.strictEqual(result.withoutMetadata, 1);
     assert.strictEqual(result.withoutTags, 1);
-    assert.deepEqual(store.listVideosWithTags(), [{ id: "missing.mp4", recordedAt: null, tags: [] }]);
+    assert.deepEqual(await store.listVideosWithTags(), [{ id: "missing.mp4", recordedAt: null, tags: [] }]);
   } finally {
-    store.close();
+    await store.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -108,9 +108,9 @@ test("imports a video whose TagSpaces metadata has no tags", async () => {
 
     assert.strictEqual(result.withoutMetadata, 0);
     assert.strictEqual(result.withoutTags, 1);
-    assert.deepEqual(store.listVideosWithTags(), [{ id: "empty.mp4", recordedAt: null, tags: [] }]);
+    assert.deepEqual(await store.listVideosWithTags(), [{ id: "empty.mp4", recordedAt: null, tags: [] }]);
   } finally {
-    store.close();
+    await store.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -125,9 +125,9 @@ test("deduplicates TagSpaces titles while preserving first-seen order", async ()
 
     await importLibrary(libraryPath, store);
 
-    assert.deepEqual(store.getVideoTags("dupes.mp4"), ["casino", "clase", "salsa"]);
+    assert.deepEqual(await store.getVideoTags("dupes.mp4"), ["casino", "clase", "salsa"]);
   } finally {
-    store.close();
+    await store.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -146,12 +146,12 @@ test("reuses existing tags instead of creating duplicates", async () => {
 
     assert.strictEqual(result.tagsCreated, 3);
     assert.deepEqual(
-      store.listTags().map((tag) => tag.name),
+      (await store.listTags()).map((tag) => tag.name),
       ["bea", "linea", "salsa"],
     );
-    assert.strictEqual(store.listTags().filter((tag) => tag.name === "salsa").length, 1);
+    assert.strictEqual((await store.listTags()).filter((tag) => tag.name === "salsa").length, 1);
   } finally {
-    store.close();
+    await store.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -169,14 +169,14 @@ test("running the import twice does not duplicate videos, tags, or relations", a
 
     assert.strictEqual(secondResult.imported, 1);
     assert.strictEqual(secondResult.tagsCreated, 0);
-    assert.deepEqual(store.listVideos(), [{ id: "first.mp4", recordedAt: null }]);
+    assert.deepEqual(await store.listVideos(), [{ id: "first.mp4", recordedAt: null }]);
     assert.deepEqual(
-      store.listTags().map((tag) => tag.name),
+      (await store.listTags()).map((tag) => tag.name),
       ["bea", "salsa"],
     );
-    assert.deepEqual(store.getVideoTags("first.mp4"), ["bea", "salsa"]);
+    assert.deepEqual(await store.getVideoTags("first.mp4"), ["bea", "salsa"]);
   } finally {
-    store.close();
+    await store.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -193,13 +193,13 @@ test("reimporting replaces a video's tags with the current TagSpaces list", asyn
     await writeTagSpacesMetadata(libraryPath, "first.mp4", ["linea"]);
     await importLibrary(libraryPath, store);
 
-    assert.deepEqual(store.getVideoTags("first.mp4"), ["linea"]);
+    assert.deepEqual(await store.getVideoTags("first.mp4"), ["linea"]);
     assert.deepEqual(
-      store.listTags().map((tag) => tag.name),
+      (await store.listTags()).map((tag) => tag.name),
       ["bea", "linea", "salsa"],
     );
   } finally {
-    store.close();
+    await store.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -218,11 +218,11 @@ test("a video import error does not leave partial tag relations", async () => {
     assert.strictEqual(result.errors.length, 1);
     assert.strictEqual(result.errors[0]?.videoId, "broken.mp4");
     assert.match(result.errors[0]?.message ?? "", /Tag name must not be empty/);
-    assert.deepEqual(store.findVideo("broken.mp4"), { id: "broken.mp4", recordedAt: null });
-    assert.deepEqual(store.getVideoTags("broken.mp4"), []);
-    assert.deepEqual(store.listTags(), []);
+    assert.deepEqual(await store.findVideo("broken.mp4"), { id: "broken.mp4", recordedAt: null });
+    assert.deepEqual(await store.getVideoTags("broken.mp4"), []);
+    assert.deepEqual(await store.listTags(), []);
   } finally {
-    store.close();
+    await store.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });

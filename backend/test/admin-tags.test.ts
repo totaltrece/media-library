@@ -10,7 +10,7 @@ import type { LibraryStore } from "../src/ports/library-store.js";
 import { testLibraryPath } from "./fixtures.js";
 
 async function createAppWithStore(libraryStore: LibraryStore, libraryPath = testLibraryPath) {
-  const videoIndex = new InMemoryVideoIndex(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath));
+  const videoIndex = new InMemoryVideoIndex(toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath));
 
   return createApp({
     videoIndex,
@@ -23,15 +23,15 @@ test("GET /api/admin/tags lists catalog tags with usage counts", async () => {
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
-    libraryStore.upsertVideo("salsa/first.mp4");
-    libraryStore.upsertVideo("salsa/second.mp4");
-    libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
-    libraryStore.setVideoTags("salsa/second.mp4", ["salsa"]);
-    libraryStore.upsertTag("bufanda");
+    await libraryStore.upsertVideo("salsa/first.mp4");
+    await libraryStore.upsertVideo("salsa/second.mp4");
+    await libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
+    await libraryStore.setVideoTags("salsa/second.mp4", ["salsa"]);
+    await libraryStore.upsertTag("bufanda");
 
-    const salsa = libraryStore.findTagByName("salsa")!;
-    const jota = libraryStore.findTagByName("jota")!;
-    const bufanda = libraryStore.findTagByName("bufanda")!;
+    const salsa = (await libraryStore.findTagByName("salsa"))!;
+    const jota = (await libraryStore.findTagByName("jota"))!;
+    const bufanda = (await libraryStore.findTagByName("bufanda"))!;
     const app = await createAppWithStore(libraryStore);
     const response = await app.inject({
       method: "GET",
@@ -64,7 +64,7 @@ test("GET /api/admin/tags lists catalog tags with usage counts", async () => {
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 });
 
@@ -72,9 +72,9 @@ test("PUT /api/admin/tags/:id renames a tag without changing its id or video rel
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
-    libraryStore.upsertVideo("salsa/first.mp4");
-    libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
-    const jota = libraryStore.findTagByName("jota")!;
+    await libraryStore.upsertVideo("salsa/first.mp4");
+    await libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
+    const jota = (await libraryStore.findTagByName("jota"))!;
     const app = await createAppWithStore(libraryStore);
 
     const response = await app.inject({
@@ -85,12 +85,12 @@ test("PUT /api/admin/tags/:id renames a tag without changing its id or video rel
 
     assert.strictEqual(response.statusCode, 200);
     assert.deepEqual(response.json(), {
-      ...libraryStore.findTagByName("jota-nueva")!,
+      ...(await libraryStore.findTagByName("jota-nueva"))!,
       usageCount: 1,
     });
-    assert.equal(libraryStore.findTagByName("jota"), null);
-    assert.strictEqual(libraryStore.findTagById(jota.id)?.name, "jota-nueva");
-    assert.deepEqual(libraryStore.getVideoTags("salsa/first.mp4"), ["jota-nueva", "salsa"]);
+    assert.equal(await libraryStore.findTagByName("jota"), null);
+    assert.strictEqual((await libraryStore.findTagById(jota.id))?.name, "jota-nueva");
+    assert.deepEqual(await libraryStore.getVideoTags("salsa/first.mp4"), ["jota-nueva", "salsa"]);
 
     const search = await app.inject({
       method: "GET",
@@ -102,7 +102,7 @@ test("PUT /api/admin/tags/:id renames a tag without changing its id or video rel
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 });
 
@@ -110,8 +110,8 @@ test("PUT /api/admin/tags/:id rejects empty names and existing names", async () 
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
-    const salsa = libraryStore.upsertTag("salsa");
-    libraryStore.upsertTag("jota");
+    const salsa = await libraryStore.upsertTag("salsa");
+    await libraryStore.upsertTag("jota");
     const app = await createAppWithStore(libraryStore);
 
     const empty = await app.inject({
@@ -133,11 +133,11 @@ test("PUT /api/admin/tags/:id rejects empty names and existing names", async () 
     assert.strictEqual(empty.statusCode, 400);
     assert.strictEqual(conflict.statusCode, 409);
     assert.strictEqual(missing.statusCode, 404);
-    assert.deepEqual(libraryStore.listTags().map((tag) => tag.name), ["jota", "salsa"]);
+    assert.deepEqual((await libraryStore.listTags()).map((tag) => tag.name), ["jota", "salsa"]);
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 });
 
@@ -145,12 +145,12 @@ test("DELETE /api/admin/tags/:id removes the tag and its video relations", async
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
-    libraryStore.upsertVideo("salsa/first.mp4");
-    libraryStore.upsertVideo("salsa/second.mp4");
-    libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
-    libraryStore.setVideoTags("salsa/second.mp4", ["salsa"]);
-    const jota = libraryStore.findTagByName("jota")!;
-    const salsa = libraryStore.findTagByName("salsa")!;
+    await libraryStore.upsertVideo("salsa/first.mp4");
+    await libraryStore.upsertVideo("salsa/second.mp4");
+    await libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "jota"]);
+    await libraryStore.setVideoTags("salsa/second.mp4", ["salsa"]);
+    const jota = (await libraryStore.findTagByName("jota"))!;
+    const salsa = (await libraryStore.findTagByName("salsa"))!;
     const app = await createAppWithStore(libraryStore);
 
     const response = await app.inject({
@@ -160,13 +160,13 @@ test("DELETE /api/admin/tags/:id removes the tag and its video relations", async
 
     assert.strictEqual(response.statusCode, 200);
     assert.deepEqual(response.json(), { id: jota.id });
-    assert.equal(libraryStore.findTagById(jota.id), null);
-    assert.deepEqual(libraryStore.getVideoTags("salsa/first.mp4"), ["salsa"]);
-    assert.deepEqual(libraryStore.listVideos().map((video) => video.id), [
+    assert.equal(await libraryStore.findTagById(jota.id), null);
+    assert.deepEqual(await libraryStore.getVideoTags("salsa/first.mp4"), ["salsa"]);
+    assert.deepEqual((await libraryStore.listVideos()).map((video) => video.id), [
       "salsa/first.mp4",
       "salsa/second.mp4",
     ]);
-    assert.deepEqual(libraryStore.findTagById(salsa.id), salsa);
+    assert.deepEqual(await libraryStore.findTagById(salsa.id), salsa);
 
     const missing = await app.inject({
       method: "DELETE",
@@ -177,7 +177,7 @@ test("DELETE /api/admin/tags/:id removes the tag and its video relations", async
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 });
 
@@ -185,8 +185,8 @@ test("PUT /api/admin/tags/:id updates the tag type", async () => {
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
-    const jota = libraryStore.upsertTag("jota");
-    const teacher = libraryStore.listTagTypes().find((type) => type.name === "teacher")!;
+    const jota = await libraryStore.upsertTag("jota");
+    const teacher = (await libraryStore.listTagTypes()).find((type) => type.name === "teacher")!;
     const app = await createAppWithStore(libraryStore);
 
     const response = await app.inject({
@@ -197,13 +197,13 @@ test("PUT /api/admin/tags/:id updates the tag type", async () => {
 
     assert.strictEqual(response.statusCode, 200);
     assert.deepEqual(response.json(), {
-      ...libraryStore.findTagByName("jota")!,
+      ...(await libraryStore.findTagByName("jota"))!,
       usageCount: 0,
     });
-    assert.strictEqual(libraryStore.findTagById(jota.id)?.typeName, "teacher");
+    assert.strictEqual((await libraryStore.findTagById(jota.id))?.typeName, "teacher");
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 });

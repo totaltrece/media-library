@@ -13,14 +13,14 @@ export class RenameTagUseCase {
     private readonly libraryPath: string,
   ) {}
 
-  execute(tagId: number, name: string, typeId?: number): LibraryTagUsage {
+  async execute(tagId: number, name: string, typeId?: number): Promise<LibraryTagUsage> {
     const tagName = name.trim();
 
     if (tagName.length === 0) {
       throw new Error("Tag name must not be empty");
     }
 
-    const current = this.libraryStore.findTagById(tagId);
+    const current = await this.libraryStore.findTagById(tagId);
 
     if (current === null) {
       throw new TagNotFoundError(tagId);
@@ -28,20 +28,20 @@ export class RenameTagUseCase {
 
     const nextTypeId = typeId ?? current.typeId;
 
-    if (this.libraryStore.findTagTypeById(nextTypeId) === null) {
+    if (await this.libraryStore.findTagTypeById(nextTypeId) === null) {
       throw new TagTypeNotFoundError(nextTypeId);
     }
 
-    const conflict = this.libraryStore.findTagByName(tagName);
+    const conflict = await this.libraryStore.findTagByName(tagName);
 
     if (conflict !== null && conflict.id !== tagId) {
       throw new TagNameConflictError(tagName);
     }
 
-    this.libraryStore.updateTag(tagId, tagName, nextTypeId);
-    reloadVideoIndex(this.libraryStore, this.videoIndex, this.libraryPath);
+    await this.libraryStore.updateTag(tagId, tagName, nextTypeId);
+    await reloadVideoIndex(this.libraryStore, this.videoIndex, this.libraryPath);
 
-    const updated = this.libraryStore.listTagUsages().find((tag) => tag.id === tagId);
+    const updated = (await this.libraryStore.listTagUsages()).find((tag) => tag.id === tagId);
 
     if (updated === undefined) {
       throw new TagNotFoundError(tagId);

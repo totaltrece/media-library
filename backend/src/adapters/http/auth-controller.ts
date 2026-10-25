@@ -26,7 +26,7 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthController
     }
 
     try {
-      const result = options.loginUseCase.execute(credentials.username, credentials.password);
+      const result = await options.loginUseCase.execute(credentials.username, credentials.password);
       reply.setCookie(SESSION_COOKIE_NAME, result.token, {
         httpOnly: true,
         path: "/",
@@ -48,13 +48,13 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthController
   });
 
   app.post("/auth/logout", async (request, reply) => {
-    options.logoutUseCase.execute(readSessionToken(request));
+    await options.logoutUseCase.execute(readSessionToken(request));
     reply.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
     return { authenticated: false };
   });
 
   app.get("/auth/me", async (request) => {
-    const user = resolveSessionUser(options.authStore, readSessionToken(request));
+    const user = await resolveSessionUser(options.authStore, readSessionToken(request));
     return toMeResponse(user);
   });
 }

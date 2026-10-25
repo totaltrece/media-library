@@ -9,13 +9,13 @@ export interface VideoTagsResponse {
 export class GetVideoTagsUseCase {
   constructor(private readonly libraryStore: LibraryStore) {}
 
-  execute(videoId: string): VideoTagsResponse {
-    if (this.libraryStore.findVideo(videoId) === null) {
+  async execute(videoId: string): Promise<VideoTagsResponse> {
+    if (await this.libraryStore.findVideo(videoId) === null) {
       throw new VideoNotFoundError(videoId);
     }
 
     return {
-      tags: this.libraryStore.getVideoTags(videoId),
+      tags: await this.libraryStore.getVideoTags(videoId),
     };
   }
 }
