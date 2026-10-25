@@ -2,6 +2,7 @@ const CAST_SENDER_SRC = "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?
 const FALLBACK_RECEIVER_APP_ID = "CC1AD845";
 const SENDER_TIMEOUT_MS = 8000;
 const UNAVAILABLE_GRACE_MS = 2500;
+const PLAYBACK_TIMEOUT_MS = 20000;
 
 export class CastUnavailableError extends Error {
   constructor(message = "This browser did not open media casting. Casting the whole tab does not send the video file.") {
@@ -10,15 +11,26 @@ export class CastUnavailableError extends Error {
   }
 }
 
+export class CastPlaybackError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CastPlaybackError";
+  }
+}
+
 export interface CastMediaRequest {
   contentUrl: string;
   contentType: string;
   title: string;
   currentTime: number;
+  receiverCompatible: boolean;
 }
+
+export type CastPlayerStatus = "playing" | "buffering" | "failed" | "pending";
 
 interface CastSession {
   loadMedia(request: Record<string, unknown>): Promise<unknown>;
+  getMediaSession?(): unknown;
 }
 
 interface CastContext {
@@ -68,69 +80,87 @@ export function resolveCastSession(requestResult: unknown, currentSession: unkno
   return null;
 }
 
-export async function startCastPlayback(request: CastMediaRequest): Promise<void> {
-  const ready = await ensureCastSender();
+export function preloadCastSender(): Promise<boolean> {
+  return ensureCastSender();
+}
 
-  if (!ready || castApi === null) {
+export function isCastSenderReady(): boolean {
+  return castApi !== null;
+}
+
+export function readCastPlayerStatus(media: unknown): CastPlayerStatus {
+  if (!isRecord(media)) {
+    return "pending";
+  }
+
+  const state = typeof media.playerState === "string" ? media.playerState : "";
+
+  if (state === "PLAYING" || state === "PAUSED") {
+    return "playing";
+  }
+
+  if (state === "BUFFERING") {
+    return "buffering";
+  }
+
+  if (state === "IDLE") {
+    const reason = typeof media.idleReason === "string" ? media.idleReason : "";
+
+    if (reason === "ERROR" || reason === "CANCELLED" || reason === "INTERRUPTED") {
+      return "failed";
+    }
+  }
+
+  return "pending";
+}
+
+/**
+ * Opens the device picker. Call this directly from the click handler, before any await,
+ * so Chrome still treats it as a user gesture.
+ */
+export function openCastSession(): Promise<CastSession> {
+  if (castApi === null) {
     throw new CastUnavailableError();
   }
 
-  const session = await requestCastSession(castApi.context);
+  const existing = resolveCastSession(undefined, castApi.context.getCurrentSession());
+
+  if (existing !== null) {
+    return Promise.resolve(existing);
+  }
+
+  const pending = castApi.context.requestSession();
+
+  return pending.then((result) => {
+    const session = resolveCastSession(result, castApi?.context.getCurrentSession());
+
+    if (session === null) {
+      throw new CastUnavailableError();
+    }
+
+    return session;
+  });
+}
+
+export async function playOnCastSession(session: CastSession, request: CastMediaRequest): Promise<void> {
+  if (castApi === null) {
+    throw new CastUnavailableError();
+  }
+
   const loadRequest = buildLoadRequest(castApi, request);
 
   if (loadRequest === null) {
     throw new CastUnavailableError();
   }
 
-  await session.loadMedia(loadRequest);
-}
+  const loaded = await session.loadMedia(loadRequest);
+  const media = asMedia(loaded) ?? readSessionMedia(session);
 
-export function hasRemotePlayback(video: HTMLVideoElement): boolean {
-  return readRemotePlayback(video) !== null;
-}
-
-export async function startRemotePlayback(video: HTMLVideoElement, request: CastMediaRequest): Promise<void> {
-  const remote = readRemotePlayback(video);
-
-  if (remote === null) {
-    throw new CastUnavailableError();
+  if (media === null) {
+    throw new CastPlaybackError(receiverFailureMessage(request));
   }
 
-  video.disableRemotePlayback = false;
-
-  if (video.src !== request.contentUrl) {
-    video.src = request.contentUrl;
-  }
-
-  if (request.currentTime > 0) {
-    const applyTime = (): void => {
-      try {
-        video.currentTime = request.currentTime;
-      } catch {
-        // Metadata may still be loading. Playback can start at the beginning.
-      }
-    };
-
-    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
-      applyTime();
-    } else {
-      video.addEventListener("loadedmetadata", applyTime, { once: true });
-    }
-  }
-
-  await remote.prompt();
-
-  try {
-    await video.play();
-  } catch (error: unknown) {
-    const state = remote.state();
-
-    if (state === "connected" || state === "connecting") {
-      return;
-    }
-
-    throw error;
-  }
+  await waitUntilPlaying(media, request);
 }
 
 function ensureCastSender(): Promise<boolean> {
@@ -225,23 +255,6 @@ function initializeCast(): boolean {
   return true;
 }
 
-async function requestCastSession(context: CastContext): Promise<CastSession> {
-  const existing = resolveCastSession(undefined, context.getCurrentSession());
-
-  if (existing !== null) {
-    return existing;
-  }
-
-  const result = await context.requestSession();
-  const session = resolveCastSession(result, context.getCurrentSession());
-
-  if (session === null) {
-    throw new CastUnavailableError();
-  }
-
-  return session;
-}
-
 function buildLoadRequest(api: CastConstructors, request: CastMediaRequest): Record<string, unknown> | null {
   const mediaInfo = createInstance(api.mediaInfo, [request.contentUrl, request.contentType]);
   const metadata = createInstance(api.genericMediaMetadata, []);
@@ -265,8 +278,137 @@ function buildLoadRequest(api: CastConstructors, request: CastMediaRequest): Rec
   }
 
   loadRequest.autoplay = true;
-  loadRequest.currentTime = request.currentTime;
+
+  if (request.currentTime > 0) {
+    loadRequest.currentTime = request.currentTime;
+  }
+
   return loadRequest;
+}
+
+function asMedia(value: unknown): Record<string, unknown> | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  if (typeof value.playerState === "string" || typeof value.addUpdateListener === "function") {
+    return value;
+  }
+
+  return null;
+}
+
+function readSessionMedia(session: CastSession): Record<string, unknown> | null {
+  if (typeof session.getMediaSession !== "function") {
+    return null;
+  }
+
+  return asMedia(session.getMediaSession());
+}
+
+function waitUntilPlaying(media: Record<string, unknown>, request: CastMediaRequest): Promise<void> {
+  const initial = readCastPlayerStatus(media);
+
+  if (initial === "playing") {
+    return Promise.resolve();
+  }
+
+  if (initial === "failed") {
+    return Promise.reject(new CastPlaybackError(receiverFailureMessage(request)));
+  }
+
+  return new Promise((resolve, reject) => {
+    let buffering = initial === "buffering";
+    let settled = false;
+
+    const finish = (error?: Error): void => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      window.clearTimeout(timer);
+      removeListener();
+
+      if (error !== undefined) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    };
+
+    const onUpdate = (isAlive?: boolean): void => {
+      if (isAlive === false) {
+        finish(new CastPlaybackError(receiverFailureMessage(request)));
+        return;
+      }
+
+      const status = readCastPlayerStatus(media);
+
+      if (status === "playing") {
+        finish();
+        return;
+      }
+
+      if (status === "failed") {
+        finish(new CastPlaybackError(receiverFailureMessage(request)));
+        return;
+      }
+
+      if (status === "buffering") {
+        buffering = true;
+      }
+    };
+
+    let removeListener = (): void => undefined;
+    const timer = window.setTimeout(() => {
+      finish(buffering ? undefined : new CastPlaybackError(receiverFailureMessage(request)));
+    }, PLAYBACK_TIMEOUT_MS);
+    removeListener = addMediaListener(media, onUpdate);
+
+    onUpdate();
+  });
+}
+
+function addMediaListener(
+  media: Record<string, unknown>,
+  listener: (isAlive?: boolean) => void,
+): () => void {
+  const add = media.addUpdateListener;
+
+  if (typeof add !== "function") {
+    return () => undefined;
+  }
+
+  add.call(media, listener);
+
+  const remove = media.removeUpdateListener;
+
+  if (typeof remove !== "function") {
+    return () => undefined;
+  }
+
+  return () => {
+    remove.call(media, listener);
+  };
+}
+
+function receiverFailureMessage(request: CastMediaRequest): string {
+  const host = mediaHost(request.contentUrl);
+  const format = request.receiverCompatible
+    ? "The TV has to reach that host over HTTPS with a certificate it trusts."
+    : "This format often stays blank on a Chromecast. MP4 (H.264/AAC) and WebM work.";
+
+  return `The Chromecast could not play this video. It has to download it from ${host}. ${format}`;
+}
+
+function mediaHost(contentUrl: string): string {
+  try {
+    return new URL(contentUrl).host;
+  } catch {
+    return contentUrl;
+  }
 }
 
 function readCastConstructors(): CastConstructors | null {
@@ -309,21 +451,6 @@ function readCastConstructors(): CastConstructors | null {
     genericMetadataType: readNumber(media.MetadataType, "GENERIC"),
     receiverApplicationId: readString(media, "DEFAULT_MEDIA_RECEIVER_APP_ID") ?? FALLBACK_RECEIVER_APP_ID,
     autoJoinPolicy: readString(chromeCast.AutoJoinPolicy, "ORIGIN_SCOPED") ?? "origin_scoped",
-  };
-}
-
-function readRemotePlayback(video: HTMLVideoElement): { prompt: () => Promise<void>; state: () => string } | null {
-  const candidate: unknown = Reflect.get(video, "remote");
-
-  if (!isRecord(candidate) || typeof candidate.prompt !== "function") {
-    return null;
-  }
-
-  const prompt = candidate.prompt;
-
-  return {
-    prompt: () => Promise.resolve(prompt.call(candidate)),
-    state: () => (typeof candidate.state === "string" ? candidate.state : ""),
   };
 }
 

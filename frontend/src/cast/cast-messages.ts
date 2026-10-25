@@ -1,5 +1,5 @@
 import { ApiRequestError } from "../api/client.js";
-import { CastUnavailableError } from "./cast-sender.js";
+import { CastPlaybackError, CastUnavailableError } from "./cast-sender.js";
 
 const LOCALHOST_MESSAGE =
   "Chromecast cannot open localhost. Open Media Library with this computer's network address, such as http://192.168.1.20:3000.";
@@ -27,6 +27,10 @@ export function castPlaybackMessage(options: { receiverCompatible: boolean; prot
   return `Playing on Chromecast.${httpHint}`;
 }
 
+export function castSenderStartingMessage(): string {
+  return "Cast is still starting. Click Cast again.";
+}
+
 export function castSenderUnavailableMessage(protocol: string): string {
   const httpNote =
     protocol === "http:"
@@ -38,6 +42,10 @@ export function castSenderUnavailableMessage(protocol: string): string {
 
 export function describeCastError(error: unknown, protocol: string): string {
   if (error instanceof ApiRequestError) {
+    return error.message;
+  }
+
+  if (error instanceof CastPlaybackError) {
     return error.message;
   }
 

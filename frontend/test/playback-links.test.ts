@@ -6,7 +6,7 @@ import {
   castSenderUnavailableMessage,
   describeCastError,
 } from "../src/cast/cast-messages.js";
-import { isCastCancelled, resolveCastSession } from "../src/cast/cast-sender.js";
+import { isCastCancelled, readCastPlayerStatus, resolveCastSession } from "../src/cast/cast-sender.js";
 import {
   absoluteStreamUrl,
   downloadFileName,
@@ -39,6 +39,13 @@ describe("cast messages", () => {
     expect(isCastCancelled("cancel")).toBe(true);
     expect(isCastCancelled({ code: "cancel" })).toBe(true);
     expect(isCastCancelled({ code: "timeout" })).toBe(false);
+  });
+
+  it("treats a black receiver as not playing yet", () => {
+    expect(readCastPlayerStatus({ playerState: "PLAYING" })).toBe("playing");
+    expect(readCastPlayerStatus({ playerState: "BUFFERING" })).toBe("buffering");
+    expect(readCastPlayerStatus({ playerState: "IDLE", idleReason: "NONE" })).toBe("pending");
+    expect(readCastPlayerStatus({ playerState: "IDLE", idleReason: "ERROR" })).toBe("failed");
   });
 
   it("includes the cast sender error code", () => {

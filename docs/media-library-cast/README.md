@@ -17,28 +17,25 @@ file the browser streams.
 3. The page turns that path into an absolute URL with `window.location.origin`.
    The server does not invent the host, because the host the user opened is
    the one the Chromecast must use.
-4. Desktop Chrome or Edge loads the Google Cast sender and asks which device
-   to use. Chrome may report the sender as unavailable once while it starts;
-   the player waits and tries again. After a device is chosen, the session is
-   read with `getCurrentSession()`, because `requestSession()` does not return
-   it. The sender tells Google's Default Media Receiver (`CC1AD845`) to play
-   the signed URL. No custom Cast application has to be registered. A phone
-   does not include that sender. There the player asks the browser to cast
-   the signed video URL itself. Casting the whole browser tab is a different
-   Chrome control and does not send this file.
+4. Chrome or Edge, including Chrome on Android, loads the Google Cast sender
+   when the player opens. The device picker has to open in that click, so if
+   the sender is not ready yet the page asks for one more click. After a
+   device is chosen, the session is read with `getCurrentSession()`, because
+   `requestSession()` does not return it. The sender tells Google's Default
+   Media Receiver (`CC1AD845`) to play the signed URL and waits until the TV
+   reports playback. A device connection by itself leaves the screen black.
+   No custom Cast application has to be registered. Casting the whole browser
+   tab is a different Chrome control and does not send this file.
 5. The Chromecast fetches the URL itself. It does not send the session
    cookie, so the token is what authorizes that one video until it expires.
-   Range requests keep working for seeking. The video element keeps that
-   signed address for the rest of the session. Pausing it would pause the TV.
+   Range requests keep working for seeking. The local player pauses only
+   after the TV has started, so the sound is not doubled.
 
 Canceling the device picker leaves the page as it was.
 
-The cast icon sits on the video, at the top right. When the browser can cast a
-video element, that is tried first, with the signed URL, and playback continues
-on the TV. Otherwise the Google Cast sender is used and the local player
-pauses. Download is the video player's own menu, not a separate button. The
-browser control stays off until a cast starts, and then it receives the signed
-URL rather than the cookie address.
+The cast icon sits on the video, at the top right. Download is the video
+player's own menu, not a separate button. The browser's own remote-playback
+control stays off: it can connect the TV without sending this file.
 
 ## Signed links
 
