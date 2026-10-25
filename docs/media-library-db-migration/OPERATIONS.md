@@ -32,14 +32,14 @@ Keep `SQLITE_PATH` while running the importer. After cutover it is optional.
 From Windows, keep MariaDB on `127.0.0.1` and open an SSH tunnel. Do not
 publish MariaDB on `0.0.0.0`. `tools/start-media-library.bat` starts that
 tunnel when `DATABASE_ENGINE=mariadb` and `MARIADB_HOST` is localhost, using
-`SSH_TUNNEL_HOST` (default `root@82.223.103.205`, same as `tools/sync-baile.sh`).
-`media-server` is a WSL SSH alias and does not resolve in Windows. Optional
-`SSH_TUNNEL_KEY` must be a private key that exists on Windows. If the key is
-only in WSL, set `SSH_TUNNEL_PASSWORD` to the server SSH password instead
-(not `MARIADB_PASSWORD`). That value stays in `.env` and is not committed.
+`SSH_TUNNEL_HOST`. `media-server` is a WSL SSH alias and does not resolve in
+Windows. Optional `SSH_TUNNEL_KEY` must be a private key that exists on
+Windows. If the key is only in WSL, set `SSH_TUNNEL_PASSWORD` to the server
+SSH password instead (not `MARIADB_PASSWORD`). That value stays in `.env` and
+is not committed.
 
 ```text
-ssh -N -L 3306:127.0.0.1:3306 -i %USERPROFILE%\.ssh\id_ed25519_rsync root@82.223.103.205
+ssh -N -L 3306:127.0.0.1:3306 user@server
 ```
 
 ## Import
