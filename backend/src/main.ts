@@ -68,6 +68,8 @@ async function main(): Promise<void> {
       libraryPath,
       libraryStore,
       authStore: stores.authStore,
+      catalogBackup: stores.catalogBackup,
+      sqlitePath: config.sqlitePath,
       authPublicRead: config.authPublicRead,
       refreshLibraryUseCase,
       processVideoJobUseCase,

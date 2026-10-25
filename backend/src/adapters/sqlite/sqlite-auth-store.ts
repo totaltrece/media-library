@@ -57,6 +57,31 @@ export class SqliteAuthStore implements AuthStore {
     return isPublicUserRow(row) ? toAuthUser(row) : null;
   }
 
+  async listUsers(role?: AuthRole): Promise<AuthUser[]> {
+    const rows =
+      role === undefined
+        ? this.database.prepare("SELECT id, username, role FROM users ORDER BY username").all()
+        : this.database.prepare("SELECT id, username, role FROM users WHERE role = ? ORDER BY username").all(role);
+
+    const users: AuthUser[] = [];
+
+    for (const row of rows) {
+      if (isPublicUserRow(row)) {
+        users.push(toAuthUser(row));
+      }
+    }
+
+    return users;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    const result = this.database.prepare("DELETE FROM users WHERE id = ?").run(id);
+
+    if (result.changes === 0) {
+      throw new Error(`User not found: ${id}`);
+    }
+  }
+
   async createSession(userId: number, token: string, expiresAt: Date): Promise<AuthSession> {
     const createdAt = new Date().toISOString();
     const expiresAtIso = expiresAt.toISOString();

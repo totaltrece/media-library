@@ -8,7 +8,7 @@ import type {
   AuthUser,
   AuthUserRecord,
 } from "../../ports/auth-store.js";
-import { executeChange, isUniqueViolation, queryOne } from "./mariadb-sql.js";
+import { executeChange, isUniqueViolation, queryOne, queryRows } from "./mariadb-sql.js";
 
 export class MariaDbAuthStore implements AuthStore {
   constructor(private readonly pool: Pool) {}
@@ -54,6 +54,31 @@ export class MariaDbAuthStore implements AuthStore {
     const row = await queryOne(this.pool, "SELECT id, username, role FROM users WHERE id = ?", [id]);
 
     return isPublicUserRow(row) ? toAuthUser(row) : null;
+  }
+
+  async listUsers(role?: AuthRole): Promise<AuthUser[]> {
+    const rows =
+      role === undefined
+        ? await queryRows(this.pool, "SELECT id, username, role FROM users ORDER BY username")
+        : await queryRows(this.pool, "SELECT id, username, role FROM users WHERE role = ? ORDER BY username", [role]);
+
+    const users: AuthUser[] = [];
+
+    for (const row of rows) {
+      if (isPublicUserRow(row)) {
+        users.push(toAuthUser(row));
+      }
+    }
+
+    return users;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    const result = await executeChange(this.pool, "DELETE FROM users WHERE id = ?", [id]);
+
+    if (result.affectedRows === 0) {
+      throw new Error(`User not found: ${id}`);
+    }
   }
 
   async createSession(userId: number, token: string, expiresAt: Date): Promise<AuthSession> {

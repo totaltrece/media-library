@@ -1,7 +1,10 @@
 import type {
   ApiErrorResponse,
   AuthMe,
+  CatalogBackupResult,
   CatalogTag,
+  ManagedUser,
+  ManagedUsersResponse,
   CatalogTagsResponse,
   RefreshLibraryResponse,
   SearchResponse,
@@ -241,6 +244,40 @@ export async function fetchActiveUploadJob(): Promise<UploadJobView | null> {
   }
 
   return readJsonResponse<UploadJobView>(response);
+}
+
+export async function fetchManagedUsers(): Promise<ManagedUsersResponse> {
+  const response = await apiFetch("/admin/users");
+
+  return readJsonResponse<ManagedUsersResponse>(response);
+}
+
+export async function createManagedUser(username: string, password: string): Promise<ManagedUser> {
+  const response = await apiFetch("/admin/users", {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+
+  return readJsonResponse<ManagedUser>(response);
+}
+
+export async function deleteManagedUser(userId: number): Promise<void> {
+  const response = await apiFetch(`/admin/users/${userId}`, {
+    method: "DELETE",
+  });
+
+  await readJsonResponse<{ id: number }>(response);
+}
+
+export async function createCatalogBackup(): Promise<CatalogBackupResult> {
+  const response = await apiFetch("/admin/backup", {
+    method: "POST",
+  });
+
+  return readJsonResponse<CatalogBackupResult>(response);
 }
 
 export async function fetchAuthMe(): Promise<AuthMe> {

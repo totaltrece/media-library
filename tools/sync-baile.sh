@@ -2,6 +2,7 @@
 
 rsync -avh \
   --exclude='bachata/' \
+  --exclude='db/' \
   --exclude='*.converting.mp4' \
   -e "ssh -i ~/.ssh/id_ed25519_rsync" \
   /mnt/c/Users/Carlos/Documents/baile/ \

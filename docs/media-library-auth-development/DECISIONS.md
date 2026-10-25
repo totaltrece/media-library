@@ -46,7 +46,12 @@ auth stack.
 
 ## Users
 
-No web form. Schema migration creates empty `users` / `sessions`.
+Schema migration creates empty `users` / `sessions`. Admins manage **view**
+users in the UI (`docs/media-library-admin-users/`). Admin accounts:
+
+```text
+pnpm --filter @media-library/backend create-user -- --username NAME --password PASS [--role admin|view]
+```
 
 ```text
 pnpm --filter @media-library/backend create-user -- --username NAME --password PASS [--role admin|view]

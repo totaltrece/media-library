@@ -156,12 +156,12 @@ function Start-MariadbSshTunnel {
 
   $process = Start-Process -FilePath "ssh" -ArgumentList $sshArgs -PassThru -NoNewWindow -RedirectStandardError $stderrFile -RedirectStandardOutput $stdoutFile
 
-  for ($attempt = 0; $attempt -lt 20; $attempt += 1) {
+  for ($attempt = 0; $attempt -lt 25; $attempt += 1) {
     Start-Sleep -Seconds 1
     if ($process.HasExited) {
       $details = @(Read-ProcessLog $stderrFile; Read-ProcessLog $stdoutFile) -join "`n"
       if ([string]::IsNullOrWhiteSpace($details)) {
-        $details = "ssh exited with code $($process.ExitCode). Set SSH_TUNNEL_HOST=root@82.223.103.205 and SSH_TUNNEL_KEY to your Windows private key path."
+        $details = "ssh exited with code $($process.ExitCode). Set SSH_TUNNEL_HOST and SSH_TUNNEL_KEY or SSH_TUNNEL_PASSWORD."
       }
       throw "SSH tunnel failed: $details"
     }
@@ -188,6 +188,8 @@ $sshProcess = $null
 try {
   if (ShouldStartSshTunnel) {
     $sshProcess = Start-MariadbSshTunnel
+  } else {
+    Write-Host "DATABASE_ENGINE=$($env:DATABASE_ENGINE); skipping SSH tunnel"
   }
 
   pnpm --filter @media-library/backend dev

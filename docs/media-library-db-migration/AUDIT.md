@@ -437,7 +437,9 @@ per-request full catalog load.
 8. **Keep SQLite** as `DATABASE_ENGINE=sqlite` fallback until both Plesk and Windows have run against MariaDB successfully.
 9. **Do not** re-run TagSpaces `import-library` as part of this move (would overwrite tags from stale sidecars).
 
-**Needs confirmation:** path of production SQLite (`SQLITE_PATH` / `tools/backup-media-library.sh` uses `/mnt/storage/media-library/db/library.sqlite` — ops convention, not app code). Row counts are not in git.
+Production SQLite on the server is `/mnt/storage/media-library/db/library.sqlite`.
+The Windows pull writes that file to `SQLITE_PATH` from `backend/.env` (not
+into `LIBRARY_PATH`). Row counts are not in git.
 
 ---
 

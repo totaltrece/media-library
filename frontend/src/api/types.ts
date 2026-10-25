@@ -37,6 +37,26 @@ export type AuthMe =
   | { authenticated: false }
   | { authenticated: true; username: string; role: AuthRole };
 
+export interface ManagedUser {
+  id: number;
+  username: string;
+  role: AuthRole;
+}
+
+export interface ManagedUsersResponse {
+  count: number;
+  users: ManagedUser[];
+}
+
+export interface CatalogBackupResult {
+  sqlitePath: string;
+  tagTypes: number;
+  tags: number;
+  videos: number;
+  relations: number;
+  users: number;
+}
+
 export interface RefreshLibraryResponse {
   count: number;
 }

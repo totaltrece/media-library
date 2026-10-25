@@ -58,6 +58,49 @@ test("authorizeRequest rejects view-role writes with 403", async () => {
   );
 });
 
+test("authorizeRequest keeps user management admin-only even for GET", () => {
+  assert.deepEqual(
+    authorizeRequest({
+      method: "GET",
+      path: "/api/admin/users",
+      principal: { username: "viewer", role: "view" },
+      publicRead: false,
+    }),
+    { ok: false, status: 403, message: "Admin access required" },
+  );
+  assert.deepEqual(
+    authorizeRequest({
+      method: "GET",
+      path: "/api/admin/users",
+      principal: { username: "admin", role: "admin" },
+      publicRead: false,
+    }),
+    { ok: true },
+  );
+  assert.deepEqual(
+    authorizeRequest({ method: "DELETE", path: "/api/admin/users/2", principal: null, publicRead: false }),
+    { ok: false, status: 401, message: "Authentication required" },
+  );
+  assert.deepEqual(
+    authorizeRequest({
+      method: "POST",
+      path: "/api/admin/backup",
+      principal: { username: "viewer", role: "view" },
+      publicRead: false,
+    }),
+    { ok: false, status: 403, message: "Admin access required" },
+  );
+  assert.deepEqual(
+    authorizeRequest({
+      method: "POST",
+      path: "/api/admin/backup",
+      principal: { username: "admin", role: "admin" },
+      publicRead: false,
+    }),
+    { ok: true },
+  );
+});
+
 test("authorizeRequest requires a session for GET when public-read is off", async () => {
   assert.deepEqual(
     authorizeRequest({ method: "GET", path: "/api/search", principal: null, publicRead: false }),

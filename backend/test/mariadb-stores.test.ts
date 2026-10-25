@@ -38,5 +38,15 @@ function readMariadbTestConfig() {
     MARIADB_PASSWORD: process.env.MARIADB_PASSWORD,
   });
 
-  return config.engine === "mariadb" ? config : null;
+  if (config.engine !== "mariadb") {
+    return null;
+  }
+
+  if (config.database === "media-library" && process.env.MEDIA_LIBRARY_MARIADB_ALLOW_PRODUCTION_RESET !== "1") {
+    throw new Error(
+      "MariaDB contract tests refuse database 'media-library' because they wipe users and videos. Use a dedicated test database.",
+    );
+  }
+
+  return config;
 }

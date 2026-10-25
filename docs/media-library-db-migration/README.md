@@ -21,5 +21,6 @@ SQLite remains a selectable engine. Cut over an environment by pointing
 
 Set `MEDIA_LIBRARY_MARIADB_TESTS=1` plus `MARIADB_HOST`, `MARIADB_PORT`,
 `MARIADB_DATABASE`, `MARIADB_USER`, and `MARIADB_PASSWORD`. Those tests wipe
-catalog tables, so do not run them against a database that already holds
-production rows.
+catalog tables. They refuse the production name `media-library` unless
+`MEDIA_LIBRARY_MARIADB_ALLOW_PRODUCTION_RESET=1`. Use a dedicated test
+database.
