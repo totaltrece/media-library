@@ -71,6 +71,8 @@ async function main(): Promise<void> {
       catalogBackup: stores.catalogBackup,
       sqlitePath: config.sqlitePath,
       authPublicRead: config.authPublicRead,
+      castUrlSecret: config.castUrlSecret,
+      castUrlTtlMs: config.castUrlTtlMs,
       refreshLibraryUseCase,
       processVideoJobUseCase,
       processingJobStore,

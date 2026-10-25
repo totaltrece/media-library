@@ -18,7 +18,7 @@ Operators still create **admin** users with the backend CLI.
   (`backend/src/config.ts`). Leaving the variable unset would reopen anonymous
   GET; do not rely on the code default for production.
 - Roles:
-  - `view` — browse and watch (read).
+  - `view` — browse, watch, download, and cast (read). Casting is documented in `docs/media-library-cast/README.md`.
   - `admin` — read plus writes (tags, types, upload, refresh, delete).
 - Session cookie (`media_library_session`), scrypt password hashes, SQLite
   `users` / `sessions` today (MariaDB later, same `AuthStore` port).

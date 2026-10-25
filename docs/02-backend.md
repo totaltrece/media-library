@@ -31,6 +31,7 @@ The backend is responsible for:
 - exposing application statistics
 - managing the application lifecycle
 - receiving admin video uploads, processing them, and installing new files into the library
+- issuing short-lived Chromecast stream links (`docs/media-library-cast/README.md`)
 
 The backend is not responsible for:
 

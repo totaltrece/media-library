@@ -12,7 +12,7 @@
     "backfill-recorded-at": "tsx src/backfill-recorded-at.ts",
     "create-user": "tsx src/create-user.ts",
     "migrate-sqlite-to-mariadb": "tsx src/migrate-sqlite-to-mariadb.ts",
-    "test": "pnpm --filter @media-library/indexer build && pnpm --filter @media-library/search build && tsc --project tsconfig.test.json && node --test dist-test/test/health.test.js dist-test/test/auth.test.js dist-test/test/auth-policy.test.js dist-test/test/admin-users.test.js dist-test/test/catalog-backup.test.js dist-test/test/database-config.test.js dist-test/test/sqlite-store.contract.test.js dist-test/test/sqlite-catalog-dump.test.js dist-test/test/mariadb-stores.test.js"
+    "test": "pnpm --filter @media-library/indexer build && pnpm --filter @media-library/search build && tsc --project tsconfig.test.json && node --test dist-test/test/health.test.js dist-test/test/auth.test.js dist-test/test/auth-policy.test.js dist-test/test/admin-users.test.js dist-test/test/catalog-backup.test.js dist-test/test/database-config.test.js dist-test/test/sqlite-store.contract.test.js dist-test/test/sqlite-catalog-dump.test.js dist-test/test/mariadb-stores.test.js dist-test/test/video.test.js dist-test/test/cast-access-token.test.js dist-test/test/content-disposition.test.js dist-test/test/video-access.test.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

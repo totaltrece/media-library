@@ -27,7 +27,10 @@ Default lifetime: 30 days. Configurable later; not a blocker.
 `view` — read only.
 
 Write check: session exists and `role === 'admin'`. A `view` session can
-browse and watch but cannot mutate.
+browse, watch, download, and cast, but cannot mutate.
+
+Cast playback does not send the session cookie. The player asks for a
+short-lived signed stream URL. See `docs/media-library-cast/README.md`.
 
 ## Public read flag
 

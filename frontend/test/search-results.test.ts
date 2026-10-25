@@ -22,7 +22,7 @@ describe("SearchResults date sort", () => {
     video("mid.mp4", "2025-12-27T19:00:00.000Z"),
   ];
 
-  it("orders videos from oldest to newest by default", () => {
+  it("orders videos from newest to oldest by default", () => {
     const wrapper = mount(SearchResults, {
       props: {
         results,
@@ -33,15 +33,16 @@ describe("SearchResults date sort", () => {
     });
 
     expect(wrapper.get("h2").text()).toBe("3 results");
-    expect(wrapper.get('[data-testid="sort-date"]').text()).toContain("↓");
+    expect(wrapper.get('[data-testid="sort-date"]').text()).toContain("↑");
+    expect(wrapper.get('[data-testid="sort-date"]').attributes("aria-label")).toBe("Sort by date, newest first");
     expect(wrapper.findAll(".result-card-name").map((name) => name.text())).toEqual([
-      "old.mp4",
-      "mid.mp4",
       "new.mp4",
+      "mid.mp4",
+      "old.mp4",
     ]);
   });
 
-  it("toggles to newest first when the date sort button is clicked", async () => {
+  it("toggles to oldest first when the date sort button is clicked", async () => {
     const wrapper = mount(SearchResults, {
       props: {
         results,
@@ -53,12 +54,12 @@ describe("SearchResults date sort", () => {
 
     await wrapper.get('[data-testid="sort-date"]').trigger("click");
 
-    expect(wrapper.get('[data-testid="sort-date"]').text()).toContain("↑");
-    expect(wrapper.get('[data-testid="sort-date"]').attributes("aria-label")).toBe("Sort by date, newest first");
+    expect(wrapper.get('[data-testid="sort-date"]').text()).toContain("↓");
+    expect(wrapper.get('[data-testid="sort-date"]').attributes("aria-label")).toBe("Sort by date, oldest first");
     expect(wrapper.findAll(".result-card-name").map((name) => name.text())).toEqual([
-      "new.mp4",
-      "mid.mp4",
       "old.mp4",
+      "mid.mp4",
+      "new.mp4",
     ]);
   });
 });

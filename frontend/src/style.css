@@ -434,6 +434,16 @@
   width: 100%;
 }
 
+.video-player-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.video-modal .status-message {
+  margin: 0;
+}
+
 @media (max-width: 899px) {
   .video-modal-backdrop {
     padding: 0.5rem;

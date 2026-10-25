@@ -1,6 +1,6 @@
 # Frontend
 
-Version: 2.2
+Version: 2.3
 
 ---
 
@@ -76,6 +76,10 @@ Each result displays:
 - Edit video (opens the tag editor)
 - tags
 
+The catalog opens sorted by recorded date, newest first. **Date** toggles
+that order. Newest first shows ↑. Oldest first shows ↓. Videos without a
+date stay at the end either way.
+
 ---
 
 ## Video Player
@@ -90,8 +94,12 @@ The player supports:
 - pause
 - seek
 - fullscreen
+- Cast, which sends the video to a Chromecast
+- Download, for a signed-in `view` or `admin` user
 
-The frontend never downloads or copies media files.
+Cast and download are described in `docs/media-library-cast/README.md`.
+The app still does not copy media into a second library location. Download
+saves the original file that is already being streamed.
 
 ---
 

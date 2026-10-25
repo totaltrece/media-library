@@ -74,7 +74,7 @@ defineEmits<{
   "select-video": [result: SearchResult];
 }>();
 
-const dateSort = ref<DateSortDirection>("asc");
+const dateSort = ref<DateSortDirection>("desc");
 
 const heading = computed(() => {
   return `${props.results.length} result${props.results.length === 1 ? "" : "s"}`;

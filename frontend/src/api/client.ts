@@ -1,6 +1,7 @@
 import type {
   ApiErrorResponse,
   AuthMe,
+  CastLink,
   CatalogBackupResult,
   CatalogTag,
   ManagedUser,
@@ -92,6 +93,18 @@ export async function fetchTags(): Promise<TagsResponse> {
   const response = await apiFetch("/tags");
 
   return readJsonResponse<TagsResponse>(response);
+}
+
+export async function requestCastLink(mediaId: string): Promise<CastLink> {
+  const response = await apiFetch("/cast/links", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ id: mediaId }),
+  });
+
+  return readJsonResponse<CastLink>(response);
 }
 
 export async function searchVideos(tags: string[]): Promise<SearchResponse> {

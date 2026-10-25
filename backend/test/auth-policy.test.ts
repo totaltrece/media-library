@@ -101,6 +101,65 @@ test("authorizeRequest keeps user management admin-only even for GET", () => {
   );
 });
 
+test("authorizeRequest allows view users to issue cast links and cast streams without a session", () => {
+  assert.deepEqual(
+    authorizeRequest({
+      method: "POST",
+      path: "/api/cast/links",
+      principal: { username: "viewer", role: "view" },
+      publicRead: false,
+    }),
+    { ok: true },
+  );
+  assert.deepEqual(
+    authorizeRequest({
+      method: "POST",
+      path: "/api/cast/links",
+      principal: null,
+      publicRead: false,
+    }),
+    { ok: false, status: 401, message: "Authentication required" },
+  );
+  assert.deepEqual(
+    authorizeRequest({
+      method: "GET",
+      path: "/api/video/salsa/first.mp4?cast=token",
+      principal: null,
+      publicRead: false,
+      castStreamAuthorized: true,
+    }),
+    { ok: true },
+  );
+  assert.deepEqual(
+    authorizeRequest({
+      method: "GET",
+      path: "/api/search?cast=token",
+      principal: null,
+      publicRead: false,
+      castStreamAuthorized: true,
+    }),
+    { ok: false, status: 401, message: "Authentication required" },
+  );
+  assert.deepEqual(
+    authorizeRequest({
+      method: "OPTIONS",
+      path: "/api/video/salsa/first.mp4",
+      principal: null,
+      publicRead: false,
+    }),
+    { ok: true },
+  );
+  assert.deepEqual(
+    authorizeRequest({
+      method: "POST",
+      path: "/api/videos/salsa/first.mp4/tags",
+      principal: { username: "viewer", role: "view" },
+      publicRead: false,
+    }),
+    { ok: false, status: 403, message: "Admin access required" },
+  );
+});
+
 test("authorizeRequest requires a session for GET when public-read is off", async () => {
   assert.deepEqual(
     authorizeRequest({ method: "GET", path: "/api/search", principal: null, publicRead: false }),

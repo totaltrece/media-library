@@ -19,3 +19,8 @@ FFPROBE_PATH=ffprobe
 # UPLOAD_MAX_BYTES=536870912
 # AUTH_PUBLIC_READ=false
 # INDEX_RELOAD_INTERVAL_MS=60000
+# Secret for Chromecast playback links. If unset, the process generates one
+# and existing cast links stop working after a restart.
+# CAST_URL_SECRET=
+# Lifetime of a cast link, in seconds. Default 21600 (6 hours). Range 60–86400.
+# CAST_URL_TTL_SECONDS=21600

@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import cookie from "@fastify/cookie";
 import Fastify from "fastify";
 
@@ -26,6 +28,8 @@ import { RenameTagUseCase } from "./application/rename-tag.js";
 import { SearchVideosUseCase } from "./application/search-videos.js";
 import { SetVideoTagsUseCase } from "./application/set-video-tags.js";
 import { UpdateTagTypeUseCase } from "./application/update-tag-type.js";
+import { DEFAULT_CAST_URL_TTL_MS } from "./application/cast-access-token.js";
+import { IssueCastLinkUseCase } from "./application/issue-cast-link.js";
 import { StreamVideoUseCase } from "./application/stream-video.js";
 import { FilesystemLibraryMediaInstaller } from "./adapters/filesystem/filesystem-library-media-installer.js";
 import { FilesystemVideoStore } from "./adapters/filesystem/filesystem-video-store.js";
@@ -35,6 +39,7 @@ import { registerAdminTagTypesRoutes } from "./adapters/http/admin-tag-types-con
 import { registerAdminTagsRoutes } from "./adapters/http/admin-tags-controller.js";
 import { registerAdminUsersRoutes } from "./adapters/http/admin-users-controller.js";
 import { registerAuthRoutes } from "./adapters/http/auth-controller.js";
+import { registerCastRoutes } from "./adapters/http/cast-controller.js";
 import { createAuthGuard } from "./adapters/http/auth-guard.js";
 import { registerLibraryRoutes } from "./adapters/http/library-controller.js";
 import { registerSearchRoutes } from "./adapters/http/search-controller.js";
@@ -67,12 +72,16 @@ export interface AppDependencies {
   uploadMaxBytes?: number;
   authStore?: AuthStore;
   authPublicRead?: boolean;
+  castUrlSecret?: string;
+  castUrlTtlMs?: number;
   catalogBackup?: CatalogBackupPort;
   sqlitePath?: string;
 }
 
 export async function createApp(dependencies: AppDependencies) {
   const uploadMaxBytes = dependencies.uploadMaxBytes;
+  const castUrlSecret = dependencies.castUrlSecret?.trim() || randomBytes(32).toString("hex");
+  const castUrlTtlMs = dependencies.castUrlTtlMs ?? DEFAULT_CAST_URL_TTL_MS;
   const app = Fastify({
     logger: false,
     ...(uploadMaxBytes === undefined ? {} : { bodyLimit: uploadMaxBytes + 1024 * 1024 }),
@@ -94,7 +103,7 @@ export async function createApp(dependencies: AppDependencies) {
   await app.register(async (api) => {
     if (dependencies.authStore !== undefined) {
       const authStore = dependencies.authStore;
-      api.addHook("preHandler", createAuthGuard(authStore, dependencies.authPublicRead ?? true));
+      api.addHook("preHandler", createAuthGuard(authStore, dependencies.authPublicRead ?? true, castUrlSecret));
       registerAuthRoutes(api, {
         authStore,
         loginUseCase: new LoginUseCase(authStore),
@@ -133,6 +142,10 @@ export async function createApp(dependencies: AppDependencies) {
 
     registerVideoRoutes(api, {
       streamVideoUseCase,
+    });
+
+    registerCastRoutes(api, {
+      issueCastLinkUseCase: new IssueCastLinkUseCase(streamVideoUseCase, castUrlSecret, castUrlTtlMs),
     });
 
     if (dependencies.refreshLibraryUseCase !== undefined) {

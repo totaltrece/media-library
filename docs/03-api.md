@@ -1,6 +1,6 @@
 # REST API
 
-Version: 2.3
+Version: 2.4
 
 ---
 
@@ -71,7 +71,7 @@ Create users with the CLI (not via HTTP):
 pnpm --filter @media-library/backend create-user -- --username NAME --password PASS [--role admin|view]
 ```
 
-`--role` defaults to `admin`. `view` may browse and watch but cannot mutate.
+`--role` defaults to `admin`. `view` may browse, watch, download, and cast, but cannot mutate the library.
 
 ```text
 POST /api/auth/login
@@ -431,6 +431,63 @@ Streams the original video from the media library.
 The endpoint supports HTTP Range requests and is compatible with the HTML5
 `<video>` element.
 
+Responses include `Access-Control-Allow-Origin: *` so a Chromecast receiver,
+which runs on another origin, can read the stream. Cookie authentication is
+unchanged: a cross-origin page still cannot use the session cookie.
+
+`GET /api/video/:id?download=1` is the same stream with
+`Content-Disposition: attachment`. The player shows Download to signed-in
+`view` and `admin` users.
+
+`GET /api/video/:id?cast=<token>` plays without a session cookie when the
+token is valid. Tokens are issued by `POST /api/cast/links`.
+
+---
+
+## Cast
+
+```text
+POST /api/cast/links
+```
+
+Body:
+
+```json
+{ "id": "bachata/clip.mp4" }
+```
+
+Requires the same read access as watching the video. A `view` session is
+enough. The request does not modify the library.
+
+Response:
+
+```json
+{
+  "streamPath": "/api/video/bachata/clip.mp4?cast=1710000000.signature",
+  "contentType": "video/mp4",
+  "expiresAt": "2026-10-25T22:00:00.000Z",
+  "title": "clip.mp4",
+  "receiverCompatible": true
+}
+```
+
+`streamPath` is relative. The browser adds the origin of the page the user
+actually opened. Chromecast then fetches that absolute URL itself and does
+not send the session cookie. The `cast` value is an HMAC bound to that media
+id and an expiry.
+
+`CAST_URL_TTL_SECONDS` defaults to 21600 (6 hours) and must be from 60 to
+86400. Set `CAST_URL_SECRET` in production so links keep working after a
+restart. If the secret is unset, the process generates one and discards it
+on exit.
+
+`receiverCompatible` is true for `video/mp4` and `video/webm`. Other types
+can still be sent; the television may reject them. The response is
+`Cache-Control: no-store`. Unknown ids return **404**. A missing id returns
+**400**.
+
+See `docs/media-library-cast/README.md`.
+
 ---
 
 ## Admin uploads (M6.1)
@@ -528,6 +585,7 @@ Backend
 - identifier resolution
 - thumbnail serving
 - video streaming
+- short-lived Chromecast stream links
 - admin video upload, processing, and installation of new library files
 - session login and write authorization
 
@@ -539,6 +597,7 @@ Frontend
 - displaying results
 - displaying thumbnails
 - playing streamed videos
+- casting a video to Chromecast and downloading it for a signed-in reader
 - logging in and out; disabling writes when not admin
 
 Filesystem paths are never exposed to clients.

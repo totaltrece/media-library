@@ -25,6 +25,10 @@ export function isAuthExemptPath(method: string, path: string): boolean {
     return true;
   }
 
+  if (method === "OPTIONS" && isVideoStreamPath(normalized)) {
+    return true;
+  }
+
   return method === "GET" && normalized.endsWith("/auth/me");
 }
 
@@ -33,8 +37,13 @@ export function authorizeRequest(options: {
   path: string;
   principal: AuthPrincipal | null;
   publicRead: boolean;
+  castStreamAuthorized?: boolean;
 }): { ok: true } | { ok: false; status: 401 | 403; message: string } {
   if (isAuthExemptPath(options.method, options.path)) {
+    return { ok: true };
+  }
+
+  if (options.castStreamAuthorized === true && isVideoStreamRead(options.method, options.path)) {
     return { ok: true };
   }
 
@@ -52,6 +61,14 @@ export function authorizeRequest(options: {
       status: 403,
       message: "Admin access required",
     };
+  }
+
+  if (isCastLinkRequest(options.method, options.path)) {
+    if (canRead(options.principal, options.publicRead)) {
+      return { ok: true };
+    }
+
+    return unauthorized();
   }
 
   if (isReadMethod(options.method)) {
@@ -84,6 +101,20 @@ function isReadRole(role: AuthRole): boolean {
 function isAdminRestrictedPath(path: string): boolean {
   const normalized = stripQuery(path);
   return /\/admin\/users(?:\/|$)/.test(normalized) || /\/admin\/backup(?:\/|$)/.test(normalized);
+}
+
+function isCastLinkRequest(method: string, path: string): boolean {
+  return method === "POST" && stripQuery(path).endsWith("/cast/links");
+}
+
+function isVideoStreamRead(method: string, path: string): boolean {
+  return (method === "GET" || method === "HEAD") && isVideoStreamPath(path);
+}
+
+export function isVideoStreamPath(path: string): boolean {
+  const normalized = stripQuery(path);
+
+  return /\/video\/[^/]/.test(normalized);
 }
 
 function isReadMethod(method: string): boolean {
