@@ -1,3 +1,2 @@
 @echo off
-cd /d "C:\Users\Carlos\Documents\proyectos\media-library"
-pnpm --filter @media-library/backend dev
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0start-media-library.ps1"
