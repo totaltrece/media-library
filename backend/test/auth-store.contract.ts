@@ -59,6 +59,23 @@ export function defineAuthStoreContract(engine: string, openStores: () => Promis
     });
   });
 
+  test(`${engine}: listUsers can filter view accounts and deleteUser removes them`, async () => {
+    await withStores(async (authStore) => {
+      await authStore.createUser("admin", hashPassword("password1"), "admin");
+      const viewer = await authStore.createUser("viewer", hashPassword("password1"), "view");
+
+      assert.deepEqual(
+        (await authStore.listUsers("view")).map((user) => user.username),
+        ["viewer"],
+      );
+
+      await authStore.deleteUser(viewer.id);
+      assert.equal(await authStore.findUserById(viewer.id), null);
+      assert.equal((await authStore.listUsers("view")).length, 0);
+      assert.notEqual(await authStore.findUserByUsername("admin"), null);
+    });
+  });
+
   test(`${engine}: expired sessions are not valid`, async () => {
     await withStores(async (authStore) => {
       const user = await authStore.createUser("admin", hashPassword("password1"), "admin");

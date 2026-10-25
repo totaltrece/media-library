@@ -57,7 +57,7 @@ describe("header auth", () => {
     await flushPromises();
 
     expect(wrapper.find('[data-testid="auth-login"]').exists()).toBe(true);
-    expect(wrapper.get('[aria-label="Refresh library"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.find('[aria-label="Refresh library"]').exists()).toBe(false);
 
     await wrapper.get('[data-testid="auth-login"]').trigger("click");
     await wrapper.get('[data-testid="login-username"]').setValue("admin");
@@ -73,5 +73,43 @@ describe("header auth", () => {
 
     expect(wrapper.find('[data-testid="auth-login"]').exists()).toBe(true);
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST" && String(init.body ?? "").includes("password1"))).toBe(true);
+  });
+
+  it("sends view users to the video list after login", async () => {
+    setAuthSessionForTests(ANONYMOUS_AUTH);
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/auth/login" && init?.method === "POST") {
+        return jsonResponse({ authenticated: true, username: "viewer", role: "view" });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes,
+    });
+    await router.push("/admin/tags");
+    await router.isReady();
+    const wrapper = mount(AppHeader, {
+      props: {
+        title: "Admin tags",
+        subtitle: "",
+      },
+      global: {
+        plugins: [router],
+      },
+    });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="auth-login"]').trigger("click");
+    await wrapper.get('[data-testid="login-username"]').setValue("viewer");
+    await wrapper.get('[data-testid="login-password"]').setValue("password1");
+    await wrapper.get("form.login-modal").trigger("submit");
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("home");
   });
 });

@@ -52,9 +52,13 @@ ssh -N -L 3306:127.0.0.1:3306 user@server
 
 ## Backup after cutover
 
-Keep rsync of media files. Replace SQLite-file backup with `mariadb-dump` of
-the `media-library` database. Keep the last SQLite file until a restore drill
-succeeds.
+Keep rsync of media files. From **Admin zone → Backup db**, an admin can
+write the live MariaDB catalog into `SQLITE_PATH` (tag types, tags, videos,
+relations, users; not sessions). That SQLite file is a snapshot, not the
+live database while `DATABASE_ENGINE=mariadb`.
 
-Rollback: set `DATABASE_ENGINE=sqlite` and the original file path. Leave the
+You can still take a `mariadb-dump` of the `media-library` database as a
+server-side backup.
+
+Rollback: set `DATABASE_ENGINE=sqlite` and the SQLite file path. Leave the
 MariaDB copy unused.

@@ -120,7 +120,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 import { refreshLibrary as refreshLibraryIndex } from "../api/client.js";
 import { useAuth } from "../auth/session.js";
@@ -135,15 +135,18 @@ const emit = defineEmits<{
   refreshed: [];
 }>();
 
-const items = [
-  { id: "view", to: "/", label: "View", testId: "nav-view" },
-  { id: "upload", to: "/admin/videos/upload", label: "Upload video", testId: "upload-new-video" },
-  { id: "tags", to: "/admin/tags", label: "Admin tags", testId: "nav-tags" },
-  { id: "tag-types", to: "/admin/tag-types", label: "Tag types", testId: "nav-tag-types" },
+const navItems = [
+  { id: "view", to: "/", label: "View", testId: "nav-view", adminOnly: false },
+  { id: "upload", to: "/admin/videos/upload", label: "Upload video", testId: "upload-new-video", adminOnly: false },
+  { id: "tags", to: "/admin/tags", label: "Admin tags", testId: "nav-tags", adminOnly: false },
+  { id: "tag-types", to: "/admin/tag-types", label: "Tag types", testId: "nav-tag-types", adminOnly: false },
+  { id: "admin-zone", to: "/admin", label: "Admin zone", testId: "nav-admin-zone", adminOnly: true },
 ] as const;
 
 const route = useRoute();
+const router = useRouter();
 const { canView, canWrite, username, load, login, logout } = useAuth();
+const items = computed(() => navItems.filter((item) => !item.adminOnly || canWrite.value));
 const refreshing = ref(false);
 const refreshError = ref<string | null>(null);
 const loginOpen = ref(false);
@@ -163,6 +166,8 @@ const current = computed(() => {
       return "tags";
     case "admin-tag-types":
       return "tag-types";
+    case "admin-zone":
+      return "admin-zone";
     default:
       return null;
   }
@@ -196,8 +201,12 @@ async function onLogin(): Promise<void> {
   authError.value = null;
 
   try {
-    await login(loginUsername.value, loginPassword.value);
+    const me = await login(loginUsername.value, loginPassword.value);
     loginOpen.value = false;
+
+    if (me.authenticated && me.role === "view") {
+      await router.push({ name: "home" });
+    }
   } catch (error: unknown) {
     authError.value = error instanceof Error ? error.message : "Unable to log in.";
   } finally {

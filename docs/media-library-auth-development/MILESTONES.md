@@ -17,7 +17,8 @@ is an access-restricted notice until sign-in. Users are created with
 - Roles: `admin` | `view`. Only `admin` may write.
 - Deployed read lock: `AUTH_PUBLIC_READ=false` (existing flag, not a new
   auth system). Anonymous **write** was already denied.
-- No user CRUD UI. Operators use `create-user`.
+- View-user create/delete UI for admins (`docs/media-library-admin-users/`).
+  Operators still use `create-user` for admin accounts.
 - Session cookie + store `sessions`; scrypt hashes; `@fastify/cookie`.
 - Logout in the header. Session ~30 days until logout or expiry.
 - Mutating APIs (below) return 401 without a valid session and 403 if

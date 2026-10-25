@@ -6,7 +6,9 @@ system.
 
 Canonical decisions: `DECISIONS.md`. Implementation history: `MILESTONES.md`.
 
-There is no user-management UI. Operators create users with the backend CLI.
+Admins can create and delete **view** users and run a MariaDB → SQLite
+backup from **Admin zone** (`/admin`).
+Operators still create **admin** users with the backend CLI.
 
 ## Current behaviour
 

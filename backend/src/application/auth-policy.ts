@@ -38,6 +38,22 @@ export function authorizeRequest(options: {
     return { ok: true };
   }
 
+  if (isAdminRestrictedPath(options.path)) {
+    if (canWrite(options.principal)) {
+      return { ok: true };
+    }
+
+    if (options.principal === null) {
+      return unauthorized();
+    }
+
+    return {
+      ok: false,
+      status: 403,
+      message: "Admin access required",
+    };
+  }
+
   if (isReadMethod(options.method)) {
     if (canRead(options.principal, options.publicRead)) {
       return { ok: true };
@@ -63,6 +79,11 @@ export function authorizeRequest(options: {
 
 function isReadRole(role: AuthRole): boolean {
   return role === "admin" || role === "view";
+}
+
+function isAdminRestrictedPath(path: string): boolean {
+  const normalized = stripQuery(path);
+  return /\/admin\/users(?:\/|$)/.test(normalized) || /\/admin\/backup(?:\/|$)/.test(normalized);
 }
 
 function isReadMethod(method: string): boolean {

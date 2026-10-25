@@ -3,6 +3,10 @@ import Fastify from "fastify";
 
 import { AddVideoTagUseCase } from "./application/add-video-tag.js";
 import { CreateTagTypeUseCase } from "./application/create-tag-type.js";
+import { BackupCatalogUseCase } from "./application/backup-catalog.js";
+import { CreateUserUseCase } from "./application/create-user.js";
+import { DeleteViewUserUseCase } from "./application/delete-view-user.js";
+import { ListViewUsersUseCase } from "./application/list-view-users.js";
 import { DeleteTagUseCase } from "./application/delete-tag.js";
 import { DeleteTagTypeUseCase } from "./application/delete-tag-type.js";
 import { DeleteVideoUseCase } from "./application/delete-video.js";
@@ -26,8 +30,10 @@ import { StreamVideoUseCase } from "./application/stream-video.js";
 import { FilesystemLibraryMediaInstaller } from "./adapters/filesystem/filesystem-library-media-installer.js";
 import { FilesystemVideoStore } from "./adapters/filesystem/filesystem-video-store.js";
 import { TagSpacesThumbnailStore } from "./adapters/filesystem/tagspaces-thumbnail-store.js";
+import { registerAdminBackupRoutes } from "./adapters/http/admin-backup-controller.js";
 import { registerAdminTagTypesRoutes } from "./adapters/http/admin-tag-types-controller.js";
 import { registerAdminTagsRoutes } from "./adapters/http/admin-tags-controller.js";
+import { registerAdminUsersRoutes } from "./adapters/http/admin-users-controller.js";
 import { registerAuthRoutes } from "./adapters/http/auth-controller.js";
 import { createAuthGuard } from "./adapters/http/auth-guard.js";
 import { registerLibraryRoutes } from "./adapters/http/library-controller.js";
@@ -38,9 +44,11 @@ import { registerThumbnailRoutes } from "./adapters/http/thumbnail-controller.js
 import { registerUploadsRoutes } from "./adapters/http/uploads-controller.js";
 import { registerVideoRoutes } from "./adapters/http/video-controller.js";
 import { registerVideoTagsRoutes } from "./adapters/http/video-tags-controller.js";
+import { UnsupportedCatalogBackup } from "./adapters/persistence/unsupported-catalog-backup.js";
 import { LoginUseCase } from "./application/login.js";
 import { LogoutUseCase } from "./application/logout.js";
 import type { AuthStore } from "./ports/auth-store.js";
+import type { CatalogBackupPort } from "./ports/catalog-backup.js";
 import type { LibraryMediaInstaller } from "./ports/library-media-installer.js";
 import type { LibraryStore } from "./ports/library-store.js";
 import type { ProcessingJobStore } from "./ports/processing-job-store.js";
@@ -59,6 +67,8 @@ export interface AppDependencies {
   uploadMaxBytes?: number;
   authStore?: AuthStore;
   authPublicRead?: boolean;
+  catalogBackup?: CatalogBackupPort;
+  sqlitePath?: string;
 }
 
 export async function createApp(dependencies: AppDependencies) {
@@ -90,6 +100,18 @@ export async function createApp(dependencies: AppDependencies) {
         loginUseCase: new LoginUseCase(authStore),
         logoutUseCase: new LogoutUseCase(authStore),
       });
+      registerAdminUsersRoutes(api, {
+        listViewUsersUseCase: new ListViewUsersUseCase(authStore),
+        createUserUseCase: new CreateUserUseCase(authStore),
+        deleteViewUserUseCase: new DeleteViewUserUseCase(authStore),
+      });
+      registerAdminBackupRoutes(
+        api,
+        new BackupCatalogUseCase(
+          dependencies.catalogBackup ?? new UnsupportedCatalogBackup(),
+          dependencies.sqlitePath,
+        ),
+      );
     }
 
     api.get("/health", async () => {

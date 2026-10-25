@@ -9,6 +9,7 @@ import type { AuthMe } from "../api/types.js";
 
 export const ANONYMOUS_AUTH: AuthMe = { authenticated: false };
 export const ADMIN_AUTH: AuthMe = { authenticated: true, username: "admin", role: "admin" };
+export const VIEW_AUTH: AuthMe = { authenticated: true, username: "viewer", role: "view" };
 
 const session = ref<AuthMe>({ authenticated: false });
 let loadPromise: Promise<void> | null = null;

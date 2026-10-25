@@ -25,6 +25,8 @@ export interface AuthStore {
   createUser(username: string, passwordHash: string, role: AuthRole): Promise<AuthUser>;
   findUserByUsername(username: string): Promise<AuthUserRecord | null>;
   findUserById(id: number): Promise<AuthUser | null>;
+  listUsers(role?: AuthRole): Promise<AuthUser[]>;
+  deleteUser(id: number): Promise<void>;
   createSession(userId: number, token: string, expiresAt: Date): Promise<AuthSession>;
   findValidSession(token: string, now?: Date): Promise<AuthSessionWithUser | null>;
   deleteSession(token: string): Promise<void>;
