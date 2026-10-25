@@ -12,7 +12,7 @@ import type {
 export class SqliteAuthStore implements AuthStore {
   constructor(private readonly database: DatabaseSync) {}
 
-  createUser(username: string, passwordHash: string, role: AuthRole): AuthUser {
+  async createUser(username: string, passwordHash: string, role: AuthRole): Promise<AuthUser> {
     const createdAt = new Date().toISOString();
 
     try {
@@ -32,7 +32,7 @@ export class SqliteAuthStore implements AuthStore {
       throw error;
     }
 
-    const user = this.findUserByUsername(username);
+    const user = await this.findUserByUsername(username);
 
     if (user === null) {
       throw new Error(`Unable to persist user ${username}`);
@@ -41,7 +41,7 @@ export class SqliteAuthStore implements AuthStore {
     return toAuthUser(user);
   }
 
-  findUserByUsername(username: string): AuthUserRecord | null {
+  async findUserByUsername(username: string): Promise<AuthUserRecord | null> {
     const row = this.database
       .prepare("SELECT id, username, password_hash, role FROM users WHERE username = ?")
       .get(username);
@@ -49,7 +49,7 @@ export class SqliteAuthStore implements AuthStore {
     return isUserRow(row) ? toAuthUserRecord(row) : null;
   }
 
-  findUserById(id: number): AuthUser | null {
+  async findUserById(id: number): Promise<AuthUser | null> {
     const row = this.database
       .prepare("SELECT id, username, role FROM users WHERE id = ?")
       .get(id);
@@ -57,7 +57,7 @@ export class SqliteAuthStore implements AuthStore {
     return isPublicUserRow(row) ? toAuthUser(row) : null;
   }
 
-  createSession(userId: number, token: string, expiresAt: Date): AuthSession {
+  async createSession(userId: number, token: string, expiresAt: Date): Promise<AuthSession> {
     const createdAt = new Date().toISOString();
     const expiresAtIso = expiresAt.toISOString();
 
@@ -78,7 +78,7 @@ export class SqliteAuthStore implements AuthStore {
     };
   }
 
-  findValidSession(token: string, now = new Date()): AuthSessionWithUser | null {
+  async findValidSession(token: string, now = new Date()): Promise<AuthSessionWithUser | null> {
     const row = this.database
       .prepare(
         `
@@ -100,7 +100,7 @@ export class SqliteAuthStore implements AuthStore {
     return isSessionWithUserRow(row) ? toAuthSessionWithUser(row) : null;
   }
 
-  deleteSession(token: string): void {
+  async deleteSession(token: string): Promise<void> {
     this.database.prepare("DELETE FROM sessions WHERE token = ?").run(token);
   }
 }

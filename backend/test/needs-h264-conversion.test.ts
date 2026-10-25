@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import { needsH264Conversion } from "../src/application/needs-h264-conversion.js";
 
-test("needsH264Conversion is true only for HEVC", () => {
+test("needsH264Conversion is true only for HEVC", async () => {
   assert.equal(needsH264Conversion("hevc"), true);
   assert.equal(needsH264Conversion("h264"), false);
   assert.equal(needsH264Conversion("mpeg4"), false);

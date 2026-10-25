@@ -52,7 +52,7 @@ export class InstallProcessedUploadUseCase {
   ) {}
 
   async assertAvailable(videoId: string): Promise<void> {
-    if (this.libraryStore.findVideo(videoId) !== null) {
+    if (await this.libraryStore.findVideo(videoId) !== null) {
       throw new VideoAlreadyExistsError(videoId);
     }
 
@@ -84,13 +84,13 @@ export class InstallProcessedUploadUseCase {
       }
 
       try {
-        this.libraryStore.upsertVideo(videoId, toStoredRecordedAt(processed.probe.recordingTime));
+        await this.libraryStore.upsertVideo(videoId, toStoredRecordedAt(processed.probe.recordingTime));
       } catch (error: unknown) {
         await this.compensate(videoId, createdVideo, createdThumbnail);
         throw error;
       }
 
-      reloadVideoIndex(this.libraryStore, this.videoIndex, this.libraryPath);
+      await reloadVideoIndex(this.libraryStore, this.videoIndex, this.libraryPath);
 
       job = this.save(transitionProcessingJob(job, { status: "completed", videoId }));
 

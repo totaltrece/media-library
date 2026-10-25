@@ -21,7 +21,8 @@ Give every catalog tag a type with a color, show that color in the video grid
 and tag admin, allow sorting tags by type, and add a configuration screen for
 types.
 
-TagSpaces metadata and source media stay read-only.
+Source media stays read-only except for admin install/delete. Tag metadata
+lives in the application database.
 
 ## M1 — SQLite schema and seed
 

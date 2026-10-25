@@ -1,6 +1,6 @@
 # Backend Architecture
 
-Version: 2.0
+Version: 2.1
 
 ---
 
@@ -11,10 +11,11 @@ The backend is responsible for exposing the media library through an HTTP API.
 It coordinates indexing, searching and tag editing while keeping the domain
 independent from infrastructure and frameworks.
 
-The backend must never modify existing media files or TagSpaces metadata.
-Tag edits are persisted only in SQLite. Admin uploads may add **new** video
-files and **new** TagSpaces-layout thumbnails; they must never overwrite
-existing library files.
+The backend must never overwrite existing media files except through admin
+upload installation or video delete. Tag edits are persisted only in the
+application database. Admin uploads may add **new** video files and **new**
+thumbnails under `.ts/`; they must never overwrite existing library files.
+Do not read or write TagSpaces JSON sidecars.
 
 ---
 
@@ -34,8 +35,8 @@ The backend is responsible for:
 The backend is not responsible for:
 
 - rendering the user interface
-- modifying existing media files
-- writing TagSpaces JSON sidecars
+- modifying existing media files except admin install/delete
+- reading or writing TagSpaces JSON sidecars
 - implementing business logic inside HTTP handlers
 
 ---
@@ -122,7 +123,7 @@ Adapters implement ports.
 
 Examples:
 
-- TagSpaces filesystem reader
+- Filesystem video and thumbnail adapters
 - Search adapter
 - HTTP controllers
 - FFmpeg video processor

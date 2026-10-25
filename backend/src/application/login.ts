@@ -13,8 +13,8 @@ export interface LoginResult {
 export class LoginUseCase {
   constructor(private readonly authStore: AuthStore) {}
 
-  execute(username: string, password: string, now = new Date()): LoginResult {
-    const record = this.authStore.findUserByUsername(username.trim());
+  async execute(username: string, password: string, now = new Date()): Promise<LoginResult> {
+    const record = await this.authStore.findUserByUsername(username.trim());
 
     if (record === null || !verifyPassword(password, record.passwordHash)) {
       throw new InvalidCredentialsError();
@@ -22,7 +22,7 @@ export class LoginUseCase {
 
     const token = createSessionToken();
     const expiresAt = sessionExpiresAt(now);
-    this.authStore.createSession(record.id, token, expiresAt);
+    await this.authStore.createSession(record.id, token, expiresAt);
 
     return {
       token,

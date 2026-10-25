@@ -86,16 +86,14 @@ framework-specific types.
 
 # Read-only Guarantee
 
-The application must never modify existing:
+The application must never overwrite existing video files except through
+admin upload installation or video delete. Do not read or write TagSpaces
+JSON sidecars. Do not add TagSpaces as a product dependency.
 
-- video files
-- TagSpaces metadata
-- TagSpaces thumbnails
-- directory structure of already indexed media
+Thumbnails may live under `.ts/` as a filesystem layout only.
 
-Existing media is treated as immutable. Admin upload installation may **add**
-new video files and new thumbnails under `.ts/`; it must never overwrite or
-alter files that already exist.
+Admin upload installation may **add** new video files and new thumbnails
+under `.ts/`; it must never overwrite files that already exist.
 
 ---
 

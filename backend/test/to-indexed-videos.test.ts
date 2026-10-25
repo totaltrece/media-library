@@ -6,7 +6,7 @@ import { toIndexedVideo, toIndexedVideos } from "../src/application/to-indexed-v
 
 import { testLibraryPath } from "./fixtures.js";
 
-test("toIndexedVideo derives videoPath from the media id and uses SQLite tags", () => {
+test("toIndexedVideo derives videoPath from the media id and uses SQLite tags", async () => {
   assert.deepEqual(toIndexedVideo({ id: "salsa/first.mp4", recordedAt: null, tags: ["salsa", "bea"] }, testLibraryPath), {
     videoPath: resolve(testLibraryPath, "salsa", "first.mp4"),
     tags: ["salsa", "bea"],
@@ -14,20 +14,20 @@ test("toIndexedVideo derives videoPath from the media id and uses SQLite tags", 
   });
 });
 
-test("toIndexedVideo does not invent TagSpaces sidecar paths", () => {
+test("toIndexedVideo does not invent TagSpaces sidecar paths", async () => {
   const indexedVideo = toIndexedVideo({ id: "salsa/first.mp4", recordedAt: null, tags: ["salsa"] }, testLibraryPath);
 
   assert.strictEqual("metadataPath" in indexedVideo, false);
   assert.strictEqual("thumbnailPath" in indexedVideo, false);
 });
 
-test("toIndexedVideo rejects invalid media ids", () => {
+test("toIndexedVideo rejects invalid media ids", async () => {
   assert.throws(() => toIndexedVideo({ id: "../secret.mp4", recordedAt: null, tags: [] }, testLibraryPath), {
     message: "Invalid media id in library store: ../secret.mp4",
   });
 });
 
-test("toIndexedVideos preserves indexer path order", () => {
+test("toIndexedVideos preserves indexer path order", async () => {
   const indexedVideos = toIndexedVideos(
     [
       { id: "salsa/second.mp4", recordedAt: null, tags: ["salsa"] },

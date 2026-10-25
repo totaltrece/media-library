@@ -24,18 +24,18 @@ async function main(): Promise<void> {
   const libraryStore = stores.libraryStore;
   let storeOpen = true;
 
-  const closeStore = (): void => {
+  const closeStore = async (): Promise<void> => {
     if (!storeOpen) {
       return;
     }
 
     storeOpen = false;
-    stores.close();
+    await stores.close();
   };
 
   try {
     const videoIndex = new InMemoryVideoIndex(
-      toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath),
+      toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath),
     );
     const videoDiscovery = new WorkspaceVideoDiscovery(libraryPath);
     const videoProcessor = new FfmpegVideoProcessor({
@@ -70,7 +70,7 @@ async function main(): Promise<void> {
     });
 
     app.addHook("onClose", async () => {
-      closeStore();
+      await closeStore();
     });
 
     if (!existsSync(staticRoot)) {
@@ -83,7 +83,7 @@ async function main(): Promise<void> {
   } catch (error: unknown) {
     console.error(error);
     process.exitCode = 1;
-    closeStore();
+    await closeStore();
   }
 }
 

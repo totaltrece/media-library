@@ -22,11 +22,11 @@ export class SyncNewVideosUseCase {
     for (const videoPath of videoPaths) {
       const videoId = toMediaId(videoPath, this.libraryPath);
 
-      if (this.libraryStore.findVideo(videoId) !== null) {
+      if (await this.libraryStore.findVideo(videoId) !== null) {
         continue;
       }
 
-      this.libraryStore.upsertVideo(videoId);
+      await this.libraryStore.upsertVideo(videoId);
       inserted += 1;
     }
 

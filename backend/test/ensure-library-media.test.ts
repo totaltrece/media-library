@@ -17,13 +17,13 @@ const RECORDING_TIME = "2026-03-14T19:04:31.123Z";
 test("ensure fills a missing recorded_at from ffprobe metadata", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
     await writeLibraryVideo(libraryPath, "clip.mp4");
-    libraryStore.upsertVideo("clip.mp4");
+    await libraryStore.upsertVideo("clip.mp4");
     processor.setRecordingTime("clip.mp4", RECORDING_TIME);
 
     const result = await ensure(libraryPath, libraryStore, processor);
 
     assert.equal(result.datesFilled, 1);
-    assert.equal(libraryStore.findVideo("clip.mp4")?.recordedAt, toStoredRecordedAt(RECORDING_TIME));
+    assert.equal((await libraryStore.findVideo("clip.mp4"))?.recordedAt, toStoredRecordedAt(RECORDING_TIME));
   });
 });
 
@@ -31,25 +31,25 @@ test("ensure uses the filename date when ffprobe has no reliable timestamp", asy
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
     const videoId = "PXL_20260813_213639202.TS.mp4";
     await writeLibraryVideo(libraryPath, videoId);
-    libraryStore.upsertVideo(videoId);
+    await libraryStore.upsertVideo(videoId);
 
     const result = await ensure(libraryPath, libraryStore, processor);
 
     assert.equal(result.datesFilled, 1);
-    assert.equal(libraryStore.findVideo(videoId)?.recordedAt, recordedAtFromFileName(videoId));
+    assert.equal((await libraryStore.findVideo(videoId))?.recordedAt, recordedAtFromFileName(videoId));
   });
 });
 
 test("ensure does not overwrite an existing recorded_at", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
     await writeLibraryVideo(libraryPath, "clip.mp4");
-    libraryStore.upsertVideo("clip.mp4", "2020-01-01T12:00:00.000Z");
+    await libraryStore.upsertVideo("clip.mp4", "2020-01-01T12:00:00.000Z");
     processor.setRecordingTime("clip.mp4", RECORDING_TIME);
 
     const result = await ensure(libraryPath, libraryStore, processor);
 
     assert.equal(result.datesFilled, 0);
-    assert.equal(libraryStore.findVideo("clip.mp4")?.recordedAt, "2020-01-01T12:00:00.000Z");
+    assert.equal((await libraryStore.findVideo("clip.mp4"))?.recordedAt, "2020-01-01T12:00:00.000Z");
     assert.equal(processor.probeCount, 0);
   });
 });
@@ -58,8 +58,8 @@ test("ensure generates a missing TagSpaces thumbnail and leaves an existing one"
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
     await writeLibraryVideo(libraryPath, "missing.mp4");
     await writeLibraryVideo(libraryPath, "present.mp4");
-    libraryStore.upsertVideo("missing.mp4");
-    libraryStore.upsertVideo("present.mp4");
+    await libraryStore.upsertVideo("missing.mp4");
+    await libraryStore.upsertVideo("present.mp4");
 
     const presentThumbnail = resolveLibraryThumbnailPath(libraryPath, "present.mp4");
     assert.ok(presentThumbnail);
@@ -81,8 +81,8 @@ test("ensure continues after a probe error on another video", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
     await writeLibraryVideo(libraryPath, "bad.mp4");
     await writeLibraryVideo(libraryPath, "good.mp4");
-    libraryStore.upsertVideo("bad.mp4");
-    libraryStore.upsertVideo("good.mp4");
+    await libraryStore.upsertVideo("bad.mp4");
+    await libraryStore.upsertVideo("good.mp4");
     processor.fail("bad.mp4");
     processor.setRecordingTime("good.mp4", RECORDING_TIME);
 
@@ -91,7 +91,7 @@ test("ensure continues after a probe error on another video", async () => {
     assert.equal(result.errors.length, 1);
     assert.equal(result.errors[0]?.videoId, "bad.mp4");
     assert.equal(result.datesFilled, 1);
-    assert.equal(libraryStore.findVideo("good.mp4")?.recordedAt, toStoredRecordedAt(RECORDING_TIME));
+    assert.equal((await libraryStore.findVideo("good.mp4"))?.recordedAt, toStoredRecordedAt(RECORDING_TIME));
   });
 });
 
@@ -123,7 +123,7 @@ async function withLibrary(
   try {
     await run({ libraryPath, libraryStore, processor });
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 }

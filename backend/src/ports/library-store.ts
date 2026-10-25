@@ -32,29 +32,29 @@ export interface LibraryVideoWithTags {
 }
 
 export interface LibraryStore {
-  initialize(): void;
-  close(): void;
-  upsertVideo(id: string, recordedAt?: string | null): LibraryVideo;
-  findVideo(id: string): LibraryVideo | null;
-  listVideos(): LibraryVideo[];
-  deleteVideo(id: string): void;
-  setVideoRecordedAt(id: string, recordedAt: string | null): LibraryVideo;
-  upsertTag(name: string): LibraryTag;
-  findTagById(id: number): LibraryTag | null;
-  findTagByName(name: string): LibraryTag | null;
-  listTags(): LibraryTag[];
-  listTagUsages(): LibraryTagUsage[];
-  updateTag(id: number, name: string, typeId: number): LibraryTag;
-  deleteTag(id: number): void;
-  listTagTypes(): LibraryTagType[];
-  findTagTypeById(id: number): LibraryTagType | null;
-  findDefaultTagType(): LibraryTagType | null;
-  createTagType(name: string, color: string): LibraryTagType;
-  updateTagType(id: number, name: string, color: string): LibraryTagType;
-  deleteTagType(id: number): void;
-  setVideoTags(videoId: string, tagNames: string[]): void;
-  addVideoTag(videoId: string, tagName: string): void;
-  removeVideoTag(videoId: string, tagName: string): void;
-  getVideoTags(videoId: string): string[];
-  listVideosWithTags(): LibraryVideoWithTags[];
+  initialize(): Promise<void>;
+  close(): Promise<void>;
+  upsertVideo(id: string, recordedAt?: string | null): Promise<LibraryVideo>;
+  findVideo(id: string): Promise<LibraryVideo | null>;
+  listVideos(): Promise<LibraryVideo[]>;
+  deleteVideo(id: string): Promise<void>;
+  setVideoRecordedAt(id: string, recordedAt: string | null): Promise<LibraryVideo>;
+  upsertTag(name: string): Promise<LibraryTag>;
+  findTagById(id: number): Promise<LibraryTag | null>;
+  findTagByName(name: string): Promise<LibraryTag | null>;
+  listTags(): Promise<LibraryTag[]>;
+  listTagUsages(): Promise<LibraryTagUsage[]>;
+  updateTag(id: number, name: string, typeId: number): Promise<LibraryTag>;
+  deleteTag(id: number): Promise<void>;
+  listTagTypes(): Promise<LibraryTagType[]>;
+  findTagTypeById(id: number): Promise<LibraryTagType | null>;
+  findDefaultTagType(): Promise<LibraryTagType | null>;
+  createTagType(name: string, color: string): Promise<LibraryTagType>;
+  updateTagType(id: number, name: string, color: string): Promise<LibraryTagType>;
+  deleteTagType(id: number): Promise<void>;
+  setVideoTags(videoId: string, tagNames: string[]): Promise<void>;
+  addVideoTag(videoId: string, tagName: string): Promise<void>;
+  removeVideoTag(videoId: string, tagName: string): Promise<void>;
+  getVideoTags(videoId: string): Promise<string[]>;
+  listVideosWithTags(): Promise<LibraryVideoWithTags[]>;
 }

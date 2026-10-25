@@ -11,6 +11,6 @@ export class SqliteLibraryIndexer implements LibraryIndexer {
   ) {}
 
   async index(): Promise<IndexedVideo[]> {
-    return toIndexedVideos(this.libraryStore.listVideosWithTags(), this.libraryPath);
+    return toIndexedVideos(await this.libraryStore.listVideosWithTags(), this.libraryPath);
   }
 }

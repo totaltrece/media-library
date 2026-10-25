@@ -14,7 +14,7 @@ const RECORDING_TIME = "2026-03-14T19:04:31.123Z";
 
 test("backfill dry-run reports detected dates without writing SQLite", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
-    libraryStore.upsertVideo("clip.mp4");
+    await libraryStore.upsertVideo("clip.mp4");
     await writeLibraryVideo(libraryPath, "clip.mp4");
     processor.setRecordingTime("clip.mp4", RECORDING_TIME);
 
@@ -33,13 +33,13 @@ test("backfill dry-run reports detected dates without writing SQLite", async () 
         detected: toStoredRecordedAt(RECORDING_TIME),
       },
     ]);
-    assert.equal(libraryStore.findVideo("clip.mp4")?.recordedAt, null);
+    assert.equal((await libraryStore.findVideo("clip.mp4"))?.recordedAt, null);
   });
 });
 
 test("backfill writes detected dates and is idempotent", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
-    libraryStore.upsertVideo("clip.mp4");
+    await libraryStore.upsertVideo("clip.mp4");
     await writeLibraryVideo(libraryPath, "clip.mp4");
     processor.setRecordingTime("clip.mp4", RECORDING_TIME);
 
@@ -48,18 +48,18 @@ test("backfill writes detected dates and is idempotent", async () => {
     const stored = toStoredRecordedAt(RECORDING_TIME);
 
     assert.equal(first.updated, 1);
-    assert.equal(libraryStore.findVideo("clip.mp4")?.recordedAt, stored);
+    assert.equal((await libraryStore.findVideo("clip.mp4"))?.recordedAt, stored);
 
     const second = await useCase.execute({ dryRun: false });
     assert.equal(second.detected, 1);
     assert.equal(second.updated, 0);
-    assert.equal(libraryStore.findVideo("clip.mp4")?.recordedAt, stored);
+    assert.equal((await libraryStore.findVideo("clip.mp4"))?.recordedAt, stored);
   });
 });
 
 test("backfill leaves recorded_at NULL when metadata has no reliable date", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
-    libraryStore.upsertVideo("clip.mp4");
+    await libraryStore.upsertVideo("clip.mp4");
     await writeLibraryVideo(libraryPath, "clip.mp4");
     processor.setRecordingTime("clip.mp4", "1970-01-01T00:00:00.000000Z");
 
@@ -70,14 +70,14 @@ test("backfill leaves recorded_at NULL when metadata has no reliable date", asyn
     assert.equal(result.withoutDate, 1);
     assert.equal(result.updated, 0);
     assert.equal(result.previews[0]?.source, "none");
-    assert.equal(libraryStore.findVideo("clip.mp4")?.recordedAt, null);
+    assert.equal((await libraryStore.findVideo("clip.mp4"))?.recordedAt, null);
   });
 });
 
 test("backfill continues after a probe error", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
-    libraryStore.upsertVideo("bad.mp4");
-    libraryStore.upsertVideo("good.mp4");
+    await libraryStore.upsertVideo("bad.mp4");
+    await libraryStore.upsertVideo("good.mp4");
     await writeLibraryVideo(libraryPath, "bad.mp4");
     await writeLibraryVideo(libraryPath, "good.mp4");
     processor.fail("bad.mp4");
@@ -92,14 +92,14 @@ test("backfill continues after a probe error", async () => {
     assert.equal(result.errors[0]?.videoId, "bad.mp4");
     assert.equal(result.detected, 1);
     assert.equal(result.updated, 1);
-    assert.equal(libraryStore.findVideo("bad.mp4")?.recordedAt, null);
-    assert.equal(libraryStore.findVideo("good.mp4")?.recordedAt, toStoredRecordedAt(RECORDING_TIME));
+    assert.equal((await libraryStore.findVideo("bad.mp4"))?.recordedAt, null);
+    assert.equal((await libraryStore.findVideo("good.mp4"))?.recordedAt, toStoredRecordedAt(RECORDING_TIME));
   });
 });
 
 test("backfill prefers ffprobe over a filename fallback", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
-    libraryStore.upsertVideo("VID-20251227-WA0005.mp4");
+    await libraryStore.upsertVideo("VID-20251227-WA0005.mp4");
     await writeLibraryVideo(libraryPath, "VID-20251227-WA0005.mp4");
     processor.setRecordingTime("VID-20251227-WA0005.mp4", RECORDING_TIME);
 
@@ -109,14 +109,14 @@ test("backfill prefers ffprobe over a filename fallback", async () => {
 
     assert.equal(result.previews[0]?.source, "ffprobe");
     assert.equal(result.previews[0]?.detected, toStoredRecordedAt(RECORDING_TIME));
-    assert.equal(libraryStore.findVideo("VID-20251227-WA0005.mp4")?.recordedAt, toStoredRecordedAt(RECORDING_TIME));
+    assert.equal((await libraryStore.findVideo("VID-20251227-WA0005.mp4"))?.recordedAt, toStoredRecordedAt(RECORDING_TIME));
     assert.notEqual(result.previews[0]?.detected, recordedAtFromFileName("VID-20251227-WA0005.mp4"));
   });
 });
 
 test("backfill dry-run reports filename fallback without writing SQLite", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
-    libraryStore.upsertVideo("20241016-WA0010-mariposas.mp4");
+    await libraryStore.upsertVideo("20241016-WA0010-mariposas.mp4");
     await writeLibraryVideo(libraryPath, "20241016-WA0010-mariposas.mp4");
 
     const detected = recordedAtFromFileName("20241016-WA0010-mariposas.mp4");
@@ -134,13 +134,13 @@ test("backfill dry-run reports filename fallback without writing SQLite", async 
       },
     ]);
     assert.equal(result.updated, 1);
-    assert.equal(libraryStore.findVideo("20241016-WA0010-mariposas.mp4")?.recordedAt, null);
+    assert.equal((await libraryStore.findVideo("20241016-WA0010-mariposas.mp4"))?.recordedAt, null);
   });
 });
 
 test("backfill writes filename fallback and is idempotent", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
-    libraryStore.upsertVideo("VID-20251227-WA0005.mp4");
+    await libraryStore.upsertVideo("VID-20251227-WA0005.mp4");
     await writeLibraryVideo(libraryPath, "VID-20251227-WA0005.mp4");
 
     const useCase = new BackfillRecordedAtUseCase(libraryStore, processor, libraryPath);
@@ -149,18 +149,18 @@ test("backfill writes filename fallback and is idempotent", async () => {
 
     assert.equal(first.previews[0]?.source, "filename-fallback");
     assert.equal(first.updated, 1);
-    assert.equal(libraryStore.findVideo("VID-20251227-WA0005.mp4")?.recordedAt, stored);
+    assert.equal((await libraryStore.findVideo("VID-20251227-WA0005.mp4"))?.recordedAt, stored);
 
     const second = await useCase.execute({ dryRun: false });
     assert.equal(second.detected, 1);
     assert.equal(second.updated, 0);
-    assert.equal(libraryStore.findVideo("VID-20251227-WA0005.mp4")?.recordedAt, stored);
+    assert.equal((await libraryStore.findVideo("VID-20251227-WA0005.mp4"))?.recordedAt, stored);
   });
 });
 
 test("backfill does not invent a date for unmatched names without ffprobe metadata", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
-    libraryStore.upsertVideo("otro-video.mp4");
+    await libraryStore.upsertVideo("otro-video.mp4");
     await writeLibraryVideo(libraryPath, "otro-video.mp4");
 
     const result = await new BackfillRecordedAtUseCase(libraryStore, processor, libraryPath).execute({
@@ -169,13 +169,13 @@ test("backfill does not invent a date for unmatched names without ffprobe metada
 
     assert.equal(result.previews[0]?.source, "none");
     assert.equal(result.previews[0]?.detected, null);
-    assert.equal(libraryStore.findVideo("otro-video.mp4")?.recordedAt, null);
+    assert.equal((await libraryStore.findVideo("otro-video.mp4"))?.recordedAt, null);
   });
 });
 
 test("backfill leaves NULL when a filename date is not a valid calendar day", async () => {
   await withLibrary(async ({ libraryPath, libraryStore, processor }) => {
-    libraryStore.upsertVideo("VID-20250230-WA0001.mp4");
+    await libraryStore.upsertVideo("VID-20250230-WA0001.mp4");
     await writeLibraryVideo(libraryPath, "VID-20250230-WA0001.mp4");
 
     const result = await new BackfillRecordedAtUseCase(libraryStore, processor, libraryPath).execute({
@@ -184,7 +184,7 @@ test("backfill leaves NULL when a filename date is not a valid calendar day", as
 
     assert.equal(result.previews[0]?.source, "none");
     assert.equal(result.previews[0]?.detected, null);
-    assert.equal(libraryStore.findVideo("VID-20250230-WA0001.mp4")?.recordedAt, null);
+    assert.equal((await libraryStore.findVideo("VID-20250230-WA0001.mp4"))?.recordedAt, null);
   });
 });
 
@@ -202,7 +202,7 @@ async function withLibrary(
   try {
     await run({ libraryPath, libraryStore, processor });
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 }

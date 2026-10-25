@@ -11,12 +11,12 @@ export class DeleteTagUseCase {
     private readonly libraryPath: string,
   ) {}
 
-  execute(tagId: number): void {
-    if (this.libraryStore.findTagById(tagId) === null) {
+  async execute(tagId: number): Promise<void> {
+    if (await this.libraryStore.findTagById(tagId) === null) {
       throw new TagNotFoundError(tagId);
     }
 
-    this.libraryStore.deleteTag(tagId);
-    reloadVideoIndex(this.libraryStore, this.videoIndex, this.libraryPath);
+    await this.libraryStore.deleteTag(tagId);
+    await reloadVideoIndex(this.libraryStore, this.videoIndex, this.libraryPath);
   }
 }

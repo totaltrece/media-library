@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { InMemoryProcessingJobStore } from "../src/adapters/in-memory-processing-job-store.js";
 import { createProcessingJob, transitionProcessingJob } from "../src/application/processing-job.js";
 
-test("InMemoryProcessingJobStore tracks jobs and the single active processing job", () => {
+test("InMemoryProcessingJobStore tracks jobs and the single active processing job", async () => {
   const store = new InMemoryProcessingJobStore();
   const idle = createProcessingJob({ originalName: "one.mp4", id: "job-1" });
   const uploading = transitionProcessingJob(

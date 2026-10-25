@@ -54,11 +54,11 @@ Los clientes nunca acceden directamente al fichero SQLite.
 
 ## TagSpaces
 
-Durante la transición:
-- SQLite es la fuente de verdad.
-- Los `.ts` antiguos se conservan como backup.
-- No se generan nuevos cambios de tags en TagSpaces.
-- La retirada definitiva se deja para M6.
+TagSpaces is out of the product architecture. The application database is
+the source of truth for tags. Do not read or write TagSpaces sidecars for
+new work. Leftover `.ts` files and code paths are historical; retiring
+active leftovers is tracked in `docs/media-library-db-migration/AUDIT.md`
+without expanding MariaDB scope.
 
 ## Local vs remoto
 

@@ -13,7 +13,7 @@ async function main(): Promise<void> {
       config.libraryPath,
     ).execute();
 
-    const videos = libraryStore.listVideosWithTags();
+    const videos = await libraryStore.listVideosWithTags();
     const relationCount = videos.reduce((count, video) => count + video.tags.length, 0);
 
     console.log(`Library: ${config.libraryPath}`);
@@ -27,7 +27,7 @@ async function main(): Promise<void> {
     console.log(`Import errors:         ${result.errors.length}`);
     console.log("");
     console.log(`SQLite videos:     ${videos.length}`);
-    console.log(`SQLite tags:       ${libraryStore.listTags().length}`);
+    console.log(`SQLite tags:       ${(await libraryStore.listTags()).length}`);
     console.log(`SQLite relations:  ${relationCount}`);
 
     if (videos.length > 0) {
@@ -51,7 +51,7 @@ async function main(): Promise<void> {
       process.exitCode = 1;
     }
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 }
 

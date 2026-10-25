@@ -3,10 +3,10 @@ import type { MutableVideoIndex } from "../ports/video-index.js";
 
 import { toIndexedVideos } from "./to-indexed-videos.js";
 
-export function reloadVideoIndex(
+export async function reloadVideoIndex(
   libraryStore: LibraryStore,
   videoIndex: MutableVideoIndex,
   libraryPath: string,
-): void {
-  videoIndex.replaceVideos(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath));
+): Promise<void> {
+  videoIndex.replaceVideos(toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath));
 }

@@ -54,7 +54,7 @@ async function main(): Promise<void> {
       process.exitCode = 1;
     }
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 }
 

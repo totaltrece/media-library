@@ -20,14 +20,14 @@ export class DeleteVideoUseCase {
       throw new InvalidMediaIdError(videoId);
     }
 
-    if (this.libraryStore.findVideo(videoId) === null) {
+    if (await this.libraryStore.findVideo(videoId) === null) {
       throw new VideoNotFoundError(videoId);
     }
 
     await this.installer.removeVideo(videoId);
     await this.installer.removeThumbnail(videoId);
-    this.libraryStore.deleteVideo(videoId);
-    reloadVideoIndex(this.libraryStore, this.videoIndex, this.libraryPath);
+    await this.libraryStore.deleteVideo(videoId);
+    await reloadVideoIndex(this.libraryStore, this.videoIndex, this.libraryPath);
 
     return { id: videoId };
   }

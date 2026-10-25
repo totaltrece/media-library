@@ -1,13 +1,20 @@
 # Indexing
 
-Version: 2.0
+Version: 2.1
+
+Status: historical package notes. Runtime search and refresh load tags from
+the application database (`LibraryStore` / `SqliteLibraryIndexer`). Video
+discovery still scans `LIBRARY_PATH`. TagSpaces sidecar parsing in
+`indexLibrary` is leftover from the initial import and is **not** part of
+the target architecture. Do not extend it.
 
 ---
 
 # Purpose
 
-The indexing package is responsible for discovering and understanding an
-existing TagSpaces library.
+The indexing package is responsible for discovering video files under the
+library path. A historical `indexLibrary` helper can still read old `.ts`
+JSON sidecars; that path is not used for live tag data.
 
 Its output is an in-memory representation of the media library that can be used
 by the search engine and the backend.
@@ -41,7 +48,8 @@ The indexing process must never:
 - move files
 - delete files
 
-The original TagSpaces library remains the single source of truth.
+The application database is the source of truth for tags. The indexer must
+not treat TagSpaces as a live data source.
 
 ---
 

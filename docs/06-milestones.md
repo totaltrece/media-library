@@ -1,6 +1,10 @@
 # Milestones
 
-Version: 2.0
+Version: 2.1
+
+Status: historical delivery notes. Later work superseded TagSpaces as the
+tag source of truth. Do not treat TagSpaces milestones below as current
+architecture.
 
 ---
 

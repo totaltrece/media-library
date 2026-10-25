@@ -63,7 +63,7 @@ no depender del idioma de la salida.
 pertenece al use case: solo `hevc` se convierte a H.264. H.264 y el resto de
 codecs conservan la copia staged y no llaman a `convert()`.
 
-El layout TagSpaces `.ts/<filename>.jpg` lo aplica M5 al instalar. M2/M3
+El layout de miniaturas `.ts/<filename>.jpg` lo aplica M5 al instalar. M2/M3
 escriben `thumbnail.jpg` en el workspace temporal.
 
 ## ProcessVideoJobUseCase
@@ -110,7 +110,7 @@ con el polling; no hay WebSockets ni SSE. Un H.264 sin conversión deja
 No se amplían para escribir temporales ni archivos nuevos. El workspace de un
 job es `ProcessingWorkspace`. La instalación definitiva usa el port
 `LibraryMediaInstaller` (`FilesystemLibraryMediaInstaller`): solo coloca el
-resultado de un upload nuevo. Nunca muta TagSpaces JSON ni ficheros existentes.
+resultado de un upload nuevo. Nunca muta sidecars JSON ni ficheros existentes.
 
 ## Estado de job como union discriminado
 `status` es el ciclo de vida; `phase` es el paso interno de `processing`. Así

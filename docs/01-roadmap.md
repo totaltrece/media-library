@@ -1,6 +1,12 @@
 # Roadmap
 
-Version: 2.0
+Version: 2.1
+
+Status: historical staging notes. Current metadata source of truth is the
+application database. TagSpaces is not part of the target architecture. Auth
+requires a signed-in `view` or `admin` user when `AUTH_PUBLIC_READ=false`.
+See `docs/media-library-auth-development/` and
+`docs/media-library-db-migration/AUDIT.md`.
 
 ---
 

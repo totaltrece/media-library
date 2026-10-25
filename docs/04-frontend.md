@@ -1,6 +1,6 @@
 # Frontend
 
-Version: 2.1
+Version: 2.2
 
 ---
 
@@ -8,8 +8,8 @@ Version: 2.1
 
 The frontend is the primary user interface of Media Library.
 
-Its responsibility is to allow users to browse, search and watch videos from
-their TagSpaces library using a standard web browser.
+Its responsibility is to allow signed-in users to browse, search, watch, and
+(for admins) manage videos through a standard web browser.
 
 The frontend contains no business logic.
 
@@ -53,7 +53,10 @@ The frontend never accesses the filesystem.
 
 ## Search
 
-The initial screen contains:
+Until the user has a `view` or `admin` session, `App.vue` shows an
+access-restricted notice and the header login control instead of the catalog.
+
+After sign-in, the initial screen contains:
 
 - compact tag search box with selected tags inside the field
 - all videos on first load; results update as soon as a tag is added or removed

@@ -12,16 +12,16 @@ export class AddVideoTagUseCase {
     private readonly libraryPath: string,
   ) {}
 
-  execute(videoId: string, tagName: string): VideoTagsResponse {
-    if (this.libraryStore.findVideo(videoId) === null) {
+  async execute(videoId: string, tagName: string): Promise<VideoTagsResponse> {
+    if (await this.libraryStore.findVideo(videoId) === null) {
       throw new VideoNotFoundError(videoId);
     }
 
-    this.libraryStore.addVideoTag(videoId, tagName);
-    reloadVideoIndex(this.libraryStore, this.videoIndex, this.libraryPath);
+    await this.libraryStore.addVideoTag(videoId, tagName);
+    await reloadVideoIndex(this.libraryStore, this.videoIndex, this.libraryPath);
 
     return {
-      tags: this.libraryStore.getVideoTags(videoId),
+      tags: await this.libraryStore.getVideoTags(videoId),
     };
   }
 }

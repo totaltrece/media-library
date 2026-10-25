@@ -12,14 +12,14 @@ import {
 
 import { testLibraryPath, testVideos } from "./fixtures.js";
 
-test("toMediaId returns a library-relative path with forward slashes", () => {
+test("toMediaId returns a library-relative path with forward slashes", async () => {
   assert.strictEqual(
     toMediaId(join(testLibraryPath, "bachata", "20250630_193642391.TS.mp4"), testLibraryPath),
     "bachata/20250630_193642391.TS.mp4",
   );
 });
 
-test("toSearchResult maps indexed videos to the public search item shape", () => {
+test("toSearchResult maps indexed videos to the public search item shape", async () => {
   assert.deepEqual(toSearchResult(testVideos[0]!, testLibraryPath), {
     id: "salsa/first.mp4",
     name: "first.mp4",
@@ -49,7 +49,7 @@ test("buildSearchResponse includes query, count, and mapped results", () => {
   });
 });
 
-test("media URLs are derived from the media id", () => {
+test("media URLs are derived from the media id", async () => {
   const mediaId = "bachata/20250630_193642391.TS.mp4";
 
   assert.strictEqual(toThumbnailUrl(mediaId), "/api/thumbnail/bachata/20250630_193642391.TS.mp4");

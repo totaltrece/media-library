@@ -4,7 +4,7 @@ import { test } from "node:test";
 
 import { buildProcessingJobPaths } from "../src/application/processing-job-paths.js";
 
-test("buildProcessingJobPaths keeps job files under a dedicated temp directory", () => {
+test("buildProcessingJobPaths keeps job files under a dedicated temp directory", async () => {
   const tempRoot = join("data", "upload-temp");
   const jobId = "6f1d2c3a-4b5e-6789-abcd-ef0123456789";
 
@@ -16,7 +16,7 @@ test("buildProcessingJobPaths keeps job files under a dedicated temp directory",
   });
 });
 
-test("buildProcessingJobPaths rejects empty roots and unsafe job ids", () => {
+test("buildProcessingJobPaths rejects empty roots and unsafe job ids", async () => {
   assert.throws(() => buildProcessingJobPaths("", "job-1"), /temp root must not be empty/);
   assert.throws(() => buildProcessingJobPaths("tmp", "../outside"), /Invalid processing job id/);
   assert.throws(() => buildProcessingJobPaths("tmp", "job/nested"), /Invalid processing job id/);

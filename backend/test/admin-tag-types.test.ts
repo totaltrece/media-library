@@ -10,7 +10,7 @@ import type { LibraryStore } from "../src/ports/library-store.js";
 import { testLibraryPath } from "./fixtures.js";
 
 async function createAppWithStore(libraryStore: LibraryStore, libraryPath = testLibraryPath) {
-  const videoIndex = new InMemoryVideoIndex(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath));
+  const videoIndex = new InMemoryVideoIndex(toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath));
 
   return createApp({
     videoIndex,
@@ -32,7 +32,7 @@ test("GET /api/admin/tag-types lists the seeded types", async () => {
     assert.strictEqual(response.statusCode, 200);
     assert.deepEqual(response.json(), {
       count: 5,
-      types: libraryStore.listTagTypes(),
+      types: await libraryStore.listTagTypes(),
     });
     assert.deepEqual(
       response.json().types.map((type: { name: string }) => type.name),
@@ -41,7 +41,7 @@ test("GET /api/admin/tag-types lists the seeded types", async () => {
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 });
 
@@ -78,7 +78,7 @@ test("POST /api/admin/tag-types creates a type at the end of the sort order", as
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 });
 
@@ -86,7 +86,7 @@ test("PUT /api/admin/tag-types/:id renames and recolors a type", async () => {
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
-    const teacher = libraryStore.listTagTypes().find((type) => type.name === "teacher")!;
+    const teacher = (await libraryStore.listTagTypes()).find((type) => type.name === "teacher")!;
     const app = await createAppWithStore(libraryStore);
     const response = await app.inject({
       method: "PUT",
@@ -101,7 +101,7 @@ test("PUT /api/admin/tag-types/:id renames and recolors a type", async () => {
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 });
 
@@ -109,11 +109,11 @@ test("DELETE /api/admin/tag-types/:id blocks the default type and types in use",
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
-    const resource = libraryStore.findDefaultTagType()!;
-    const created = libraryStore.createTagType("workshop", "#112233");
-    libraryStore.upsertTag("jota");
-    const teacher = libraryStore.listTagTypes().find((type) => type.name === "teacher")!;
-    libraryStore.updateTag(libraryStore.findTagByName("jota")!.id, "jota", teacher.id);
+    const resource = (await libraryStore.findDefaultTagType())!;
+    const created = await libraryStore.createTagType("workshop", "#112233");
+    await libraryStore.upsertTag("jota");
+    const teacher = (await libraryStore.listTagTypes()).find((type) => type.name === "teacher")!;
+    await libraryStore.updateTag((await libraryStore.findTagByName("jota"))!.id, "jota", teacher.id);
     const app = await createAppWithStore(libraryStore);
 
     const defaultType = await app.inject({
@@ -138,10 +138,10 @@ test("DELETE /api/admin/tag-types/:id blocks the default type and types in use",
     assert.strictEqual(unused.statusCode, 200);
     assert.deepEqual(unused.json(), { id: created.id });
     assert.strictEqual(missing.statusCode, 404);
-    assert.equal(libraryStore.findTagTypeById(created.id), null);
+    assert.equal(await libraryStore.findTagTypeById(created.id), null);
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
   }
 });

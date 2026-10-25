@@ -8,8 +8,8 @@ export interface TagTypesResponse {
 export class ListTagTypesUseCase {
   constructor(private readonly libraryStore: LibraryStore) {}
 
-  execute(): TagTypesResponse {
-    const types = this.libraryStore.listTagTypes();
+  async execute(): Promise<TagTypesResponse> {
+    const types = await this.libraryStore.listTagTypes();
 
     return {
       count: types.length,

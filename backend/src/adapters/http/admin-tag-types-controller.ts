@@ -58,8 +58,8 @@ export function registerAdminTagTypesRoutes(
       return sendBadRequest(reply, "Tag type id is required");
     }
 
-    return executeTagType(reply, () => {
-      options.deleteTagTypeUseCase.execute(tagTypeId);
+    return executeTagType(reply, async () => {
+      await options.deleteTagTypeUseCase.execute(tagTypeId);
       return { id: tagTypeId };
     });
   });
@@ -98,9 +98,9 @@ function sendBadRequest(reply: FastifyReply, message: string) {
   });
 }
 
-function executeTagType<T>(reply: FastifyReply, execute: () => T, successStatus = 200) {
+async function executeTagType<T>(reply: FastifyReply, execute: () => Promise<T>, successStatus = 200) {
   try {
-    const result = execute();
+    const result = await execute();
 
     if (successStatus !== 200) {
       return reply.status(successStatus).send(result);

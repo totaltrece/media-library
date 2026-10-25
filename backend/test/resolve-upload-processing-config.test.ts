@@ -9,7 +9,7 @@ import {
   resolveUploadProcessingConfig,
 } from "../src/application/resolve-upload-processing-config.js";
 
-test("resolveUploadProcessingConfig uses PATH names and a temp directory next to SQLite", () => {
+test("resolveUploadProcessingConfig uses PATH names and a temp directory next to SQLite", async () => {
   assert.deepEqual(
     resolveUploadProcessingConfig({}, { sqlitePath: join("data", "library.sqlite") }),
     {
@@ -21,7 +21,7 @@ test("resolveUploadProcessingConfig uses PATH names and a temp directory next to
   );
 });
 
-test("resolveUploadProcessingConfig preserves configured executable paths on Windows and Ubuntu", () => {
+test("resolveUploadProcessingConfig preserves configured executable paths on Windows and Ubuntu", async () => {
   assert.equal(
     resolveUploadProcessingConfig(
       { FFMPEG_PATH: String.raw`C:\ffmpeg\bin\ffmpeg.exe`, FFPROBE_PATH: String.raw`C:\ffmpeg\bin\ffprobe.exe` },
@@ -45,7 +45,7 @@ test("resolveUploadProcessingConfig preserves configured executable paths on Win
   );
 });
 
-test("resolveUploadProcessingConfig rejects an invalid size limit", () => {
+test("resolveUploadProcessingConfig rejects an invalid size limit", async () => {
   assert.throws(
     () => resolveUploadProcessingConfig({ UPLOAD_MAX_BYTES: "0" }, { sqlitePath: join("data", "library.sqlite") }),
     /UPLOAD_MAX_BYTES must be a positive integer/,

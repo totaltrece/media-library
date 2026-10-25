@@ -46,7 +46,7 @@ async function writeTagSpacesMetadata(libraryPath: string, fileName: string, tit
 
 async function createAppFromStore(libraryStore: LibraryStore, libraryPath: string) {
   return createApp({
-    videoIndex: new InMemoryVideoIndex(toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath)),
+    videoIndex: new InMemoryVideoIndex(toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath)),
     libraryPath,
   });
 }
@@ -69,8 +69,8 @@ test("the backend can start using a temporary SQLite database", async () => {
 
   try {
     await writeVideo(libraryPath, "salsa/first.mp4");
-    libraryStore.upsertVideo("salsa/first.mp4");
-    libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "bea"]);
+    await libraryStore.upsertVideo("salsa/first.mp4");
+    await libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "bea"]);
 
     const app = await createAppFromStore(libraryStore, libraryPath);
 
@@ -92,7 +92,7 @@ test("the backend can start using a temporary SQLite database", async () => {
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -104,8 +104,8 @@ test("search returns tags from SQLite rather than TagSpaces sidecars", async () 
   try {
     await writeVideo(libraryPath, "salsa/first.mp4");
     await writeTagSpacesMetadata(libraryPath, "first.mp4", ["tagspaces-only"]);
-    libraryStore.upsertVideo("salsa/first.mp4");
-    libraryStore.setVideoTags("salsa/first.mp4", ["sqlite-tag"]);
+    await libraryStore.upsertVideo("salsa/first.mp4");
+    await libraryStore.setVideoTags("salsa/first.mp4", ["sqlite-tag"]);
 
     const app = await createAppFromStore(libraryStore, libraryPath);
 
@@ -132,7 +132,7 @@ test("search returns tags from SQLite rather than TagSpaces sidecars", async () 
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -143,8 +143,8 @@ test("a video without a TagSpaces sidecar can still be returned from SQLite", as
 
   try {
     await writeVideo(libraryPath, "missing.mp4");
-    libraryStore.upsertVideo("missing.mp4");
-    libraryStore.setVideoTags("missing.mp4", ["imported"]);
+    await libraryStore.upsertVideo("missing.mp4");
+    await libraryStore.setVideoTags("missing.mp4", ["imported"]);
 
     const app = await createAppFromStore(libraryStore, libraryPath);
     const response = await app.inject({
@@ -159,7 +159,7 @@ test("a video without a TagSpaces sidecar can still be returned from SQLite", as
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -169,10 +169,10 @@ test("a video without tags does not break search", async () => {
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
-    libraryStore.upsertVideo("empty.mp4");
-    libraryStore.setVideoTags("empty.mp4", []);
-    libraryStore.upsertVideo("salsa/first.mp4");
-    libraryStore.setVideoTags("salsa/first.mp4", ["salsa"]);
+    await libraryStore.upsertVideo("empty.mp4");
+    await libraryStore.setVideoTags("empty.mp4", []);
+    await libraryStore.upsertVideo("salsa/first.mp4");
+    await libraryStore.setVideoTags("salsa/first.mp4", ["salsa"]);
 
     const app = await createAppFromStore(libraryStore, libraryPath);
     const allVideos = await app.inject({
@@ -193,7 +193,7 @@ test("a video without tags does not break search", async () => {
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -203,12 +203,12 @@ test("searching several tags still requires every requested tag", async () => {
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
-    libraryStore.upsertVideo("salsa/first.mp4");
-    libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "bea", "linea"]);
-    libraryStore.upsertVideo("salsa/second.mp4");
-    libraryStore.setVideoTags("salsa/second.mp4", ["salsa", "damian"]);
-    libraryStore.upsertVideo("bachata/third.mp4");
-    libraryStore.setVideoTags("bachata/third.mp4", ["bachata", "bea"]);
+    await libraryStore.upsertVideo("salsa/first.mp4");
+    await libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "bea", "linea"]);
+    await libraryStore.upsertVideo("salsa/second.mp4");
+    await libraryStore.setVideoTags("salsa/second.mp4", ["salsa", "damian"]);
+    await libraryStore.upsertVideo("bachata/third.mp4");
+    await libraryStore.setVideoTags("bachata/third.mp4", ["bachata", "bea"]);
 
     const app = await createAppFromStore(libraryStore, libraryPath);
     const response = await app.inject({
@@ -236,7 +236,7 @@ test("searching several tags still requires every requested tag", async () => {
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -273,7 +273,7 @@ test("SQLite-backed search preserves the previous result order", async () => {
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -283,8 +283,8 @@ test("SQLite-backed search keeps the existing search endpoint contract", async (
   const libraryStore = openSqliteLibraryStore(":memory:");
 
   try {
-    libraryStore.upsertVideo("salsa/first.mp4");
-    libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "bea", "linea"]);
+    await libraryStore.upsertVideo("salsa/first.mp4");
+    await libraryStore.setVideoTags("salsa/first.mp4", ["salsa", "bea", "linea"]);
 
     const app = await createAppFromStore(libraryStore, libraryPath);
     const response = await app.inject({
@@ -314,7 +314,7 @@ test("SQLite-backed search keeps the existing search endpoint contract", async (
 
     await app.close();
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -364,7 +364,7 @@ test("imported TagSpaces libraries produce the same search results from SQLite",
 
     const queries = [[], ["salsa"], ["gabriela"], ["salsa", "gabriela"], ["linea", "jota"]];
     const previousVideos = await indexLibrary(libraryPath);
-    const sqliteVideos = toIndexedVideos(libraryStore.listVideosWithTags(), libraryPath);
+    const sqliteVideos = toIndexedVideos(await libraryStore.listVideosWithTags(), libraryPath);
 
     for (const tags of queries) {
       assert.deepEqual(
@@ -373,7 +373,7 @@ test("imported TagSpaces libraries produce the same search results from SQLite",
       );
     }
   } finally {
-    libraryStore.close();
+    await libraryStore.close();
     await rm(libraryPath, { recursive: true, force: true });
   }
 });
@@ -392,7 +392,7 @@ test(
       ).execute();
 
       const previousVideos = await indexLibrary(samplesLibraryPath);
-      const sqliteVideos = toIndexedVideos(libraryStore.listVideosWithTags(), samplesLibraryPath);
+      const sqliteVideos = toIndexedVideos(await libraryStore.listVideosWithTags(), samplesLibraryPath);
       const queries = [[], ["salsa"], ["gabriela"], ["salsa", "gabriela"], ["linea", "jota"]];
 
       for (const tags of queries) {
@@ -402,7 +402,7 @@ test(
         );
       }
     } finally {
-      libraryStore.close();
+      await libraryStore.close();
     }
   },
 );

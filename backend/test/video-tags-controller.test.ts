@@ -7,32 +7,32 @@ import {
   parseVideoTagsItemPath,
 } from "../src/adapters/http/video-tags-controller.js";
 
-test("parseVideoIdPath extracts a media id that contains slashes", () => {
+test("parseVideoIdPath extracts a media id that contains slashes", async () => {
   assert.deepEqual(parseVideoIdPath("salsa/first.mp4"), {
     mediaId: "salsa/first.mp4",
   });
 });
 
-test("parseVideoIdPath rejects tag collection and item paths", () => {
+test("parseVideoIdPath rejects tag collection and item paths", async () => {
   assert.equal(parseVideoIdPath("salsa/first.mp4/tags"), undefined);
   assert.equal(parseVideoIdPath("salsa/first.mp4/tags/"), undefined);
   assert.equal(parseVideoIdPath("salsa/first.mp4/tags/salsa"), undefined);
   assert.equal(parseVideoIdPath(""), undefined);
 });
 
-test("parseVideoTagsCollectionPath extracts a media id that contains slashes", () => {
+test("parseVideoTagsCollectionPath extracts a media id that contains slashes", async () => {
   assert.deepEqual(parseVideoTagsCollectionPath("salsa/first.mp4/tags"), {
     mediaId: "salsa/first.mp4",
   });
 });
 
-test("parseVideoTagsCollectionPath rejects paths that are not a tags collection", () => {
+test("parseVideoTagsCollectionPath rejects paths that are not a tags collection", async () => {
   assert.equal(parseVideoTagsCollectionPath("salsa/first.mp4"), undefined);
   assert.equal(parseVideoTagsCollectionPath("salsa/first.mp4/tags/"), undefined);
   assert.equal(parseVideoTagsCollectionPath("/tags"), undefined);
 });
 
-test("parseVideoTagsItemPath decodes tag names with reserved characters", () => {
+test("parseVideoTagsItemPath decodes tag names with reserved characters", async () => {
   assert.deepEqual(parseVideoTagsItemPath("salsa/first.mp4/tags/mano-cadera"), {
     mediaId: "salsa/first.mp4",
     tagName: "mano-cadera",

@@ -23,7 +23,7 @@ class TrackingVideoIndex implements VideoIndex {
   }
 }
 
-test("collectDistinctTags returns unique tags in alphabetical order", () => {
+test("collectDistinctTags returns unique tags in alphabetical order", async () => {
   assert.deepEqual(collectDistinctTags(testVideos), [
     "bachata",
     "bea",

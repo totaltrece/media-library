@@ -10,7 +10,6 @@
     "ffmpeg-test": "tsx src/ffmpeg-test.ts",
     "process-video": "tsx src/process-video.ts",
     "backfill-recorded-at": "tsx src/backfill-recorded-at.ts",
-    "create-admin": "tsx src/create-admin.ts",
     "create-user": "tsx src/create-user.ts",
     "test": "pnpm --filter @media-library/indexer build && pnpm --filter @media-library/search build && tsc --project tsconfig.test.json && node --test dist-test/test/health.test.js dist-test/test/auth.test.js"
   },

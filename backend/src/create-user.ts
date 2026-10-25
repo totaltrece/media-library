@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   const stores = openSqliteStores(config.sqlitePath);
 
   try {
-    const user = new CreateUserUseCase(stores.authStore).execute(options);
+    const user = await new CreateUserUseCase(stores.authStore).execute(options);
     console.log(`Created ${user.role} user: ${user.username}`);
   } catch (error: unknown) {
     if (error instanceof UsernameConflictError) {
@@ -26,7 +26,7 @@ async function main(): Promise<void> {
 
     throw error;
   } finally {
-    stores.close();
+    await stores.close();
   }
 }
 
