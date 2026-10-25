@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { castPlaybackMessage, castReachabilityMessage } from "../src/cast/cast-messages.js";
-import { isCastCancelled } from "../src/cast/cast-sender.js";
+import { castPlaybackMessage, castReachabilityMessage, castSenderUnavailableMessage } from "../src/cast/cast-messages.js";
+import { isCastCancelled, resolveCastSession } from "../src/cast/cast-sender.js";
 import {
   absoluteStreamUrl,
   downloadFileName,
@@ -34,5 +34,17 @@ describe("cast messages", () => {
     expect(isCastCancelled("cancel")).toBe(true);
     expect(isCastCancelled({ code: "cancel" })).toBe(true);
     expect(isCastCancelled({ code: "timeout" })).toBe(false);
+  });
+
+  it("explains that casting the browser tab does not send the video", () => {
+    expect(castSenderUnavailableMessage("https:")).toContain("whole tab");
+    expect(castSenderUnavailableMessage("http:")).toContain("http://");
+  });
+
+  it("reads the cast session after requestSession resolves empty", () => {
+    const session = { loadMedia: () => Promise.resolve(undefined) };
+
+    expect(resolveCastSession(null, session)).toBe(session);
+    expect(resolveCastSession(undefined, null)).toBeNull();
   });
 });

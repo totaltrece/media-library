@@ -17,9 +17,15 @@ file the browser streams.
 3. The page turns that path into an absolute URL with `window.location.origin`.
    The server does not invent the host, because the host the user opened is
    the one the Chromecast must use.
-4. Chrome or Edge loads the Google Cast sender and asks which device to use.
-   The sender then tells Google's Default Media Receiver (`CC1AD845`) to play
-   that URL. No custom Cast application has to be registered.
+4. Desktop Chrome or Edge loads the Google Cast sender and asks which device
+   to use. Chrome may report the sender as unavailable once while it starts;
+   the player waits and tries again. After a device is chosen, the session is
+   read with `getCurrentSession()`, because `requestSession()` does not return
+   it. The sender tells Google's Default Media Receiver (`CC1AD845`) to play
+   the signed URL. No custom Cast application has to be registered. A phone
+   does not include that sender. There the player asks the browser to cast
+   the signed video URL itself. Casting the whole browser tab is a different
+   Chrome control and does not send this file.
 5. The Chromecast fetches the URL itself. It does not send the session
    cookie, so the token is what authorizes that one video until it expires.
    Range requests keep working for seeking. The local player pauses so the
@@ -28,8 +34,8 @@ file the browser streams.
 Canceling the device picker leaves the page as it was.
 
 The cast icon sits on the video, at the top right. Download stays under the video. The
-browser's own remote-playback control is disabled: that control would hand
-the cookie URL to the television, and the television would be rejected.
+browser's own remote-playback control stays off until a cast starts, and then
+it receives the signed URL rather than the cookie address.
 
 ## Signed links
 

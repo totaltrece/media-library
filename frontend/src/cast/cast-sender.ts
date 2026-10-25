@@ -1,9 +1,11 @@
 const CAST_SENDER_SRC = "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
 const FALLBACK_RECEIVER_APP_ID = "CC1AD845";
+const SENDER_TIMEOUT_MS = 8000;
+const UNAVAILABLE_GRACE_MS = 2500;
 
 export class CastUnavailableError extends Error {
-  constructor() {
-    super("Casting is available in Chrome or Edge when a Chromecast is on the same network.");
+  constructor(message = "This browser did not open media casting. Casting the whole tab does not send the video file.") {
+    super(message);
     this.name = "CastUnavailableError";
   }
 }
@@ -44,11 +46,26 @@ export function isCastCancelled(error: unknown): boolean {
     return error.toLowerCase() === "cancel";
   }
 
-  if (!isRecord(error) || !("code" in error)) {
+  if (!isRecord(error)) {
     return false;
   }
 
-  return String(error.code).toLowerCase() === "cancel";
+  const code = "code" in error ? String(error.code).toLowerCase() : "";
+  const message = "message" in error && typeof error.message === "string" ? error.message.toLowerCase() : "";
+
+  return code === "cancel" || message === "cancel";
+}
+
+export function resolveCastSession(requestResult: unknown, currentSession: unknown): CastSession | null {
+  if (isCastSession(requestResult)) {
+    return requestResult;
+  }
+
+  if (isCastSession(currentSession)) {
+    return currentSession;
+  }
+
+  return null;
 }
 
 export async function startCastPlayback(request: CastMediaRequest): Promise<void> {
@@ -66,6 +83,38 @@ export async function startCastPlayback(request: CastMediaRequest): Promise<void
   }
 
   await session.loadMedia(loadRequest);
+}
+
+export async function startRemotePlayback(video: HTMLVideoElement, request: CastMediaRequest): Promise<void> {
+  const remote = readRemotePlayback(video);
+
+  if (remote === null) {
+    throw new CastUnavailableError();
+  }
+
+  video.disableRemotePlayback = false;
+
+  if (video.src !== request.contentUrl) {
+    video.src = request.contentUrl;
+  }
+
+  if (request.currentTime > 0) {
+    const applyTime = (): void => {
+      try {
+        video.currentTime = request.currentTime;
+      } catch {
+        // Metadata may still be loading. Playback can start at the beginning.
+      }
+    };
+
+    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      applyTime();
+    } else {
+      video.addEventListener("loadedmetadata", applyTime, { once: true });
+    }
+  }
+
+  await remote.prompt();
 }
 
 function ensureCastSender(): Promise<boolean> {
@@ -89,6 +138,8 @@ function ensureCastSender(): Promise<boolean> {
 function loadSender(): Promise<boolean> {
   return new Promise((resolve) => {
     let settled = false;
+    let unavailableTimer: number | undefined;
+
     const finish = (ready: boolean): void => {
       if (settled) {
         return;
@@ -96,14 +147,39 @@ function loadSender(): Promise<boolean> {
 
       settled = true;
       window.clearTimeout(timeout);
-      resolve(ready && initializeCast());
+
+      if (unavailableTimer !== undefined) {
+        window.clearTimeout(unavailableTimer);
+      }
+
+      resolve(ready);
     };
-    const timeout = window.setTimeout(() => finish(false), 8000);
+
+    const succeed = (): void => {
+      if (initializeCast()) {
+        finish(true);
+      }
+    };
+
+    const timeout = window.setTimeout(() => finish(false), SENDER_TIMEOUT_MS);
     const win = window as Window & { __onGCastApiAvailable?: (available: boolean) => void };
 
     win.__onGCastApiAvailable = (available: boolean) => {
-      finish(available);
+      if (available) {
+        succeed();
+        return;
+      }
+
+      // Chrome often reports unavailable once while the Cast component starts, then calls again.
+      if (unavailableTimer === undefined) {
+        unavailableTimer = window.setTimeout(() => finish(castApi !== null), UNAVAILABLE_GRACE_MS);
+      }
     };
+
+    if (initializeCast()) {
+      finish(true);
+      return;
+    }
 
     const script = document.createElement("script");
     script.src = CAST_SENDER_SRC;
@@ -125,23 +201,25 @@ function initializeCast(): boolean {
       receiverApplicationId: api.receiverApplicationId,
       autoJoinPolicy: api.autoJoinPolicy,
     });
-    castApi = api;
-    return true;
   } catch {
-    return false;
+    // Options may already be set from a previous attempt.
   }
+
+  castApi = api;
+  return true;
 }
 
 async function requestCastSession(context: CastContext): Promise<CastSession> {
-  const current = context.getCurrentSession();
+  const existing = resolveCastSession(undefined, context.getCurrentSession());
 
-  if (isCastSession(current)) {
-    return current;
+  if (existing !== null) {
+    return existing;
   }
 
-  const session = await context.requestSession();
+  const result = await context.requestSession();
+  const session = resolveCastSession(result, context.getCurrentSession());
 
-  if (!isCastSession(session)) {
+  if (session === null) {
     throw new CastUnavailableError();
   }
 
@@ -186,11 +264,11 @@ function readCastConstructors(): CastConstructors | null {
   const framework = castRoot.framework;
   const chromeCast = chromeRoot.cast;
 
-  if (!isRecord(framework.CastContext) || typeof framework.CastContext.getInstance !== "function" || !isRecord(chromeCast.media)) {
+  if (!isRecord(framework.CastContext) || !isRecord(chromeCast.media)) {
     return null;
   }
 
-  const context: unknown = framework.CastContext.getInstance.call(framework.CastContext);
+  const context = callMethod(framework.CastContext, "getInstance");
 
   if (!isCastContext(context)) {
     return null;
@@ -216,6 +294,30 @@ function readCastConstructors(): CastConstructors | null {
     receiverApplicationId: readString(media, "DEFAULT_MEDIA_RECEIVER_APP_ID") ?? FALLBACK_RECEIVER_APP_ID,
     autoJoinPolicy: readString(chromeCast.AutoJoinPolicy, "ORIGIN_SCOPED") ?? "origin_scoped",
   };
+}
+
+function readRemotePlayback(video: HTMLVideoElement): { prompt: () => Promise<void> } | null {
+  const candidate: unknown = Reflect.get(video, "remote");
+
+  if (!isRecord(candidate) || typeof candidate.prompt !== "function") {
+    return null;
+  }
+
+  const prompt = candidate.prompt;
+
+  return {
+    prompt: () => Promise.resolve(prompt.call(candidate)),
+  };
+}
+
+function callMethod(target: Record<string, unknown>, key: string): unknown {
+  const method = target[key];
+
+  if (typeof method !== "function") {
+    return undefined;
+  }
+
+  return method.call(target);
 }
 
 function readString(source: unknown, key: string): string | undefined {

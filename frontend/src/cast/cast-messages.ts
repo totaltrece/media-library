@@ -23,3 +23,12 @@ export function castPlaybackMessage(options: { receiverCompatible: boolean; prot
 
   return `Playing on Chromecast.${httpHint}`;
 }
+
+export function castSenderUnavailableMessage(protocol: string): string {
+  const httpNote =
+    protocol === "http:"
+      ? " On an http:// page Chrome often disables sending a video, while casting the whole tab still works."
+      : "";
+
+  return `This browser did not open media casting.${httpNote} Casting the whole tab does not send the video file.`;
+}

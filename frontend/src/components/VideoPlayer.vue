@@ -81,9 +81,10 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import { ApiRequestError, buildApiUrl, requestCastLink } from "../api/client.js";
+import type { CastLink } from "../api/types.js";
 import { useAuth } from "../auth/session.js";
-import { castPlaybackMessage, castReachabilityMessage } from "../cast/cast-messages.js";
-import { CastUnavailableError, isCastCancelled, startCastPlayback } from "../cast/cast-sender.js";
+import { castPlaybackMessage, castReachabilityMessage, castSenderUnavailableMessage } from "../cast/cast-messages.js";
+import { CastUnavailableError, isCastCancelled, startCastPlayback, startRemotePlayback } from "../cast/cast-sender.js";
 import ErrorMessage from "./ErrorMessage.vue";
 import { colorForTag, DEFAULT_TAG_COLOR, tagChipStyle } from "../utils/tag-color.js";
 import { absoluteStreamUrl, downloadFileName, downloadUrlForVideoPath, mediaIdFromVideoPath } from "../utils/video-links.js";
@@ -111,6 +112,7 @@ const playbackError = ref<string | null>(null);
 const castPending = ref(false);
 const castMessage = ref<string | null>(null);
 const castFailed = ref(false);
+const preparedLink = ref<CastLink | null>(null);
 
 const videoUrl = computed(() => buildApiUrl(props.videoPath));
 const downloadUrl = computed(() => downloadUrlForVideoPath(props.videoPath));
@@ -122,12 +124,49 @@ watch(
     playbackError.value = null;
     castMessage.value = null;
     castFailed.value = false;
+    preparedLink.value = null;
+    void prepareCastLink();
 
     if (videoElement.value !== null) {
       void videoElement.value.load();
     }
   },
+  { immediate: true },
 );
+
+async function prepareCastLink(): Promise<void> {
+  const mediaId = mediaIdFromVideoPath(props.videoPath);
+
+  if (mediaId === null || castReachabilityMessage(window.location.hostname) !== null) {
+    return;
+  }
+
+  try {
+    const link = await requestCastLink(mediaId);
+
+    if (mediaIdFromVideoPath(props.videoPath) === mediaId) {
+      preparedLink.value = link;
+    }
+  } catch {
+    // The click handler requests a fresh link if this prefetch fails.
+  }
+}
+
+async function loadCastLink(): Promise<CastLink> {
+  if (preparedLink.value !== null) {
+    return preparedLink.value;
+  }
+
+  const mediaId = mediaIdFromVideoPath(props.videoPath);
+
+  if (mediaId === null) {
+    throw new CastUnavailableError("This video cannot be cast.");
+  }
+
+  const link = await requestCastLink(mediaId);
+  preparedLink.value = link;
+  return link;
+}
 
 async function onCast(): Promise<void> {
   castMessage.value = null;
@@ -141,9 +180,7 @@ async function onCast(): Promise<void> {
     return;
   }
 
-  const mediaId = mediaIdFromVideoPath(props.videoPath);
-
-  if (mediaId === null) {
+  if (mediaIdFromVideoPath(props.videoPath) === null) {
     castMessage.value = "This video cannot be cast.";
     castFailed.value = true;
     return;
@@ -152,13 +189,24 @@ async function onCast(): Promise<void> {
   castPending.value = true;
 
   try {
-    const link = await requestCastLink(mediaId);
-    await startCastPlayback({
+    const link = await loadCastLink();
+    const request = {
       contentUrl: absoluteStreamUrl(link.streamPath, window.location.origin),
       contentType: link.contentType,
       title: link.title,
       currentTime: videoElement.value?.currentTime ?? 0,
-    });
+    };
+
+    try {
+      await startCastPlayback(request);
+    } catch (error: unknown) {
+      if (isCastCancelled(error) || videoElement.value === null || !(error instanceof CastUnavailableError)) {
+        throw error;
+      }
+
+      await startRemotePlayback(videoElement.value, request);
+    }
+
     videoElement.value?.pause();
     castMessage.value = castPlaybackMessage({
       receiverCompatible: link.receiverCompatible,
@@ -171,9 +219,11 @@ async function onCast(): Promise<void> {
 
     castFailed.value = true;
     castMessage.value =
-      error instanceof CastUnavailableError || error instanceof ApiRequestError
+      error instanceof ApiRequestError
         ? error.message
-        : "Unable to start casting. The Chromecast must be able to reach this site.";
+        : error instanceof CastUnavailableError
+          ? castSenderUnavailableMessage(window.location.protocol)
+          : "Unable to start casting. The Chromecast must be able to reach this site.";
   } finally {
     castPending.value = false;
   }
