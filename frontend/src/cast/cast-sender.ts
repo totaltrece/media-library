@@ -85,6 +85,10 @@ export async function startCastPlayback(request: CastMediaRequest): Promise<void
   await session.loadMedia(loadRequest);
 }
 
+export function hasRemotePlayback(video: HTMLVideoElement): boolean {
+  return readRemotePlayback(video) !== null;
+}
+
 export async function startRemotePlayback(video: HTMLVideoElement, request: CastMediaRequest): Promise<void> {
   const remote = readRemotePlayback(video);
 
@@ -234,12 +238,11 @@ function buildLoadRequest(api: CastConstructors, request: CastMediaRequest): Rec
     return null;
   }
 
+  mediaInfo.contentId = request.contentUrl;
+  mediaInfo.contentUrl = request.contentUrl;
+  mediaInfo.contentType = request.contentType;
   mediaInfo.streamType = api.bufferedStreamType;
-
-  if (api.genericMetadataType !== undefined) {
-    metadata.metadataType = api.genericMetadataType;
-  }
-
+  metadata.metadataType = api.genericMetadataType ?? 0;
   metadata.title = request.title;
   mediaInfo.metadata = metadata;
 
@@ -249,6 +252,7 @@ function buildLoadRequest(api: CastConstructors, request: CastMediaRequest): Rec
     return null;
   }
 
+  loadRequest.autoplay = true;
   loadRequest.currentTime = request.currentTime;
   return loadRequest;
 }

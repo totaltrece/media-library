@@ -18,8 +18,7 @@ describe("VideoPlayer download control", () => {
     });
 
     expect(wrapper.get("video").attributes("controlslist")).toBeUndefined();
-    expect(wrapper.get("[data-testid=download-video]").attributes("href")).toBe("/api/video/salsa/first.mp4?download=1");
-    expect(wrapper.get("[data-testid=download-video]").attributes("download")).toBe("first.mp4");
+    expect(wrapper.find("[data-testid=download-video]").exists()).toBe(false);
   });
 
   it("allows download for a view session", () => {
@@ -33,10 +32,7 @@ describe("VideoPlayer download control", () => {
     });
 
     expect(wrapper.get("video").attributes("controlslist")).toBeUndefined();
-    expect(wrapper.get("[data-testid=download-video]").attributes("href")).toBe(
-      "/api/video/salsa/my%20clip.mp4?download=1",
-    );
-    expect(wrapper.get("[data-testid=download-video]").attributes("download")).toBe("my clip.mp4");
+    expect(wrapper.find("[data-testid=download-video]").exists()).toBe(false);
     expect(wrapper.get("[data-testid=cast-video]").attributes("aria-label")).toBe("Cast to Chromecast");
     expect(wrapper.get(".video-player").find("[data-testid=cast-video]").exists()).toBe(true);
   });

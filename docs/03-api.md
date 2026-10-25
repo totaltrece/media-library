@@ -436,8 +436,8 @@ which runs on another origin, can read the stream. Cookie authentication is
 unchanged: a cross-origin page still cannot use the session cookie.
 
 `GET /api/video/:id?download=1` is the same stream with
-`Content-Disposition: attachment`. The player shows Download to signed-in
-`view` and `admin` users.
+`Content-Disposition: attachment`. Signed-in `view` and `admin` users can
+download from the video player's own menu.
 
 `GET /api/video/:id?cast=<token>` plays without a session cookie when the
 token is valid. Tokens are issued by `POST /api/cast/links`.

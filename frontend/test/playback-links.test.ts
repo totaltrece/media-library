@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { castPlaybackMessage, castReachabilityMessage, castSenderUnavailableMessage } from "../src/cast/cast-messages.js";
+import {
+  castPlaybackMessage,
+  castReachabilityMessage,
+  castSenderUnavailableMessage,
+  describeCastError,
+} from "../src/cast/cast-messages.js";
 import { isCastCancelled, resolveCastSession } from "../src/cast/cast-sender.js";
 import {
   absoluteStreamUrl,
@@ -34,6 +39,10 @@ describe("cast messages", () => {
     expect(isCastCancelled("cancel")).toBe(true);
     expect(isCastCancelled({ code: "cancel" })).toBe(true);
     expect(isCastCancelled({ code: "timeout" })).toBe(false);
+  });
+
+  it("includes the cast sender error code", () => {
+    expect(describeCastError({ code: "load_failed", description: "Load failed" }, "https:")).toContain("load_failed");
   });
 
   it("explains that casting the browser tab does not send the video", () => {

@@ -45,15 +45,6 @@
         </button>
       </div>
 
-      <div v-if="canView" class="video-player-actions">
-        <a
-          class="secondary-button"
-          data-testid="download-video"
-          :download="downloadName"
-          :href="downloadUrl"
-        >Download</a>
-      </div>
-
       <p
         v-if="castMessage"
         class="status-message"
@@ -80,14 +71,20 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
-import { ApiRequestError, buildApiUrl, requestCastLink } from "../api/client.js";
+import { buildApiUrl, requestCastLink } from "../api/client.js";
 import type { CastLink } from "../api/types.js";
 import { useAuth } from "../auth/session.js";
-import { castPlaybackMessage, castReachabilityMessage, castSenderUnavailableMessage } from "../cast/cast-messages.js";
-import { CastUnavailableError, isCastCancelled, startCastPlayback, startRemotePlayback } from "../cast/cast-sender.js";
+import { castPlaybackMessage, castReachabilityMessage, describeCastError } from "../cast/cast-messages.js";
+import {
+  CastUnavailableError,
+  hasRemotePlayback,
+  isCastCancelled,
+  startCastPlayback,
+  startRemotePlayback,
+} from "../cast/cast-sender.js";
 import ErrorMessage from "./ErrorMessage.vue";
 import { colorForTag, DEFAULT_TAG_COLOR, tagChipStyle } from "../utils/tag-color.js";
-import { absoluteStreamUrl, downloadFileName, downloadUrlForVideoPath, mediaIdFromVideoPath } from "../utils/video-links.js";
+import { absoluteStreamUrl, mediaIdFromVideoPath } from "../utils/video-links.js";
 
 const props = withDefaults(
   defineProps<{
@@ -115,8 +112,6 @@ const castFailed = ref(false);
 const preparedLink = ref<CastLink | null>(null);
 
 const videoUrl = computed(() => buildApiUrl(props.videoPath));
-const downloadUrl = computed(() => downloadUrlForVideoPath(props.videoPath));
-const downloadName = computed(() => downloadFileName(props.videoPath));
 
 watch(
   () => props.videoPath,
@@ -189,44 +184,80 @@ async function onCast(): Promise<void> {
   castPending.value = true;
 
   try {
-    const link = await loadCastLink();
-    const request = {
-      contentUrl: absoluteStreamUrl(link.streamPath, window.location.origin),
-      contentType: link.contentType,
-      title: link.title,
-      currentTime: videoElement.value?.currentTime ?? 0,
-    };
+    const video = videoElement.value;
+    const readyLink = preparedLink.value;
 
-    try {
-      await startCastPlayback(request);
-    } catch (error: unknown) {
-      if (isCastCancelled(error) || videoElement.value === null || !(error instanceof CastUnavailableError)) {
-        throw error;
-      }
-
-      await startRemotePlayback(videoElement.value, request);
+    if (video !== null && readyLink !== null && hasRemotePlayback(video)) {
+      await castWithRemotePlayback(video, readyLink);
+      return;
     }
 
-    videoElement.value?.pause();
-    castMessage.value = castPlaybackMessage({
-      receiverCompatible: link.receiverCompatible,
-      protocol: window.location.protocol,
-    });
+    const link = readyLink ?? (await loadCastLink());
+    await castWithSender(link);
   } catch (error: unknown) {
     if (isCastCancelled(error)) {
       return;
     }
 
     castFailed.value = true;
-    castMessage.value =
-      error instanceof ApiRequestError
-        ? error.message
-        : error instanceof CastUnavailableError
-          ? castSenderUnavailableMessage(window.location.protocol)
-          : "Unable to start casting. The Chromecast must be able to reach this site.";
+    castMessage.value = describeCastError(error, window.location.protocol);
   } finally {
     castPending.value = false;
   }
+}
+
+function castRequest(link: CastLink): {
+  contentUrl: string;
+  contentType: string;
+  title: string;
+  currentTime: number;
+} {
+  return {
+    contentUrl: absoluteStreamUrl(link.streamPath, window.location.origin),
+    contentType: link.contentType,
+    title: link.title,
+    currentTime: videoElement.value?.currentTime ?? 0,
+  };
+}
+
+async function castWithRemotePlayback(video: HTMLVideoElement, link: CastLink): Promise<void> {
+  const request = castRequest(link);
+
+  try {
+    await startRemotePlayback(video, request);
+  } catch (error: unknown) {
+    if (isCastCancelled(error)) {
+      throw error;
+    }
+
+    await startCastPlayback(request);
+  }
+
+  finishCast(link);
+}
+
+async function castWithSender(link: CastLink): Promise<void> {
+  const request = castRequest(link);
+
+  try {
+    await startCastPlayback(request);
+  } catch (error: unknown) {
+    if (isCastCancelled(error) || videoElement.value === null || !(error instanceof CastUnavailableError)) {
+      throw error;
+    }
+
+    await startRemotePlayback(videoElement.value, request);
+  }
+
+  finishCast(link);
+}
+
+function finishCast(link: CastLink): void {
+  videoElement.value?.pause();
+  castMessage.value = castPlaybackMessage({
+    receiverCompatible: link.receiverCompatible,
+    protocol: window.location.protocol,
+  });
 }
 
 function onVideoError(): void {

@@ -33,9 +33,11 @@ file the browser streams.
 
 Canceling the device picker leaves the page as it was.
 
-The cast icon sits on the video, at the top right. Download stays under the video. The
-browser's own remote-playback control stays off until a cast starts, and then
-it receives the signed URL rather than the cookie address.
+The cast icon sits on the video, at the top right. When the browser can cast a
+video element, that is tried first, with the signed URL. Otherwise the Google
+Cast sender is used. Download is the video player's own menu, not a separate
+button. The browser control stays off until a cast starts, and then it
+receives the signed URL rather than the cookie address.
 
 ## Signed links
 
@@ -97,9 +99,9 @@ identify the file.
 
 ## Download
 
-Signed-in `view` and `admin` users see **Download** in the player and the
-browser's native video download control. Anonymous sessions keep
-`controlsList="nodownload"` and do not see the link.
+Signed-in `view` and `admin` users get the browser's native video menu,
+including Download behind the three dots. Anonymous sessions keep
+`controlsList="nodownload"`.
 
 Download requests `GET /api/video/:id?download=1`. The response is the
 original file with `Content-Disposition: attachment`. The session cookie

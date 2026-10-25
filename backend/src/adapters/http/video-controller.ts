@@ -11,8 +11,8 @@ export interface VideoControllerOptions {
 }
 
 export function registerVideoRoutes(app: FastifyInstance, options: VideoControllerOptions): void {
-  app.options("/video/*", async (_request, reply) => {
-    applyVideoCors(reply);
+  app.options("/video/*", async (request, reply) => {
+    applyVideoCors(request, reply);
     reply.header("Access-Control-Max-Age", "86400");
     return reply.code(204).send();
   });
@@ -22,7 +22,7 @@ export function registerVideoRoutes(app: FastifyInstance, options: VideoControll
     const video = await options.streamVideoUseCase.execute(mediaId);
 
     if (video === null) {
-      applyVideoCors(reply);
+      applyVideoCors(request, reply);
       return reply.status(404).send({
         error: {
           message: "Video not found",
@@ -34,10 +34,15 @@ export function registerVideoRoutes(app: FastifyInstance, options: VideoControll
   });
 }
 
-function applyVideoCors(reply: FastifyReply): void {
+function applyVideoCors(request: FastifyRequest, reply: FastifyReply): void {
+  const requestedHeaders = request.headers["access-control-request-headers"];
+
   reply.header("Access-Control-Allow-Origin", "*");
   reply.header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
-  reply.header("Access-Control-Allow-Headers", "Range");
+  reply.header(
+    "Access-Control-Allow-Headers",
+    typeof requestedHeaders === "string" && requestedHeaders.length > 0 ? requestedHeaders : "*",
+  );
   reply.header(
     "Access-Control-Expose-Headers",
     "Accept-Ranges, Content-Disposition, Content-Length, Content-Range, Content-Type",
@@ -53,7 +58,7 @@ async function sendVideoResponse(
   const rangeHeader = getRangeHeader(request);
   const parsedRange = parseRangeHeader(rangeHeader, video.size);
 
-  applyVideoCors(reply);
+  applyVideoCors(request, reply);
 
   if (hasCastToken(request)) {
     reply.header("Cache-Control", "private");

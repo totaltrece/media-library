@@ -95,7 +95,7 @@ The player supports:
 - seek
 - fullscreen
 - Cast, which sends the video to a Chromecast
-- Download, for a signed-in `view` or `admin` user
+- Download, from the video player's own menu, for a signed-in `view` or `admin` user
 
 Cast and download are described in `docs/media-library-cast/README.md`.
 The app still does not copy media into a second library location. Download
