@@ -24,7 +24,14 @@ async function main(): Promise<void> {
   const libraryStore = stores.libraryStore;
   let storeOpen = true;
 
+  let reloadTimer: ReturnType<typeof setInterval> | undefined;
+
   const closeStore = async (): Promise<void> => {
+    if (reloadTimer !== undefined) {
+      clearInterval(reloadTimer);
+      reloadTimer = undefined;
+    }
+
     if (!storeOpen) {
       return;
     }
@@ -68,6 +75,20 @@ async function main(): Promise<void> {
       uploadMaxBytes: config.uploadMaxBytes,
       staticRoot: existsSync(staticRoot) ? staticRoot : undefined,
     });
+
+    if (config.indexReloadIntervalMs > 0) {
+      reloadTimer = setInterval(() => {
+        void libraryStore
+          .listVideosWithTags()
+          .then((videos) => {
+            videoIndex.replaceVideos(toIndexedVideos(videos, libraryPath));
+          })
+          .catch((error: unknown) => {
+            console.error("Failed to reload in-memory video index", error);
+          });
+      }, config.indexReloadIntervalMs);
+      reloadTimer.unref();
+    }
 
     app.addHook("onClose", async () => {
       await closeStore();

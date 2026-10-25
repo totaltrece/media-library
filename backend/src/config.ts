@@ -41,5 +41,20 @@ export const config = {
   database,
   sqlitePath,
   authPublicRead: process.env.AUTH_PUBLIC_READ !== "false",
+  indexReloadIntervalMs: readNonNegativeInteger(process.env.INDEX_RELOAD_INTERVAL_MS, 60_000, "INDEX_RELOAD_INTERVAL_MS"),
   ...resolveUploadProcessingConfig(process.env, { sqlitePath }),
 };
+
+function readNonNegativeInteger(value: string | undefined, fallback: number, name: string): number {
+  if (value === undefined || value.trim().length === 0) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${name} must be a non-negative integer.`);
+  }
+
+  return parsed;
+}

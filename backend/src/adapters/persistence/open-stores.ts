@@ -1,3 +1,4 @@
+import { openMariadbStores } from "../mariadb/open-mariadb-stores.js";
 import { openSqliteStores } from "../sqlite/sqlite-library-store.js";
 import type { DatabaseConfig } from "../../application/database-config.js";
 import type { AuthStore } from "../../ports/auth-store.js";
@@ -20,5 +21,11 @@ export async function openStores(database: DatabaseConfig): Promise<AppStores> {
     };
   }
 
-  throw new Error("MariaDB engine is not implemented yet.");
+  const stores = await openMariadbStores(database);
+
+  return {
+    libraryStore: stores.libraryStore,
+    authStore: stores.authStore,
+    close: () => stores.close(),
+  };
 }
