@@ -68,7 +68,19 @@ function Get-SshTunnelKey {
     }
   }
 
+  if (-not [string]::IsNullOrWhiteSpace($env:SSH_TUNNEL_KEY)) {
+    Write-Host "SSH_TUNNEL_KEY not found ($($env:SSH_TUNNEL_KEY)); trying password if set."
+  }
+
   return $null
+}
+
+function Get-SshTunnelPassword {
+  if ([string]::IsNullOrWhiteSpace($env:SSH_TUNNEL_PASSWORD)) {
+    return $null
+  }
+
+  return $env:SSH_TUNNEL_PASSWORD
 }
 
 function Read-ProcessLog([string] $path) {
@@ -99,16 +111,16 @@ function Test-LocalPortOpen([int] $port) {
 function Start-MariadbSshTunnel {
   $port = Get-MariadbPort
   $target = Get-SshTunnelTarget
-  $key = Get-SshTunnelKey
-  $hasPassword = -not [string]::IsNullOrWhiteSpace($env:SSH_TUNNEL_PASSWORD)
 
   if (Test-LocalPortOpen $port) {
     Write-Host "MariaDB already reachable on 127.0.0.1:$port"
     return $null
   }
 
-  if ($null -eq $key -and -not $hasPassword) {
-    throw "Nothing is listening on 127.0.0.1:$port. Set SSH_TUNNEL_PASSWORD or SSH_TUNNEL_KEY in backend/.env."
+  $key = Get-SshTunnelKey
+  $password = Get-SshTunnelPassword
+  if ($null -eq $key -and $null -eq $password) {
+    throw "No SSH key file and SSH_TUNNEL_PASSWORD is empty. Set SSH_TUNNEL_PASSWORD in backend/.env (server SSH password, not MariaDB)."
   }
 
   $sshArgs = @(
@@ -118,20 +130,20 @@ function Start-MariadbSshTunnel {
   )
   if ($null -ne $key) {
     $sshArgs += @("-i", $key, "-o", "IdentitiesOnly=yes")
-    Write-Host "Starting SSH tunnel $target -> 127.0.0.1:$port (key)"
+    Write-Host "Starting SSH tunnel $target -> 127.0.0.1:$port (key $key)"
   } else {
     $sshArgs += @(
       "-o", "PreferredAuthentications=password,keyboard-interactive",
       "-o", "PubkeyAuthentication=no",
       "-o", "NumberOfPasswordPrompts=1"
     )
-    Write-Host "Starting SSH tunnel $target -> 127.0.0.1:$port (password)"
+    Write-Host "Starting SSH tunnel $target -> 127.0.0.1:$port (password from SSH_TUNNEL_PASSWORD)"
     $env:SSH_ASKPASS = Join-Path $PSScriptRoot "ssh-tunnel-askpass.cmd"
     $env:SSH_ASKPASS_REQUIRE = "force"
     $env:DISPLAY = "127.0.0.1:0"
   }
 
-  if (-not $hasPassword) {
+  if ($null -eq $password) {
     $sshArgs += @("-o", "BatchMode=yes")
   }
 
@@ -149,7 +161,7 @@ function Start-MariadbSshTunnel {
     if ($process.HasExited) {
       $details = @(Read-ProcessLog $stderrFile; Read-ProcessLog $stdoutFile) -join "`n"
       if ([string]::IsNullOrWhiteSpace($details)) {
-        $details = "ssh exited with code $($process.ExitCode)."
+        $details = "ssh exited with code $($process.ExitCode). Set SSH_TUNNEL_HOST and SSH_TUNNEL_KEY or SSH_TUNNEL_PASSWORD."
       }
       throw "SSH tunnel failed: $details"
     }
