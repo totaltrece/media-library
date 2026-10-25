@@ -23,10 +23,10 @@
         <video
           ref="videoElement"
           controls
-          disableRemotePlayback
           playsinline
           :controlslist="canView ? undefined : 'nodownload'"
-          :src="videoUrl"
+          :disableRemotePlayback="blockRemotePlayback"
+          :src="playbackSrc"
           @error="onVideoError"
         />
         <button
@@ -112,6 +112,8 @@ const castFailed = ref(false);
 const preparedLink = ref<CastLink | null>(null);
 
 const videoUrl = computed(() => buildApiUrl(props.videoPath));
+const playbackSrc = ref(videoUrl.value);
+const blockRemotePlayback = ref(true);
 
 watch(
   () => props.videoPath,
@@ -120,6 +122,8 @@ watch(
     castMessage.value = null;
     castFailed.value = false;
     preparedLink.value = null;
+    playbackSrc.value = buildApiUrl(props.videoPath);
+    blockRemotePlayback.value = true;
     void prepareCastLink();
 
     if (videoElement.value !== null) {
@@ -222,6 +226,8 @@ function castRequest(link: CastLink): {
 
 async function castWithRemotePlayback(video: HTMLVideoElement, link: CastLink): Promise<void> {
   const request = castRequest(link);
+  blockRemotePlayback.value = false;
+  playbackSrc.value = request.contentUrl;
 
   try {
     await startRemotePlayback(video, request);
@@ -230,10 +236,21 @@ async function castWithRemotePlayback(video: HTMLVideoElement, link: CastLink): 
       throw error;
     }
 
-    await startCastPlayback(request);
+    try {
+      await startCastPlayback(request);
+    } catch (senderError: unknown) {
+      if (isCastCancelled(senderError)) {
+        throw senderError;
+      }
+
+      throw senderError instanceof CastUnavailableError ? error : senderError;
+    }
+
+    finishCast(link, true);
+    return;
   }
 
-  finishCast(link);
+  finishCast(link, false);
 }
 
 async function castWithSender(link: CastLink): Promise<void> {
@@ -246,14 +263,21 @@ async function castWithSender(link: CastLink): Promise<void> {
       throw error;
     }
 
+    blockRemotePlayback.value = false;
+    playbackSrc.value = request.contentUrl;
     await startRemotePlayback(videoElement.value, request);
+    finishCast(link, false);
+    return;
   }
 
-  finishCast(link);
+  finishCast(link, true);
 }
 
-function finishCast(link: CastLink): void {
-  videoElement.value?.pause();
+function finishCast(link: CastLink, pauseLocal: boolean): void {
+  if (pauseLocal) {
+    videoElement.value?.pause();
+  }
+
   castMessage.value = castPlaybackMessage({
     receiverCompatible: link.receiverCompatible,
     protocol: window.location.protocol,

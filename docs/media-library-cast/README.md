@@ -28,16 +28,17 @@ file the browser streams.
    Chrome control and does not send this file.
 5. The Chromecast fetches the URL itself. It does not send the session
    cookie, so the token is what authorizes that one video until it expires.
-   Range requests keep working for seeking. The local player pauses so the
-   sound is not doubled.
+   Range requests keep working for seeking. The video element keeps that
+   signed address for the rest of the session. Pausing it would pause the TV.
 
 Canceling the device picker leaves the page as it was.
 
 The cast icon sits on the video, at the top right. When the browser can cast a
-video element, that is tried first, with the signed URL. Otherwise the Google
-Cast sender is used. Download is the video player's own menu, not a separate
-button. The browser control stays off until a cast starts, and then it
-receives the signed URL rather than the cookie address.
+video element, that is tried first, with the signed URL, and playback continues
+on the TV. Otherwise the Google Cast sender is used and the local player
+pauses. Download is the video player's own menu, not a separate button. The
+browser control stays off until a cast starts, and then it receives the signed
+URL rather than the cookie address.
 
 ## Signed links
 

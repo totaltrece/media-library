@@ -119,6 +119,18 @@ export async function startRemotePlayback(video: HTMLVideoElement, request: Cast
   }
 
   await remote.prompt();
+
+  try {
+    await video.play();
+  } catch (error: unknown) {
+    const state = remote.state();
+
+    if (state === "connected" || state === "connecting") {
+      return;
+    }
+
+    throw error;
+  }
 }
 
 function ensureCastSender(): Promise<boolean> {
@@ -300,7 +312,7 @@ function readCastConstructors(): CastConstructors | null {
   };
 }
 
-function readRemotePlayback(video: HTMLVideoElement): { prompt: () => Promise<void> } | null {
+function readRemotePlayback(video: HTMLVideoElement): { prompt: () => Promise<void>; state: () => string } | null {
   const candidate: unknown = Reflect.get(video, "remote");
 
   if (!isRecord(candidate) || typeof candidate.prompt !== "function") {
@@ -311,6 +323,7 @@ function readRemotePlayback(video: HTMLVideoElement): { prompt: () => Promise<vo
 
   return {
     prompt: () => Promise.resolve(prompt.call(candidate)),
+    state: () => (typeof candidate.state === "string" ? candidate.state : ""),
   };
 }
 
