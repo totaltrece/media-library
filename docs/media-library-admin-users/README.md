@@ -18,6 +18,8 @@ SQLite backup. Old paths `/admin/users` and `/admin/backup` redirect there.
 - GET of `/api/admin/users` and `/api/admin/backup` requires admin.
 - HTTP: `POST /api/admin/backup` dumps MariaDB (no sessions) into the SQLite
   file. Returns 409 when the live engine is SQLite or `SQLITE_PATH` is unset.
+  Pulling the **server** SQLite onto this machine is `tools/backup-media-library.sh`,
+  not this button.
 
 ## Persistence
 
