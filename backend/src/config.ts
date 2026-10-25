@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 
+import { parseDatabaseConfig } from "./application/database-config.js";
 import { resolveUploadProcessingConfig } from "./application/resolve-upload-processing-config.js";
 
 loadBackendEnv();
@@ -31,11 +32,13 @@ function requireEnv(name: string): string {
   return value;
 }
 
-const sqlitePath = requireEnv("SQLITE_PATH");
+const database = parseDatabaseConfig(process.env);
+const sqlitePath = database.sqlitePath;
 
 export const config = {
   libraryPath: requireEnv("LIBRARY_PATH"),
   port: Number(process.env.PORT ?? "3000"),
+  database,
   sqlitePath,
   authPublicRead: process.env.AUTH_PUBLIC_READ !== "false",
   ...resolveUploadProcessingConfig(process.env, { sqlitePath }),

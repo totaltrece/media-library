@@ -13,12 +13,16 @@ export interface UploadProcessingConfig {
 
 export function resolveUploadProcessingConfig(
   env: NodeJS.Dict<string>,
-  options: { sqlitePath: string },
+  options: { sqlitePath?: string } = {},
 ): UploadProcessingConfig {
   return {
     ffmpegPath: readExecutablePath(env.FFMPEG_PATH, DEFAULT_FFMPEG_PATH),
     ffprobePath: readExecutablePath(env.FFPROBE_PATH, DEFAULT_FFPROBE_PATH),
-    uploadTempPath: readOptionalPath(env.UPLOAD_TEMP_PATH) ?? join(dirname(options.sqlitePath), "upload-temp"),
+    uploadTempPath:
+      readOptionalPath(env.UPLOAD_TEMP_PATH) ??
+      (options.sqlitePath !== undefined
+        ? join(dirname(options.sqlitePath), "upload-temp")
+        : join(process.cwd(), "data", "upload-temp")),
     uploadMaxBytes: readPositiveInteger(env.UPLOAD_MAX_BYTES, DEFAULT_UPLOAD_MAX_BYTES, "UPLOAD_MAX_BYTES"),
   };
 }

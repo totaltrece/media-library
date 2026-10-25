@@ -45,6 +45,13 @@ test("resolveUploadProcessingConfig preserves configured executable paths on Win
   );
 });
 
+test("resolveUploadProcessingConfig falls back to a workspace temp directory without SQLite", async () => {
+  assert.equal(
+    resolveUploadProcessingConfig({}).uploadTempPath,
+    join(process.cwd(), "data", "upload-temp"),
+  );
+});
+
 test("resolveUploadProcessingConfig rejects an invalid size limit", async () => {
   assert.throws(
     () => resolveUploadProcessingConfig({ UPLOAD_MAX_BYTES: "0" }, { sqlitePath: join("data", "library.sqlite") }),

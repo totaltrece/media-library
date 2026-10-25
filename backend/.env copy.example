@@ -1,6 +1,13 @@
 LIBRARY_PATH=C:\Users\Carlos\Documents\baile
 PORT=3000
+DATABASE_ENGINE=sqlite
 SQLITE_PATH=C:\Users\Carlos\Documents\proyectos\media-library\data\library.sqlite
+# DATABASE_ENGINE=mariadb
+# MARIADB_HOST=127.0.0.1
+# MARIADB_PORT=3306
+# MARIADB_DATABASE=media-library
+# MARIADB_USER=media-library
+# MARIADB_PASSWORD=
 # Windows example: FFMPEG_PATH=C:\ffmpeg\bin\ffmpeg.exe
 # Ubuntu example:  FFMPEG_PATH=ffmpeg
 FFMPEG_PATH=ffmpeg

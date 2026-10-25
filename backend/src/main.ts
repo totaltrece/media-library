@@ -5,8 +5,8 @@ import { FilesystemProcessingWorkspace } from "./adapters/filesystem/filesystem-
 import { InMemoryProcessingJobStore } from "./adapters/in-memory-processing-job-store.js";
 import { InMemoryVideoIndex } from "./adapters/in-memory-video-index.js";
 import { WorkspaceVideoDiscovery } from "./adapters/indexer/workspace-video-discovery.js";
+import { openStores } from "./adapters/persistence/open-stores.js";
 import { SqliteLibraryIndexer } from "./adapters/sqlite/sqlite-library-indexer.js";
-import { openSqliteStores } from "./adapters/sqlite/sqlite-library-store.js";
 import { createApp } from "./app.js";
 import { EnsureLibraryMediaUseCase } from "./application/ensure-library-media.js";
 import { ProcessVideoJobUseCase } from "./application/process-video-job.js";
@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   const libraryPath = config.libraryPath;
   const port = config.port;
   const staticRoot = resolveFrontendDistPath(import.meta.url);
-  const stores = openSqliteStores(config.sqlitePath);
+  const stores = await openStores(config.database);
   const libraryStore = stores.libraryStore;
   let storeOpen = true;
 

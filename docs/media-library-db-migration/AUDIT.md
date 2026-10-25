@@ -475,7 +475,7 @@ Widen `backend` `test` script beyond `health` + `auth` so adapter contracts actu
 |---|------|-------|---------|-----------|
 | **M0** | Optionally extract store contracts from SQLite tests | tests | — | Contract tests compile |
 | **M1** | Async `LibraryStore` / `AuthStore`; SQLite still works | ports, sqlite adapters, use cases, tests | — | **Done.** Ports return `Promise`; SQLite remains the engine. |
-| **M2** | `DATABASE_ENGINE` + config validation; `openStores()`; `UPLOAD_TEMP_PATH` independent | `config.ts`, `open-stores.ts`, `main.ts`, CLIs, env example | M1 | SQLite path unchanged when `engine=sqlite`; mariadb config rejected if incomplete |
+| **M2** | `DATABASE_ENGINE` + config validation; `openStores()`; `UPLOAD_TEMP_PATH` independent | `config.ts`, `open-stores.ts`, `main.ts`, CLIs, env example | M1 | **Done.** SQLite path unchanged when `engine=sqlite`; mariadb config rejected if incomplete. `openStores` still throws until M3. |
 | **M3** | MariaDB migrations + `mysql2` pool + both stores | `adapters/mariadb/*`, `package.json` | M2 | Contract tests pass against local MariaDB |
 | **M4** | Importer CLI SQLite → MariaDB | `migrate-sqlite-to-mariadb.ts` | M3 | Dry-run on a **copy** of SQLite; counts match |
 | **M5** | Docs ADR + env + backup notes (English) | `docs/`, tools scripts (docs only until cutover) | M3 | Reviewable ops runbook |
