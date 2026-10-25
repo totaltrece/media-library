@@ -27,7 +27,7 @@ file the browser streams.
 
 Canceling the device picker leaves the page as it was.
 
-The Cast button is in the player, under the video, next to Download. The
+The cast icon sits on the video, at the top right. Download stays under the video. The
 browser's own remote-playback control is disabled: that control would hand
 the cookie URL to the television, and the television would be rejected.
 

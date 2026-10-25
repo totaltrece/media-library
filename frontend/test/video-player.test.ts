@@ -37,7 +37,8 @@ describe("VideoPlayer download control", () => {
       "/api/video/salsa/my%20clip.mp4?download=1",
     );
     expect(wrapper.get("[data-testid=download-video]").attributes("download")).toBe("my clip.mp4");
-    expect(wrapper.get("[data-testid=cast-video]").text()).toBe("Cast");
+    expect(wrapper.get("[data-testid=cast-video]").attributes("aria-label")).toBe("Cast to Chromecast");
+    expect(wrapper.get(".video-player").find("[data-testid=cast-video]").exists()).toBe(true);
   });
 
   it("hides download when the session is anonymous", () => {

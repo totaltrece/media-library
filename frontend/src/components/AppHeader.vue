@@ -93,13 +93,34 @@
         type="text"
       />
       <label class="login-field" for="login-password">Password</label>
-      <input
-        id="login-password"
-        v-model="loginPassword"
-        autocomplete="current-password"
-        data-testid="login-password"
-        type="password"
-      />
+      <div class="login-password">
+        <input
+          id="login-password"
+          v-model="loginPassword"
+          autocomplete="current-password"
+          data-testid="login-password"
+          :type="showPassword ? 'text' : 'password'"
+        />
+        <button
+          class="password-toggle"
+          data-testid="login-password-toggle"
+          type="button"
+          :aria-label="showPassword ? 'Hide password' : 'Show password'"
+          :aria-pressed="showPassword"
+          @click="showPassword = !showPassword"
+        >
+          <svg v-if="showPassword" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M3 3l18 18" />
+            <path d="M10.6 10.6a3 3 0 0 0 4.2 4.2" />
+            <path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.5 18.5 0 0 1-4.1 4.8" />
+            <path d="M6.1 6.1C3.8 7.8 2 12 2 12s3.5 7 10 7a10.8 10.8 0 0 0 4.2-.8" />
+          </svg>
+          <svg v-else aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+      </div>
       <ErrorMessage v-if="authError" :message="authError" />
       <div class="search-actions">
         <button class="secondary-button" type="button" :disabled="authBusy" @click="closeLogin">
@@ -152,6 +173,7 @@ const refreshError = ref<string | null>(null);
 const loginOpen = ref(false);
 const loginUsername = ref("");
 const loginPassword = ref("");
+const showPassword = ref(false);
 const authBusy = ref(false);
 const authError = ref<string | null>(null);
 
@@ -181,6 +203,7 @@ function openLogin(): void {
   loginOpen.value = true;
   loginUsername.value = "";
   loginPassword.value = "";
+  showPassword.value = false;
   authError.value = null;
 }
 
@@ -331,5 +354,41 @@ async function refreshLibrary(): Promise<void> {
   border-radius: 0.5rem;
   font: inherit;
   padding: 0.5rem 0.75rem;
+  width: 100%;
+}
+
+.login-password {
+  position: relative;
+}
+
+.login-password input {
+  padding-right: 2.5rem;
+}
+
+.password-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #5f6368;
+  cursor: pointer;
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2rem;
+}
+
+.password-toggle svg {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  color: #202124;
 }
 </style>
