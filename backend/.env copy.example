@@ -15,3 +15,4 @@ FFPROBE_PATH=ffprobe
 # UPLOAD_TEMP_PATH=C:\Users\Carlos\Documents\proyectos\media-library\data\upload-temp
 # UPLOAD_MAX_BYTES=536870912
 # AUTH_PUBLIC_READ=false
+# INDEX_RELOAD_INTERVAL_MS=60000
