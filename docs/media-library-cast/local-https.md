@@ -61,6 +61,67 @@ the Windows machine. The remote name keeps sending it to the remote server.
 The session cookie is not marked `Secure`, so it works on HTTP and HTTPS. Sign
 in again on the new name, because the cookie is scoped to the host.
 
+## Private address viability
+
+A Chromecast can open `https://acemagic.total13.net` when that name's public
+`A` record is `192.168.1.35`. The certificate is checked against the hostname,
+not against whether the address is private. Let's Encrypt will issue that name
+through DNS-01. The television then connects to port 443 on the LAN. A private
+address is not routable from the Internet, so the video stays on the LAN and
+the router does not need a port forward.
+
+Google Public DNS (`8.8.8.8`) returns `192.168.x.x` answers. The Chromecast
+queries that resolver and does not use the DNS server from DHCP, so a public
+`A` record aimed at the Windows machine is a name the television can resolve.
+Home Assistant and Jellyfin use the same pattern.
+
+Chrome treats a page loaded from `192.168.0.0/16` as a local-network site.
+Chrome's permission for a public website to enter the LAN does not apply: this
+page is already on the LAN, and the video URL is HTTPS on the same origin.
+
+This is not a DNS rebinding attack. Rebinding swaps a public name from a public
+address to a private one to fool the browser. Here the name always points at
+the same private address, and TLS stops another host from impersonating it.
+
+The real limit is the router. Google Wifi, Nest Wifi, and some other routers
+drop DNS answers in which a public name returns a private address. If this
+router does that, the television never learns `192.168.1.35` even though
+`8.8.8.8` has it. Wi-Fi client isolation would also block the television from
+reaching the Windows machine.
+
+Do not publish an `AAAA` record for this name. If one exists, the Chromecast
+may prefer IPv6 and skip the LAN address.
+
+### DNS check before any proxy
+
+This check needs no certificate, no proxy, and no open router port. Nothing is
+installed on the television.
+
+1. Create only the `A` record for `acemagic.total13.net` pointing at
+   `192.168.1.35`.
+2. On the Windows machine, run both lookups:
+
+   ```text
+   nslookup acemagic.total13.net 8.8.8.8
+   nslookup acemagic.total13.net
+   ```
+
+   Both must answer `192.168.1.35`. The first is what the Chromecast sees. The
+   second is what the PC sees. If only the first succeeds, the router is
+   filtering the answer and Chrome will not open the page.
+
+If `8.8.8.8` does not return `192.168.1.35`, this layout will not work on this
+network. The LAN-only remedy is to turn off the router's DNS rebinding
+protection, or set its DNS servers to `8.8.8.8` and `8.8.4.4`, then repeat both
+lookups. Forwarding port 443, or sending the file through the remote server,
+does not meet the goal.
+
+The Chromecast's HTTPS fetch cannot be proven until a publicly trusted
+certificate exists and something answers on port 443. A private or staging
+certificate would be rejected by the receiver even when DNS is correct. That
+listener comes after this DNS check, and it can be a one-off certificate
+before automatic renewal is set up.
+
 ## Certificates
 
 A private CA, mkcert, or a self-signed certificate installed only on Windows is
@@ -107,7 +168,8 @@ share one startup path.
 
 1. Reserve `192.168.1.35` for the Windows machine.
 2. Create `acemagic.total13.net` pointing at `192.168.1.35` in public DNS.
-3. Confirm `nslookup acemagic.total13.net 8.8.8.8`.
+3. Confirm both lookups in the DNS check above return `192.168.1.35`. Stop
+   here if they do not.
 4. Issue the certificate with DNS-01 and proxy port 443 to `127.0.0.1:3000`.
 5. Open `https://acemagic.total13.net`. The lock must be valid, with no warning.
 6. Sign in and cast an MP4 that already has sound on the remote server. Picture
