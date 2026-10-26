@@ -1,7 +1,6 @@
 const CAST_SENDER_SRC = "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
 const FALLBACK_RECEIVER_APP_ID = "CC1AD845";
 const SENDER_TIMEOUT_MS = 8000;
-const UNAVAILABLE_GRACE_MS = 2500;
 const PLAYBACK_TIMEOUT_MS = 20000;
 
 export class CastUnavailableError extends Error {
@@ -184,7 +183,6 @@ function ensureCastSender(): Promise<boolean> {
 function loadSender(): Promise<boolean> {
   return new Promise((resolve) => {
     let settled = false;
-    let unavailableTimer: number | undefined;
 
     const finish = (ready: boolean): void => {
       if (settled) {
@@ -193,11 +191,6 @@ function loadSender(): Promise<boolean> {
 
       settled = true;
       window.clearTimeout(timeout);
-
-      if (unavailableTimer !== undefined) {
-        window.clearTimeout(unavailableTimer);
-      }
-
       resolve(ready);
     };
 
@@ -207,18 +200,13 @@ function loadSender(): Promise<boolean> {
       }
     };
 
-    const timeout = window.setTimeout(() => finish(false), SENDER_TIMEOUT_MS);
+    const timeout = window.setTimeout(() => finish(castApi !== null), SENDER_TIMEOUT_MS);
     const win = window as Window & { __onGCastApiAvailable?: (available: boolean) => void };
 
     win.__onGCastApiAvailable = (available: boolean) => {
+      // Chrome often reports unavailable once while the Cast component starts, then calls again.
       if (available) {
         succeed();
-        return;
-      }
-
-      // Chrome often reports unavailable once while the Cast component starts, then calls again.
-      if (unavailableTimer === undefined) {
-        unavailableTimer = window.setTimeout(() => finish(castApi !== null), UNAVAILABLE_GRACE_MS);
       }
     };
 
@@ -411,22 +399,24 @@ function mediaHost(contentUrl: string): string {
   }
 }
 
-function readCastConstructors(): CastConstructors | null {
-  const castRoot = (globalThis as { cast?: unknown }).cast;
-  const chromeRoot = (globalThis as { chrome?: unknown }).chrome;
-
+export function readCastConstructors(
+  castRoot: unknown = (globalThis as { cast?: unknown }).cast,
+  chromeRoot: unknown = (globalThis as { chrome?: unknown }).chrome,
+): CastConstructors | null {
   if (!isRecord(castRoot) || !isRecord(castRoot.framework) || !isRecord(chromeRoot) || !isRecord(chromeRoot.cast)) {
     return null;
   }
 
   const framework = castRoot.framework;
   const chromeCast = chromeRoot.cast;
+  const CastContext = framework.CastContext;
 
-  if (!isRecord(framework.CastContext) || !isRecord(chromeCast.media)) {
+  // CastContext is a constructor function with a static getInstance(), not a plain object.
+  if ((typeof CastContext !== "function" && !isRecord(CastContext)) || !isRecord(chromeCast.media)) {
     return null;
   }
 
-  const context = callMethod(framework.CastContext, "getInstance");
+  const context = callMethod(CastContext, "getInstance");
 
   if (!isCastContext(context)) {
     return null;
@@ -454,14 +444,14 @@ function readCastConstructors(): CastConstructors | null {
   };
 }
 
-function callMethod(target: Record<string, unknown>, key: string): unknown {
-  const method = target[key];
+function callMethod(target: object, key: string): unknown {
+  const method: unknown = Reflect.get(target, key);
 
   if (typeof method !== "function") {
     return undefined;
   }
 
-  return method.call(target);
+  return Reflect.apply(method, target, []);
 }
 
 function readString(source: unknown, key: string): string | undefined {

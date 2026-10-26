@@ -6,7 +6,7 @@ import {
   castSenderUnavailableMessage,
   describeCastError,
 } from "../src/cast/cast-messages.js";
-import { isCastCancelled, readCastPlayerStatus, resolveCastSession } from "../src/cast/cast-sender.js";
+import { isCastCancelled, readCastConstructors, readCastPlayerStatus, resolveCastSession } from "../src/cast/cast-sender.js";
 import {
   absoluteStreamUrl,
   downloadFileName,
@@ -55,6 +55,49 @@ describe("cast messages", () => {
   it("explains that casting the browser tab does not send the video", () => {
     expect(castSenderUnavailableMessage("https:")).toContain("whole tab");
     expect(castSenderUnavailableMessage("http:")).toContain("http://");
+  });
+
+  it("reads CastContext when it is a constructor function", () => {
+    function CastContext(this: unknown): void {
+      return;
+    }
+
+    CastContext.getInstance = () => ({
+      setOptions: () => undefined,
+      requestSession: () => Promise.resolve(undefined),
+      getCurrentSession: () => null,
+    });
+
+    function MediaInfo(this: unknown): void {
+      return;
+    }
+
+    function GenericMediaMetadata(this: unknown): void {
+      return;
+    }
+
+    function LoadRequest(this: unknown): void {
+      return;
+    }
+
+    const api = readCastConstructors(
+      { framework: { CastContext } },
+      {
+        cast: {
+          media: {
+            MediaInfo,
+            GenericMediaMetadata,
+            LoadRequest,
+            StreamType: { BUFFERED: "BUFFERED" },
+            MetadataType: { GENERIC: 0 },
+            DEFAULT_MEDIA_RECEIVER_APP_ID: "CC1AD845",
+          },
+          AutoJoinPolicy: { ORIGIN_SCOPED: "origin_scoped" },
+        },
+      },
+    );
+
+    expect(api?.receiverApplicationId).toBe("CC1AD845");
   });
 
   it("reads the cast session after requestSession resolves empty", () => {
