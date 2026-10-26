@@ -71,6 +71,9 @@ each other.
   page itself is HTTP.
 - A reverse proxy must forward `Range`, `GET`, `HEAD`, and `OPTIONS` for
   `/api/video/*`, and it must not strip the `cast` query.
+- Local HTTP on a LAN address cannot start the Cast sender. See
+  [local HTTPS](local-https.md) for the proposed Windows setup. It is not
+  implemented.
 
 ## Formats
 
