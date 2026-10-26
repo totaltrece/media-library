@@ -24,7 +24,7 @@ export function castPlaybackMessage(options: { receiverCompatible: boolean; prot
     return `Sent to Chromecast. This format may not play on the TV. MP4 (H.264/AAC) and WebM work best.${httpHint}`;
   }
 
-  return `Playing on Chromecast.${httpHint}`;
+  return `Playing on Chromecast. If there is no sound, the audio track is not AAC or MP3.${httpHint}`;
 }
 
 export function castSenderStartingMessage(): string {

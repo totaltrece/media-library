@@ -30,7 +30,8 @@ describe("cast messages", () => {
     expect(castReachabilityMessage("localhost")).toContain("localhost");
     expect(castReachabilityMessage("[::1]")).toContain("localhost");
     expect(castReachabilityMessage("192.168.1.20")).toBeNull();
-    expect(castPlaybackMessage({ receiverCompatible: true, protocol: "https:" })).toBe("Playing on Chromecast.");
+    expect(castPlaybackMessage({ receiverCompatible: true, protocol: "https:" })).toContain("Playing on Chromecast");
+    expect(castPlaybackMessage({ receiverCompatible: true, protocol: "https:" })).toContain("AAC");
     expect(castPlaybackMessage({ receiverCompatible: false, protocol: "http:" })).toContain("MP4");
     expect(castPlaybackMessage({ receiverCompatible: true, protocol: "http:" })).toContain("HTTPS");
   });

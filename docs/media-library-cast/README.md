@@ -76,9 +76,9 @@ each other.
 
 `receiverCompatible` is true only for `video/mp4` and `video/webm`. Those are
 the types the Default Media Receiver is expected to play. MP4 should be
-H.264 video with AAC audio. MKV, AVI, MPEG-TS, and HEVC often fail on the
-television even when the browser plays them. This feature does not transcode
-for cast.
+H.264 video with AAC or MP3 audio. AC3, E-AC3, and DTS often show the picture
+with no sound. MKV, AVI, MPEG-TS, and HEVC often fail on the television even
+when the browser plays them. This feature does not transcode for cast.
 
 Content types served for the stream:
 

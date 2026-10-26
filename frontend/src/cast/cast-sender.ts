@@ -1,7 +1,7 @@
 const CAST_SENDER_SRC = "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
 const FALLBACK_RECEIVER_APP_ID = "CC1AD845";
 const SENDER_TIMEOUT_MS = 8000;
-const PLAYBACK_TIMEOUT_MS = 20000;
+const PLAYBACK_TIMEOUT_MS = 3000;
 
 export class CastUnavailableError extends Error {
   constructor(message = "This browser did not open media casting. Casting the whole tab does not send the video file.") {
@@ -152,14 +152,9 @@ export async function playOnCastSession(session: CastSession, request: CastMedia
     throw new CastUnavailableError();
   }
 
-  const loaded = await session.loadMedia(loadRequest);
-  const media = asMedia(loaded) ?? readSessionMedia(session);
-
-  if (media === null) {
-    throw new CastPlaybackError(receiverFailureMessage(request));
-  }
-
-  await waitUntilPlaying(media, request);
+  await session.loadMedia(loadRequest);
+  restoreReceiverAudio(session);
+  await waitForReportedPlayback(session);
 }
 
 function ensureCastSender(): Promise<boolean> {
@@ -294,108 +289,43 @@ function readSessionMedia(session: CastSession): Record<string, unknown> | null 
   return asMedia(session.getMediaSession());
 }
 
-function waitUntilPlaying(media: Record<string, unknown>, request: CastMediaRequest): Promise<void> {
-  const initial = readCastPlayerStatus(media);
+function waitForReportedPlayback(session: CastSession): Promise<void> {
+  const current = readSessionMedia(session);
 
-  if (initial === "playing") {
+  if (readCastPlayerStatus(current) === "playing" || readCastPlayerStatus(current) === "buffering") {
     return Promise.resolve();
   }
 
-  if (initial === "failed") {
-    return Promise.reject(new CastPlaybackError(receiverFailureMessage(request)));
-  }
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      const status = readCastPlayerStatus(readSessionMedia(session));
 
-  return new Promise((resolve, reject) => {
-    let buffering = initial === "buffering";
-    let settled = false;
-
-    const finish = (error?: Error): void => {
-      if (settled) {
-        return;
+      if (status === "playing" || status === "buffering" || Date.now() - started >= PLAYBACK_TIMEOUT_MS) {
+        window.clearInterval(timer);
+        resolve();
       }
-
-      settled = true;
-      window.clearTimeout(timer);
-      removeListener();
-
-      if (error !== undefined) {
-        reject(error);
-        return;
-      }
-
-      resolve();
-    };
-
-    const onUpdate = (isAlive?: boolean): void => {
-      if (isAlive === false) {
-        finish(new CastPlaybackError(receiverFailureMessage(request)));
-        return;
-      }
-
-      const status = readCastPlayerStatus(media);
-
-      if (status === "playing") {
-        finish();
-        return;
-      }
-
-      if (status === "failed") {
-        finish(new CastPlaybackError(receiverFailureMessage(request)));
-        return;
-      }
-
-      if (status === "buffering") {
-        buffering = true;
-      }
-    };
-
-    let removeListener = (): void => undefined;
-    const timer = window.setTimeout(() => {
-      finish(buffering ? undefined : new CastPlaybackError(receiverFailureMessage(request)));
-    }, PLAYBACK_TIMEOUT_MS);
-    removeListener = addMediaListener(media, onUpdate);
-
-    onUpdate();
+    }, 200);
   });
 }
 
-function addMediaListener(
-  media: Record<string, unknown>,
-  listener: (isAlive?: boolean) => void,
-): () => void {
-  const add = media.addUpdateListener;
-
-  if (typeof add !== "function") {
-    return () => undefined;
+function restoreReceiverAudio(session: CastSession): void {
+  if (!isRecord(session)) {
+    return;
   }
 
-  add.call(media, listener);
+  for (const name of ["setMute", "setReceiverMuted"]) {
+    const method = session[name];
 
-  const remove = media.removeUpdateListener;
+    if (typeof method !== "function") {
+      continue;
+    }
 
-  if (typeof remove !== "function") {
-    return () => undefined;
-  }
-
-  return () => {
-    remove.call(media, listener);
-  };
-}
-
-function receiverFailureMessage(request: CastMediaRequest): string {
-  const host = mediaHost(request.contentUrl);
-  const format = request.receiverCompatible
-    ? "The TV has to reach that host over HTTPS with a certificate it trusts."
-    : "This format often stays blank on a Chromecast. MP4 (H.264/AAC) and WebM work.";
-
-  return `The Chromecast could not play this video. It has to download it from ${host}. ${format}`;
-}
-
-function mediaHost(contentUrl: string): string {
-  try {
-    return new URL(contentUrl).host;
-  } catch {
-    return contentUrl;
+    try {
+      method.call(session, false);
+    } catch {
+      // The receiver may not accept a mute change.
+    }
   }
 }
 
