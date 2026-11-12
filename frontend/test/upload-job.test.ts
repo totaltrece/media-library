@@ -21,6 +21,7 @@ describe("upload job presentation", () => {
   it("treats uploading and processing as active", () => {
     expect(isUploadJobActive(job({ status: "uploading" }))).toBe(true);
     expect(isUploadJobActive(job({ status: "processing", phase: "installing" }))).toBe(true);
+    expect(isUploadJobActive(job({ status: "queued", phase: "queued" }))).toBe(false);
     expect(isUploadJobActive(job({ status: "completed", phase: "completed" }))).toBe(false);
     expect(isUploadJobActive(job({ status: "failed", phase: "failed" }))).toBe(false);
   });

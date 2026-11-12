@@ -11,6 +11,7 @@ import type {
   TagType,
   TagTypesResponse,
   TagsResponse,
+  OpenUploadJobsResponse,
   UploadAcceptedResponse,
   UploadJobView,
   VideoTagsResponse,
@@ -218,6 +219,10 @@ export function buildActiveUploadJobUrl(): string {
   return buildApiUrl("/admin/uploads/active");
 }
 
+export function buildOpenUploadJobsUrl(): string {
+  return buildApiUrl("/admin/uploads/open");
+}
+
 export async function uploadVideo(file: File): Promise<UploadAcceptedResponse> {
   const body = new FormData();
   body.append("video", file);
@@ -244,6 +249,17 @@ export async function fetchActiveUploadJob(): Promise<UploadJobView | null> {
   }
 
   return readJsonResponse<UploadJobView>(response);
+}
+
+export async function fetchOpenUploadJobs(): Promise<UploadJobView[]> {
+  const response = await apiFetch(buildOpenUploadJobsUrl());
+
+  if (response.status === 404) {
+    return [];
+  }
+
+  const body = await readJsonResponse<Partial<OpenUploadJobsResponse>>(response);
+  return Array.isArray(body.jobs) ? body.jobs : [];
 }
 
 export async function fetchManagedUsers(): Promise<ManagedUsersResponse> {

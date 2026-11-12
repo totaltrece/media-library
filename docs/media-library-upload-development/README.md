@@ -19,7 +19,7 @@ Orden:
 6. M6 UI de estado
 7. M7 Despliegue remoto
 8. M8 Tags durante upload
-9. M9 Cola, si hace falta
+9. M9 Cola (varios vídeos, un worker)
 10. M10 Concurrencia, solo si se justifica
 
 Regla: desarrollar primero en local y después desplegar en remoto. El backend web no debe depender de WSL.

@@ -2,7 +2,7 @@
   <div class="app-shell">
     <AppHeader
       title="Upload new video"
-      subtitle="Process a video on the server. It will appear under Untagged when it finishes."
+      subtitle="Process one or more videos on the server. Each one appears under Untagged when it finishes."
     />
 
     <AdminVideoUpload @completed="onUploadCompleted" />

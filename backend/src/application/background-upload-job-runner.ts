@@ -1,4 +1,4 @@
-import { isActiveProcessingJob } from "./processing-job.js";
+import { isActiveProcessingJob, oldestQueuedProcessingJob } from "./processing-job.js";
 import type { CompleteUploadUseCase } from "./complete-upload.js";
 import type { ProcessVideoJobUseCase } from "./process-video-job.js";
 import type { ProcessingJobStore } from "../ports/processing-job-store.js";
@@ -25,13 +25,24 @@ export class BackgroundUploadJobRunner {
   ) {}
 
   start(jobId: string): void {
+    if (this.inflight.has(jobId)) {
+      return;
+    }
+
     const running = this.run(jobId);
     this.inflight.set(jobId, running);
     void running.finally(() => {
       if (this.inflight.get(jobId) === running) {
         this.inflight.delete(jobId);
       }
+
+      this.promoteNext();
     });
+  }
+
+  /** Starts the next stored upload when the worker is idle. */
+  kick(): void {
+    this.promoteNext();
   }
 
   waitFor(jobId: string): Promise<void> {
@@ -40,6 +51,27 @@ export class BackgroundUploadJobRunner {
 
   async waitForIdle(): Promise<void> {
     await Promise.all([...this.inflight.values()]);
+  }
+
+  private promoteNext(): void {
+    if (this.inflight.size > 0 || this.jobs.findActive() !== null) {
+      return;
+    }
+
+    const next = oldestQueuedProcessingJob(this.jobs.list());
+
+    if (next === null) {
+      return;
+    }
+
+    try {
+      this.processVideoJob.promoteQueued(next.id);
+    } catch (error: unknown) {
+      this.logError(next.id, error);
+      return;
+    }
+
+    this.start(next.id);
   }
 
   private async run(jobId: string): Promise<void> {

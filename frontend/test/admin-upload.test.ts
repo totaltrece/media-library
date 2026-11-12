@@ -102,6 +102,62 @@ describe("admin video upload", () => {
     expect(wrapper.get('[data-testid="upload-file-name"]').text()).toBe("PXL_clip.mp4");
   });
 
+  it("uploads every selected video and shows the ones still waiting", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/admin/uploads/active") {
+        return noActiveUpload();
+      }
+
+      if (url === "/api/admin/uploads" && init?.method === "POST") {
+        const body = init.body as FormData;
+        const file = body.get("video");
+        const name = file instanceof File ? file.name : "video.mp4";
+        const queued = name === "two.mp4";
+        return jsonResponse(
+          { jobId: queued ? "job-2" : "job-1", status: queued ? "queued" : "uploading" },
+          true,
+          202,
+        );
+      }
+
+      if (url === "/api/admin/uploads/job-1") {
+        return jsonResponse(jobView({ status: "processing", phase: "processing", videoId: "one.mp4" }));
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const wrapper = mount(AdminVideoUpload);
+    const input = wrapper.get('[data-testid="upload-file-input"]');
+    expect(input.attributes("multiple")).toBeDefined();
+    const files = ["one.mp4", "two.mp4"].map((name) => new File(["video-bytes"], name, { type: "video/mp4" }));
+    Object.defineProperty(input.element, "files", {
+      configurable: true,
+      value: files,
+    });
+    await input.trigger("change");
+    await nextTick();
+    expect(wrapper.findAll('[data-testid="upload-file-name"]').map((node) => node.text())).toEqual([
+      "one.mp4",
+      "two.mp4",
+    ]);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="upload-submit"]').trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    const posts = fetchMock.mock.calls.filter(([url, requestInit]) => String(url) === "/api/admin/uploads" && requestInit?.method === "POST");
+    expect(posts).toHaveLength(2);
+    expect(wrapper.text()).toContain("Videos in progress");
+    expect(wrapper.get('[data-testid="upload-queue"]').text()).toContain("two.mp4 — Queued");
+    expect(wrapper.get('[data-step="processing"]').classes()).toContain("is-current");
+    expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
+  });
+
   it("asks for a file before uploading", async () => {
     const fetchMock = vi.fn(async () => noActiveUpload());
     vi.stubGlobal("fetch", fetchMock);
