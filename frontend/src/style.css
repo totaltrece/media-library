@@ -26,35 +26,6 @@
   margin: 0;
 }
 
-.refresh-button {
-  align-items: center;
-  background: #f1f3f4;
-  border: 0;
-  border-radius: 999px;
-  color: #202124;
-  cursor: pointer;
-  display: inline-flex;
-  height: 2.125rem;
-  justify-content: center;
-  padding: 0;
-  width: 2.125rem;
-}
-
-.refresh-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.refresh-button svg {
-  display: block;
-  height: 1.125rem;
-  width: 1.125rem;
-}
-
-.refresh-button[aria-busy="true"] svg {
-  animation: spin 0.8s linear infinite;
-}
-
 .content-layout {
   display: grid;
   gap: 1.5rem;

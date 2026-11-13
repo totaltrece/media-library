@@ -833,7 +833,7 @@ describe("admin video upload", () => {
 
     expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="upload-new-video"]').text()).toBe("Upload videos");
-    expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="refresh-library"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
     expect(wrapper.text()).not.toContain("Select video");
     expect(wrapper.findComponent(TagSearch).exists()).toBe(true);

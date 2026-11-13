@@ -55,7 +55,7 @@ describe("admin backup", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("Admin zone");
-    expect(wrapper.text()).toContain("Admin users");
+    expect(wrapper.text()).toContain("Create view user");
     expect(wrapper.text()).toContain("Backup db");
 
     await wrapper.get('[data-testid="create-backup"]').trigger("click");
@@ -63,5 +63,43 @@ describe("admin backup", () => {
 
     expect(wrapper.get('[data-testid="backup-result"]').text()).toContain("3 videos");
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/backup", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("refreshes FTP uploads from Admin zone", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/library/refresh" && init?.method === "POST") {
+        return jsonResponse({ count: 12 });
+      }
+
+      if (url === "/api/admin/users") {
+        return jsonResponse({ count: 0, users: [] });
+      }
+
+      return jsonResponse({ error: { message: "Not found" } }, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes,
+    });
+    await router.push("/admin");
+    await router.isReady();
+    const wrapper = mount(AdminZoneView, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    expect(wrapper.get("#refresh-library-heading").text()).toBe("Refresh");
+    expect(wrapper.text()).toContain("uploaded by FTP");
+    expect(wrapper.find('[aria-label="Refresh library"]').exists()).toBe(false);
+
+    await wrapper.get('[data-testid="refresh-library"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="refresh-result"]').text()).toContain("12 videos");
+    expect(fetchMock).toHaveBeenCalledWith("/api/library/refresh", expect.objectContaining({ method: "POST" }));
   });
 });

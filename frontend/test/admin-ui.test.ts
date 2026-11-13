@@ -217,32 +217,6 @@ describe("admin video list", () => {
     expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
   });
 
-  it("refreshes the library from the admin video catalog", async () => {
-    const catalogFetch = createCatalogFetchMock();
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (String(input) === "/api/library/refresh" && init?.method === "POST") {
-        return jsonResponse({ count: catalogVideos.length });
-      }
-
-      return catalogFetch(input, init);
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const router = createTestRouter();
-    await router.push("/");
-    await router.isReady();
-    const wrapper = mountWithRouter(AdminVideosView, router);
-    await flushPromises();
-
-    await wrapper.get('button[aria-label="Refresh library"]').trigger("click");
-    await flushPromises();
-
-    expect(fetchMock).toHaveBeenCalledWith("/api/library/refresh", { credentials: "include", method: "POST" });
-    expect(fetchMock).toHaveBeenCalledWith("/api/search", { credentials: "include" });
-    expect(fetchMock).toHaveBeenCalledWith("/api/tags", { credentials: "include" });
-    expect(wrapper.text()).toContain("4 results");
-  });
-
   it("searches by tag through the same /api/search mechanism as the consumer view", async () => {
     const zenitVideo = catalogVideos.find((video) => video.id === "tagged-zenit.mp4")!;
     const fetchMock = createCatalogFetchMock((url) => {
@@ -1305,7 +1279,7 @@ describe("consumer search view", () => {
     expect(wrapper.find(".search-results").exists()).toBe(true);
     expect(wrapper.text()).toContain("4 results");
     expect(wrapper.text()).toContain("Find a video, play it, or edit its tags.");
-    expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="refresh-library"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
     expect(wrapper.get('[data-testid="upload-new-video"]').classes()).not.toContain("active");
   });
