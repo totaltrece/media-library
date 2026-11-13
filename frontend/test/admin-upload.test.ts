@@ -832,7 +832,7 @@ describe("admin video upload", () => {
     await flushPromises();
 
     expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="upload-new-video"]').text()).toBe("Upload video");
+    expect(wrapper.get('[data-testid="upload-new-video"]').text()).toBe("Upload videos");
     expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
     expect(wrapper.text()).not.toContain("Select video");

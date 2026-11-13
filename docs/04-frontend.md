@@ -61,7 +61,7 @@ After sign-in, the initial screen contains:
 - compact tag search box with selected tags inside the field
 - all videos on first load; results update as soon as a tag is added or removed
 - clearing every selected tag shows the full catalog again
-- shared header: View, Upload video, Admin tags, and refresh library
+- shared header: View, Upload videos, Tag catalog, and refresh library
 - search results: thumbnail plays the video, Edit video opens the editor
 
 Searching should feel immediate and responsive.
@@ -109,7 +109,7 @@ returns to `/`, which reloads the catalog from `GET /api/search` and
 `GET /api/tags`.
 
 `/` shares the same header as `/admin/videos/upload`, `/admin/tags`, and
-`/admin/tag-types`: **View**, **Upload video**, **Admin tags**, **Tag types**,
+`/admin/tag-types`: **View**, **Upload videos**, **Tag catalog**, **Tag types**,
 and refresh library
 (`POST /api/library/refresh`). The current section is highlighted. Upload
 lives at `/admin/videos/upload`: it loads `GET /api/admin/uploads/active` on

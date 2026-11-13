@@ -211,7 +211,7 @@ describe("admin video list", () => {
     const wrapper = mountWithRouter(AdminVideosView, router);
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="upload-new-video"]').text()).toBe("Upload video");
+    expect(wrapper.get('[data-testid="upload-new-video"]').text()).toBe("Upload videos");
     expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
     expect(wrapper.find('[data-testid="upload-file-input"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="upload-select"]').exists()).toBe(false);

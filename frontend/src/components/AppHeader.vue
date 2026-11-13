@@ -1,7 +1,7 @@
 <template>
   <header class="app-header">
     <div class="app-header-row">
-      <div>
+      <div class="app-header-copy">
         <h1>{{ title }}</h1>
         <p>{{ subtitle }}</p>
       </div>
@@ -32,21 +32,6 @@
           </button>
         </template>
 
-        <template v-if="username">
-          <span class="app-nav-sep" aria-hidden="true">|</span>
-          <span class="auth-username" data-testid="auth-username">{{ username }}</span>
-          <span class="app-nav-sep" aria-hidden="true">|</span>
-          <button
-            class="app-nav-link auth-button"
-            data-testid="auth-logout"
-            type="button"
-            :disabled="authBusy"
-            @click="onLogout"
-          >
-            Log out
-          </button>
-        </template>
-
         <template v-if="canView">
           <span class="app-nav-sep" aria-hidden="true">|</span>
           <button
@@ -62,6 +47,19 @@
               <path d="M21 12a9 9 0 1 1-3.16-6.85" />
               <path d="M21 3v6h-6" />
             </svg>
+          </button>
+        </template>
+
+        <template v-if="username">
+          <span class="auth-username" data-testid="auth-username">{{ username }}</span>
+          <button
+            class="logout-button"
+            data-testid="auth-logout"
+            type="button"
+            :disabled="authBusy"
+            @click="onLogout"
+          >
+            Log out
           </button>
         </template>
       </nav>
@@ -137,8 +135,8 @@ const emit = defineEmits<{
 
 const navItems = [
   { id: "view", to: "/", label: "View", testId: "nav-view", adminOnly: false },
-  { id: "upload", to: "/admin/videos/upload", label: "Upload video", testId: "upload-new-video", adminOnly: false },
-  { id: "tags", to: "/admin/tags", label: "Admin tags", testId: "nav-tags", adminOnly: false },
+  { id: "upload", to: "/admin/videos/upload", label: "Upload videos", testId: "upload-new-video", adminOnly: false },
+  { id: "tags", to: "/admin/tags", label: "Tag catalog", testId: "nav-tags", adminOnly: false },
   { id: "tag-types", to: "/admin/tag-types", label: "Tag types", testId: "nav-tag-types", adminOnly: false },
   { id: "admin-zone", to: "/admin", label: "Admin zone", testId: "nav-admin-zone", adminOnly: true },
 ] as const;
@@ -251,11 +249,28 @@ async function refreshLibrary(): Promise<void> {
 </script>
 
 <style scoped>
+.app-header-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-header-copy p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
 .app-nav {
   align-items: center;
   display: flex;
-  flex-wrap: wrap;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
   gap: 0.35rem 0;
+  justify-content: flex-end;
+  white-space: nowrap;
 }
 
 .app-nav-sep {
@@ -293,7 +308,33 @@ async function refreshLibrary(): Promise<void> {
 .auth-username {
   color: #3c4043;
   font-weight: 600;
+  margin-left: 1.15rem;
   padding: 0.25rem 0.15rem;
+}
+
+.logout-button {
+  background: #f1f3f4;
+  border: 0;
+  border-radius: 999px;
+  color: #202124;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  margin-left: 0.35rem;
+  padding: 0.2rem 0.55rem calc(0.45rem - 1px);
+  position: relative;
+  top: 3px;
+}
+
+.logout-button:hover,
+.logout-button:focus-visible {
+  background: #e8eaed;
+}
+
+.logout-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .refresh-button {
