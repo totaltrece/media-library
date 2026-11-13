@@ -7,6 +7,7 @@ import {
   InvalidProcessingJobTransitionError,
   isActiveProcessingJob,
   isTerminalProcessingJob,
+  oldestQueuedProcessingJob,
   processingJobPhase,
   transitionProcessingJob,
 } from "../src/application/processing-job.js";
@@ -55,6 +56,25 @@ test("processing jobs follow the upload to completed path", async () => {
     ),
     true,
   );
+});
+
+test("a stored upload can wait in the queue and then start", async () => {
+  let job = createProcessingJob({ originalName: "clip.mp4", id: "job-1", createdAt: "2026-08-15T10:00:00.000Z" });
+  job = transitionProcessingJob(job, { status: "queued" });
+  assert.equal(isActiveProcessingJob(job), false);
+  assert.equal(isTerminalProcessingJob(job), false);
+  assert.equal(processingJobPhase(job.state), "queued");
+
+  const later = transitionProcessingJob(
+    createProcessingJob({ originalName: "later.mp4", id: "job-2", createdAt: "2026-08-15T11:00:00.000Z" }),
+    { status: "queued" },
+  );
+  assert.equal(oldestQueuedProcessingJob([later, job])?.id, "job-1");
+
+  job = transitionProcessingJob(job, { status: "uploading" });
+  assert.equal(isActiveProcessingJob(job), true);
+  job = transitionProcessingJob(job, { status: "failed", error: "disk full" });
+  assert.equal(job.state.status, "failed");
 });
 
 test("a processing job can fail from an active step without skipping ahead", async () => {

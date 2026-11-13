@@ -3,7 +3,6 @@
     <AppHeader
       title="Media Library"
       subtitle="Find a video, play it, or edit its tags."
-      @refreshed="onLibraryRefreshed"
     />
 
     <div class="admin-filter-row" role="group" aria-label="Video filters">
@@ -312,18 +311,6 @@ function syncSelectedVideo(): void {
   }
 }
 
-async function onLibraryRefreshed(): Promise<void> {
-  try {
-    await loadCatalog();
-    error.value = null;
-
-    if (hasSearched.value && selectedTags.value.length > 0) {
-      await runSearch();
-    }
-  } catch (loadError: unknown) {
-    error.value = loadError instanceof Error ? loadError.message : "Unable to load videos.";
-  }
-}
 </script>
 
 <style scoped>

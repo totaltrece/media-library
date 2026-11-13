@@ -10,7 +10,9 @@ Usar FFmpeg como proceso externo. Es compatible con Windows y Ubuntu y coincide 
 WSL seguirá sirviendo para rsync y herramientas locales, pero el nuevo upload web debe funcionar directamente con Node + FFmpeg.
 
 ## Un procesamiento simultáneo
-Primero uno. Evita complejidad y permite medir recursos antes de introducir concurrencia.
+La cola acepta varios vídeos, pero un solo worker los procesa. Así se puede
+subir un lote sin solapar FFmpeg. La concurrencia sigue fuera hasta que el
+uso real lo justifique.
 
 ## Estado en memoria
 Inicialmente no persistir jobs en SQLite. Si hace falta, se añadirá posteriormente una tabla de jobs.
@@ -72,7 +74,8 @@ M3 orquesta un job completo sin HTTP. Dependencias: `VideoProcessor`,
 
 - Éxito: el workspace se conserva para que M5 instale el resultado.
 - Error: `failed` y se descarta el workspace.
-- Un segundo job activo se rechaza con `ActiveProcessingJobError` (HTTP 409 en M4).
+- El CLI sigue rechazando otro procesamiento con `ActiveProcessingJobError` si ya hay un job no terminado.
+- HTTP guarda el fichero y lo deja `queued` si el worker está ocupado (M9).
 - `completed.videoId` es el id de biblioteca: el nombre original si ya incluye
   fecha, o el `PXL_YYYYMMDD_HHMMSSmmm` generado desde metadatos cuando el
   selector no entrega esa fecha. M5 instala con ese id.
@@ -92,7 +95,8 @@ con `CompleteUploadUseCase`. Los errores de background marcan el job `failed`,
 aplican la compensación de M5 y se registran en logs del servidor; no producen
 unhandled rejections. `GET /api/admin/uploads/:jobId` es la fuente de estado
 para el cliente. Los jobs siguen en memoria: no hay persistencia ni reanudación
-tras un reinicio de Node. No hay cola.
+tras un reinicio de Node. M9 añade cola en memoria con un solo worker; un
+reinicio sigue perdiendo los jobs en curso y los que esperaban.
 
 ## UI de subida y seguimiento (M6.2)
 La administración sube y sigue el vídeo en `/admin/videos/upload`. Al entrar,

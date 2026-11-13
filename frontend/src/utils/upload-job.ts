@@ -32,6 +32,10 @@ export function isUploadJobActive(job: Pick<UploadJobView, "status"> | null): bo
   return job?.status === "uploading" || job?.status === "processing";
 }
 
+export function isUploadJobQueued(job: Pick<UploadJobView, "status"> | null): boolean {
+  return job?.status === "queued";
+}
+
 export function currentUploadStepId(job: Pick<UploadJobView, "status" | "phase"> | null): UploadStepId | null {
   if (job === null) {
     return null;

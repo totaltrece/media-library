@@ -19,7 +19,8 @@ POST /api/admin/uploads
 Content-Type: multipart/form-data
 ```
 
-Campo: `video` (un único fichero).
+Campo: `video` (un único fichero por petición). La UI puede enviar varias
+peticiones seguidas, una por vídeo.
 
 La petición solo espera a validar el upload y a escribir el fichero en el
 workspace del job. No espera a FFmpeg ni a la instalación.
@@ -32,6 +33,9 @@ Respuesta de aceptación (`202`):
   "status": "uploading"
 }
 ```
+
+Si ya hay un job `uploading` o `processing`, el fichero se guarda igual y la
+respuesta usa `status: "queued"`. El worker lo toma cuando el anterior termina.
 
 No se exponen rutas absolutas. El estado vivo se consulta con `GET`.
 
@@ -128,34 +132,43 @@ GET /api/admin/uploads/active
 Devuelve el mismo cuerpo que `GET /api/admin/uploads/:jobId` si hay un job
 con `status` `uploading` o `processing` (incluida la fase `installing`).
 Si no hay ninguno, responde `404` (`No active upload job.`).
-Los jobs `completed` y `failed` no cuentan como activos.
+Los jobs `completed` y `failed` no cuentan como activos. Un job `queued`
+tampoco: espera en disco a que el worker quede libre.
 
-Este endpoint está registrado antes de `/:jobId` para que `active` no se
-interprete como un id.
+```http
+GET /api/admin/uploads/open
+```
+
+Devuelve los jobs `uploading`, `processing` y `queued`, del más antiguo al
+más nuevo:
+
+```json
+{
+  "jobs": []
+}
+```
+
+Si no hay ninguno, `jobs` es un array vacío (`200`). No usa `404`.
+
+`active` y `open` están registrados antes de `/:jobId` para que esos nombres
+no se interpreten como un id.
 
 ## Errores de POST
 
 | Código | Caso |
 | --- | --- |
 | 400 | Fichero ausente, campo incorrecto, nombre o tipo no válido |
-| 409 | Ya hay un job activo, o el vídeo ya existe |
+| 409 | El vídeo ya existe en la biblioteca o en un job no terminado |
 | 413 | El fichero supera `UPLOAD_MAX_BYTES` |
 
 Los fallos de FFmpeg o de instalación **no** se devuelven en el `POST`.
 Quedan en el job (`failed`) y se consultan con `GET`.
 
-Job activo:
+Un segundo fichero no responde `409` por haber un job en curso: entra en la
+cola. El `409` de nombre duplicado (biblioteca, job en curso o job en cola)
+es:
 
-```json
-{
-  "error": {
-    "message": "A video processing job is already active."
-  },
-  "jobId": "..."
-}
-```
-
-Vídeo existente (SQLite o fichero definitivo):
+Vídeo existente (SQLite, fichero definitivo o job no terminado):
 
 ```json
 {
@@ -167,6 +180,7 @@ Vídeo existente (SQLite o fichero definitivo):
 
 ## Un único procesamiento
 
-Mientras exista un job activo (`uploading` o `processing`, incluida la fase
-`installing`), otro upload responde `409 Conflict`.
-`queued` / `cancelled` se podrán añadir como `status` nuevos más adelante.
+Varios vídeos pueden estar `queued`. Solo uno está `uploading` o `processing`
+(incluida la fase `installing`). El worker arranca el `queued` más antiguo
+cuando el job en curso termina, también si ha fallado. No hay procesamiento
+paralelo. `cancelled` se podrá añadir más adelante.

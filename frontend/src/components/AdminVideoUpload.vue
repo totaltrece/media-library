@@ -1,7 +1,7 @@
 <template>
-  <section class="admin-upload" aria-label="Upload video">
-    <h2>{{ busy ? "Video in progress" : "Upload video" }}</h2>
-    <p v-if="!busy">The video will be processed on the server and appear under Untagged when it finishes.</p>
+  <section class="admin-upload" aria-label="Upload videos">
+    <h2>{{ heading }}</h2>
+    <p v-if="!busy">Select one or more videos. They are processed one at a time and appear under Untagged when each one finishes.</p>
 
     <p v-if="checking && !busy" class="status-message info" data-testid="upload-checking">
       Checking for an upload in progress...
@@ -13,11 +13,22 @@
       class="admin-upload-input"
       type="file"
       accept="video/*,.mp4,.m4v,.mov,.mkv,.webm,.ts"
+      multiple
       data-testid="upload-file-input"
       @change="onFileChange"
     >
 
-    <p v-if="displayedFileName" class="admin-upload-filename" data-testid="upload-file-name">
+    <ul v-if="!busy && selectedFiles.length > 0" class="admin-upload-files" data-testid="upload-selected">
+      <li
+        v-for="(file, index) in selectedFiles"
+        :key="`${file.name}-${index}`"
+        class="admin-upload-filename"
+        data-testid="upload-file-name"
+      >
+        {{ file.name }}
+      </li>
+    </ul>
+    <p v-else-if="displayedFileName" class="admin-upload-filename" data-testid="upload-file-name">
       {{ displayedFileName }}
     </p>
 
@@ -29,7 +40,7 @@
         :disabled="checking"
         @click="openFilePicker"
       >
-        Select video
+        Select videos
       </button>
       <button
         class="primary-button admin-upload-button"
@@ -38,7 +49,7 @@
         :disabled="checking || !canWrite"
         @click="submitUpload"
       >
-        Upload video
+        Upload videos
       </button>
     </div>
 
@@ -50,7 +61,13 @@
       {{ successMessage }}
     </p>
 
-    <ol v-if="job" class="admin-upload-steps" data-testid="upload-steps">
+    <ul v-if="queueEntries.length > 0" class="admin-upload-queue" data-testid="upload-queue">
+      <li v-for="entry in queueEntries" :key="entry.key" data-testid="upload-queue-item">
+        {{ entry.label }} — Queued
+      </li>
+    </ul>
+
+    <ol v-if="job && !isUploadJobQueued(job)" class="admin-upload-steps" data-testid="upload-steps">
       <li
         v-for="step in steps"
         :key="step.id"
@@ -81,11 +98,13 @@
 import { computed, onMounted, ref, watch } from "vue";
 
 import { ApiRequestError, uploadVideo } from "../api/client.js";
+import type { UploadAcceptedResponse, UploadJobView } from "../api/types.js";
 import { useAuth } from "../auth/session.js";
 import { useUploadJobPolling } from "../composables/use-upload-job-polling.js";
 import {
   buildUploadSteps,
   isUploadJobActive,
+  isUploadJobQueued,
   mapUploadError,
   showsConversionProgress,
   uploadStepLabel,
@@ -99,17 +118,54 @@ const emit = defineEmits<{
 
 const { canWrite } = useAuth();
 const fileInput = ref<HTMLInputElement | null>(null);
-const selectedFile = ref<File | null>(null);
+const selectedFiles = ref<File[]>([]);
+const pendingQueueNames = ref<string[]>([]);
 const error = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
 const submitting = ref(false);
 const checking = ref(true);
-const { job, pollWarning, start, beginLocalUpload, reset, resumeActive } = useUploadJobPolling();
+const { job, queued, pollWarning, start, rememberQueued, beginLocalUpload, reset, resumeActive } = useUploadJobPolling();
 
-const selectedFileName = computed(() => selectedFile.value?.name ?? "");
-const displayedFileName = computed(() => selectedFileName.value || job.value?.videoId || "");
-const busy = computed(() => submitting.value || isUploadJobActive(job.value));
+const displayedFileName = computed(() => job.value?.videoId || "");
+const busy = computed(() =>
+  submitting.value
+  || pendingQueueNames.value.length > 0
+  || isUploadJobActive(job.value)
+  || isUploadJobQueued(job.value)
+  || queued.value.length > 0,
+);
+const heading = computed(() => {
+  if (!busy.value) {
+    return "Upload video";
+  }
+
+  const waiting = queued.value.length + pendingQueueNames.value.length + (isUploadJobQueued(job.value) ? 1 : 0);
+  const active = submitting.value || isUploadJobActive(job.value) ? 1 : 0;
+  return waiting + active > 1 ? "Videos in progress" : "Video in progress";
+});
 const steps = computed(() => buildUploadSteps(job.value));
+const queueEntries = computed(() => {
+  const entries = queued.value.map((item) => ({
+    key: item.jobId,
+    label: item.videoId ?? "Video",
+  }));
+
+  if (job.value !== null && isUploadJobQueued(job.value)) {
+    entries.unshift({
+      key: job.value.jobId,
+      label: job.value.videoId ?? "Video",
+    });
+  }
+
+  if (entries.length > 0) {
+    return entries;
+  }
+
+  return pendingQueueNames.value.map((name, index) => ({
+    key: `${name}-${index}`,
+    label: name,
+  }));
+});
 
 onMounted(() => {
   void (async () => {
@@ -124,7 +180,7 @@ function openFilePicker(): void {
 
 function onFileChange(event: Event): void {
   const input = event.target as HTMLInputElement;
-  selectedFile.value = input.files?.[0] ?? null;
+  selectedFiles.value = input.files === null ? [] : [...input.files];
   error.value = null;
   successMessage.value = null;
 }
@@ -134,7 +190,7 @@ async function submitUpload(): Promise<void> {
     return;
   }
 
-  if (selectedFile.value === null) {
+  if (selectedFiles.value.length === 0) {
     error.value = "Select a video first.";
     return;
   }
@@ -146,31 +202,76 @@ async function submitUpload(): Promise<void> {
     return;
   }
 
-  const file = selectedFile.value;
+  const files = [...selectedFiles.value];
+  const accepted: Array<{ file: File; response: UploadAcceptedResponse }> = [];
+  const problems: string[] = [];
+  let recovered = false;
   submitting.value = true;
-  beginLocalUpload(file.name);
+  pendingQueueNames.value = files.slice(1).map((file) => file.name);
+  beginLocalUpload(files[0]?.name ?? "video");
 
   try {
-    const accepted = await uploadVideo(file);
-    start(accepted.jobId, {
-      jobId: accepted.jobId,
-      status: accepted.status,
-      phase: "uploading",
-      videoId: file.name,
-      converted: null,
-      progress: null,
-      outputs: null,
-    });
-  } catch (uploadError: unknown) {
-    if (await recoverActiveJob(uploadError)) {
-      return;
-    }
+    for (const file of files) {
+      try {
+        accepted.push({ file, response: await uploadVideo(file) });
+      } catch (uploadError: unknown) {
+        if (await recoverActiveJob(uploadError)) {
+          recovered = true;
+          return;
+        }
 
-    error.value = mapUploadError(uploadError);
-    reset();
+        problems.push(mapUploadError(uploadError));
+      }
+    }
   } finally {
     submitting.value = false;
+    pendingQueueNames.value = [];
   }
+
+  if (recovered || accepted.length === 0) {
+    if (!recovered) {
+      error.value = problems[0] ?? "The video could not be uploaded. Check your connection.";
+      reset();
+    }
+
+    return;
+  }
+
+  const primary = accepted.find((item) => item.response.status !== "queued") ?? accepted[0];
+
+  if (primary === undefined) {
+    return;
+  }
+
+  start(primary.response.jobId, toJobView(primary.response, primary.file.name));
+  rememberQueued(
+    accepted
+      .filter((item) => item.response.jobId !== primary.response.jobId && item.response.status === "queued")
+      .map((item) => toJobView(item.response, item.file.name)),
+  );
+  selectedFiles.value = [];
+
+  if (fileInput.value !== null) {
+    fileInput.value.value = "";
+  }
+
+  if (problems.length > 0) {
+    error.value = problems.join(" ");
+  }
+}
+
+function toJobView(response: UploadAcceptedResponse, fileName: string): UploadJobView {
+  const status = response.status === "queued" ? "queued" : "uploading";
+
+  return {
+    jobId: response.jobId,
+    status,
+    phase: status,
+    videoId: fileName,
+    converted: null,
+    progress: null,
+    outputs: null,
+  };
 }
 
 async function recoverActiveJob(uploadError: unknown): Promise<boolean> {
@@ -250,11 +351,24 @@ watch(
   width: 0;
 }
 
+.admin-upload-files,
+.admin-upload-queue {
+  display: grid;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 .admin-upload-filename {
   color: #202124;
   font-weight: 600;
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.admin-upload-queue {
+  color: #3c4043;
 }
 
 .admin-upload-actions {

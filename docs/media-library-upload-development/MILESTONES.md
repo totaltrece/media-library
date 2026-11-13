@@ -46,10 +46,10 @@ reanudación.
 Implementado: página `/admin/videos/upload`, enlazada desde la cabecera
 compartida (**Upload video**). `POST` multipart, `GET /api/admin/uploads/active`
 al entrar, polling de `GET /api/admin/uploads/:jobId`, fases visibles,
-porcentaje real de FFmpeg durante la conversión, un solo upload activo y
-vuelta al catálogo en Untagged. Cabecera compartida con View / Upload video /
-Admin tags y refresh. Sin cola, sin persistencia de jobs y sin
-captura de cámara.
+porcentaje real de FFmpeg durante la conversión, vuelta al catálogo en
+Untagged. Cabecera compartida con View / Upload video / Admin tags y
+refresh. Sin persistencia de jobs y sin captura de cámara. La cola de
+varios vídeos está en M9.
 
 ## M6 — UI de estado
 La presentación de fases, recuperación del job activo y progreso de FFmpeg
@@ -62,7 +62,12 @@ Instalar/configurar FFmpeg en Ubuntu, desplegar el mismo backend y probar desde 
 Opcional: seleccionar tags existentes y crear nuevos durante el upload.
 
 ## M9 — Cola
-Opcional: varios vídeos pendientes, pero un solo worker inicialmente.
+Implementado: la UI acepta varios vídeos en un envío. Cada `POST` sigue
+llevando un fichero. Si el worker está libre, el job pasa a `uploading` y se
+procesa. Si no, el fichero queda guardado y el job pasa a `queued`. Un solo
+worker: al terminar (bien o mal) arranca el siguiente. `GET /api/admin/uploads/open`
+devuelve el job en curso y los que esperan. Sin procesamiento paralelo y sin
+persistencia de jobs.
 
 ## M10 — Concurrencia
 Solo si el uso real lo justifica.

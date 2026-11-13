@@ -3,7 +3,6 @@
     <AppHeader
       title="Tag types"
       subtitle="Add, rename, or recolor the types used by catalog tags."
-      @refreshed="loadTypes"
     />
 
     <LoadingIndicator v-if="loading" message="Loading tag types..." />

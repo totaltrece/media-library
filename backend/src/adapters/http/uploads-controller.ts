@@ -49,6 +49,12 @@ export async function registerUploadsRoutes(
     return handleUpload(request, reply, options);
   });
 
+  app.get("/admin/uploads/open", async () => {
+    return {
+      jobs: options.getUploadJobUseCase.executeOpen(),
+    };
+  });
+
   app.get("/admin/uploads/active", async (_request, reply) => {
     const job = options.getUploadJobUseCase.executeActive();
 
@@ -173,7 +179,14 @@ async function handleUpload(
         throw error;
       }
 
-      const started = await options.processVideoJobUseCase.begin({ originalName });
+      let started: Awaited<ReturnType<typeof options.processVideoJobUseCase.stageUpload>>;
+
+      try {
+        started = await options.processVideoJobUseCase.stageUpload({ originalName });
+      } catch (error: unknown) {
+        part.file.resume();
+        throw error;
+      }
       jobId = started.job.id;
       await pipeline(part.file, createWriteStream(started.paths.sourcePath));
       storedFile = true;
@@ -187,11 +200,17 @@ async function handleUpload(
       });
     }
 
-    options.backgroundUploadJobRunner.start(jobId);
+    const published = options.processVideoJobUseCase.publishStoredUpload(jobId);
+
+    if (published.state.status === "uploading") {
+      options.backgroundUploadJobRunner.start(jobId);
+    } else {
+      options.backgroundUploadJobRunner.kick();
+    }
 
     return reply.status(202).send({
       jobId,
-      status: "uploading",
+      status: published.state.status,
     });
   } catch (error: unknown) {
     if (error instanceof VideoAlreadyExistsError) {

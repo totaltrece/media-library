@@ -507,7 +507,7 @@ describe("admin tag catalog", () => {
     });
     await flushPromises();
 
-    expect(wrapper.find('button[aria-label="Refresh library"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="refresh-library"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="nav-view"]').classes()).toContain("active");
 
     await wrapper.get("a[href='/admin/tags']").trigger("click");

@@ -75,3 +75,57 @@ test("BackgroundUploadJobRunner does not discard a job already marked failed", a
   assert.equal(jobs.findById("job-2")?.state.status, "failed");
   assert.deepEqual(failCalls, []);
 });
+
+test("BackgroundUploadJobRunner starts the oldest queued job when the active one finishes", async () => {
+  const jobs = new InMemoryProcessingJobStore();
+  const first = transitionProcessingJob(createProcessingJob({ originalName: "one.mp4", id: "job-1" }), {
+    status: "uploading",
+  });
+  const second = transitionProcessingJob(createProcessingJob({ originalName: "two.mp4", id: "job-2" }), {
+    status: "queued",
+  });
+  jobs.create(first);
+  jobs.create(second);
+
+  const started: string[] = [];
+  const complete = {
+    execute: async (jobId: string): Promise<CompleteUploadResult> => {
+      started.push(jobId);
+      const current = jobs.findById(jobId);
+      if (current === null) {
+        throw new Error(`missing ${jobId}`);
+      }
+      const failed = transitionProcessingJob(current, { status: "failed", error: "done" });
+      jobs.update(failed);
+      return {
+        status: "failed",
+        jobId,
+        originalName: current.originalName,
+        error: "done",
+        job: failed,
+        conflict: false,
+        stage: "processing",
+      };
+    },
+  } as unknown as CompleteUploadUseCase;
+  const processVideoJob = {
+    failActiveJob: async () => undefined,
+    promoteQueued: (jobId: string) => {
+      const current = jobs.findById(jobId);
+      if (current === null) {
+        throw new Error(`missing ${jobId}`);
+      }
+      const uploading = transitionProcessingJob(current, { status: "uploading" });
+      jobs.update(uploading);
+      return uploading;
+    },
+  } as unknown as ProcessVideoJobUseCase;
+
+  const runner = new BackgroundUploadJobRunner(complete, processVideoJob, jobs, () => undefined);
+  runner.start("job-1");
+  await runner.waitFor("job-1");
+  await runner.waitForIdle();
+
+  assert.deepEqual(started, ["job-1", "job-2"]);
+  assert.equal(jobs.findById("job-2")?.state.status, "failed");
+});

@@ -313,7 +313,7 @@ test("POST /api/admin/uploads rejects path traversal file names", async () => {
   });
 });
 
-test("POST /api/admin/uploads rejects a second active job", async () => {
+test("POST /api/admin/uploads queues a file while another job is active", async () => {
   await withUploadApp({ codec: "h264" }, async (context) => {
     context.jobs.create(
       transitionProcessingJob(createProcessingJob({ originalName: "busy.mp4", id: "busy" }), {
@@ -327,14 +327,17 @@ test("POST /api/admin/uploads rejects a second active job", async () => {
       ...multipartRequest("clip.mp4", VIDEO_BYTES),
     });
 
-    assert.equal(response.statusCode, 409);
-    assert.equal(response.json().error.message, "A video processing job is already active.");
-    assert.equal(response.json().jobId, "busy");
+    assert.equal(response.statusCode, 202);
+    assert.equal(response.json().status, "queued");
+    const queued = context.jobs.findById(String(response.json().jobId));
+    assert.equal(queued?.state.status, "queued");
+    assert.equal(await readFile(join(context.uploadTempPath, String(response.json().jobId), "source"), "utf8"), VIDEO_BYTES.toString());
     assert.equal(await context.libraryStore.findVideo("clip.mp4"), null);
+    assert.equal(context.jobs.findActive()?.id, "busy");
   });
 });
 
-test("POST /api/admin/uploads returns 409 while a gated job is still active", async () => {
+test("POST /api/admin/uploads processes queued files one at a time", async () => {
   await withUploadApp({ codec: "h264", holdProcessing: true }, async (context) => {
     const first = await context.app.inject({
       method: "POST",
@@ -342,6 +345,7 @@ test("POST /api/admin/uploads returns 409 while a gated job is still active", as
       ...multipartRequest("one.mp4", VIDEO_BYTES),
     });
     assert.equal(first.statusCode, 202);
+    assert.equal(first.json().status, "uploading");
     const firstJobId = String(first.json().jobId);
 
     const second = await context.app.inject({
@@ -349,15 +353,36 @@ test("POST /api/admin/uploads returns 409 while a gated job is still active", as
       url: "/api/admin/uploads",
       ...multipartRequest("two.mp4", VIDEO_BYTES),
     });
-    assert.equal(second.statusCode, 409);
-    assert.equal(second.json().error.message, "A video processing job is already active.");
-    assert.equal(second.json().jobId, firstJobId);
+    assert.equal(second.statusCode, 202);
+    assert.equal(second.json().status, "queued");
+    const secondJobId = String(second.json().jobId);
+    assert.equal(context.jobs.findById(secondJobId)?.state.status, "queued");
     assert.equal(await context.libraryStore.findVideo("two.mp4"), null);
     assert.equal((await readdir(context.libraryPath)).includes("two.mp4"), false);
 
+    const duplicate = await context.app.inject({
+      method: "POST",
+      url: "/api/admin/uploads",
+      ...multipartRequest("two.mp4", VIDEO_BYTES),
+    });
+    assert.equal(duplicate.statusCode, 409);
+    assert.equal(duplicate.json().error.message, PUBLIC_VIDEO_ALREADY_EXISTS_MESSAGE);
+
+    const open = await context.app.inject({
+      method: "GET",
+      url: "/api/admin/uploads/open",
+    });
+    assert.equal(open.statusCode, 200);
+    const openJobs = open.json().jobs as Array<{ jobId: string; status: string }>;
+    assert.equal(openJobs.length, 2);
+    assert.equal(openJobs.find((job) => job.jobId === secondJobId)?.status, "queued");
+    assert.notEqual(openJobs.find((job) => job.jobId === firstJobId)?.status, "queued");
+
     context.processor.release();
-    const job = await waitForTerminalJob(context.jobs, firstJobId);
-    assert.equal(job.state.status, "completed");
+    assert.equal((await waitForTerminalJob(context.jobs, firstJobId)).state.status, "completed");
+    assert.equal((await waitForTerminalJob(context.jobs, secondJobId)).state.status, "completed");
+    assert.equal((await context.libraryStore.findVideo("one.mp4"))?.id, "one.mp4");
+    assert.equal((await context.libraryStore.findVideo("two.mp4"))?.id, "two.mp4");
   });
 });
 
@@ -404,6 +429,13 @@ test("GET /api/admin/uploads/active returns 404 when no job is active", async ()
 
     assert.equal(response.statusCode, 404);
     assert.equal(response.json().error.message, "No active upload job.");
+
+    const open = await context.app.inject({
+      method: "GET",
+      url: "/api/admin/uploads/open",
+    });
+    assert.equal(open.statusCode, 200);
+    assert.deepEqual(open.json().jobs, []);
   });
 });
 
