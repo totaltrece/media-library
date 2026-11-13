@@ -36,6 +36,7 @@ test("GET /video/:id returns the full video with the correct Content-Type", asyn
     assert.strictEqual(response.statusCode, 200);
     assert.strictEqual(response.headers["content-type"], "video/mp4");
     assert.strictEqual(response.headers["accept-ranges"], "bytes");
+    assert.strictEqual(response.headers["access-control-allow-origin"], "*");
     assert.strictEqual(response.headers["content-length"], "10");
     assert.deepEqual(response.rawPayload, videoBytes);
 

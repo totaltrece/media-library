@@ -121,7 +121,7 @@ Si se reinicia Node durante un job, el estado en memoria se pierde.
 ## Prueba manual de M6.2
 
 Con el backend y el frontend en marcha, abrir `/admin/videos/upload` desde
-**Upload video** en la cabecera (también desde un móvil en la misma red).
+**Upload videos** en la cabecera (también desde un móvil en la misma red).
 
 1. Pulsar **Select videos** y elegir uno o varios ficheros de la galería
    o del disco. No usar captura de cámara en la app.
@@ -136,7 +136,7 @@ Con el backend y el frontend en marcha, abrir `/admin/videos/upload` desde
    `/?untagged=1` con el vídeo nuevo.
 7. `/` es el catálogo (**View** en la cabecera): el thumbnail reproduce el
    vídeo y el nombre abre la edición.
-8. El refresh de biblioteca está en la cabecera de todas las páginas.
+8. El refresh de biblioteca está en Admin zone (**Refresh**), no en la cabecera.
 9. Mientras hay vídeos en curso, el selector sigue oculto. Un nombre que ya
    está en la biblioteca o en la cola responde `409`.
 10. Un fichero demasiado grande muestra el mensaje de tamaño (`413`).

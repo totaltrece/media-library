@@ -31,6 +31,14 @@ export interface ApiErrorResponse {
   };
 }
 
+export interface CastLink {
+  streamPath: string;
+  contentType: string;
+  expiresAt: string;
+  title: string;
+  receiverCompatible: boolean;
+}
+
 export type AuthRole = "admin" | "view";
 
 export type AuthMe =

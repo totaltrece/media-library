@@ -1,6 +1,6 @@
 # Frontend
 
-Version: 2.2
+Version: 2.3
 
 ---
 
@@ -61,7 +61,7 @@ After sign-in, the initial screen contains:
 - compact tag search box with selected tags inside the field
 - all videos on first load; results update as soon as a tag is added or removed
 - clearing every selected tag shows the full catalog again
-- shared header: View, Upload videos, and Tag catalog
+- shared header: View, Upload videos, Tag catalog, and Tag types
 - search results: thumbnail plays the video, Edit video opens the editor
 
 Searching should feel immediate and responsive.
@@ -75,6 +75,10 @@ Each result displays:
 - thumbnail (opens the video player)
 - Edit video (opens the tag editor)
 - tags
+
+The catalog opens sorted by recorded date, newest first. **Date** toggles
+that order. Newest first shows ↑. Oldest first shows ↓. Videos without a
+date stay at the end either way.
 
 ---
 
@@ -90,8 +94,12 @@ The player supports:
 - pause
 - seek
 - fullscreen
+- Cast, which sends the video to a Chromecast
+- Download, from the video player's own menu, for a signed-in `view` or `admin` user
 
-The frontend never downloads or copies media files.
+Cast and download are described in `docs/media-library-cast/README.md`.
+The app still does not copy media into a second library location. Download
+saves the original file that is already being streamed.
 
 ---
 

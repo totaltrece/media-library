@@ -132,8 +132,9 @@ ese mismo almacén: varios jobs `queued`, un solo job `uploading` o
 ## UI de subida (M6.2)
 
 La administración comparte cabecera entre `/` (**View**),
-`/admin/videos/upload` (**Upload video**) y `/admin/tags` (**Admin tags**),
-más el refresh de biblioteca.
+`/admin/videos/upload` (**Upload videos**), `/admin/tags` (**Tag catalog**)
+y `/admin/tag-types` (**Tag types**). **Refresh** está en Admin zone, no en
+la cabecera.
 
 `/admin/videos/upload` es la página que recupera y muestra el upload activo. Al
 entrar consulta `GET /api/admin/uploads/active` y, si hay job,
@@ -150,8 +151,8 @@ sin conversión no muestra progreso de FFmpeg.
 
 Al completar, **View in Untagged** vuelve a `/?untagged=1`. El
 catálogo recarga `GET /api/search` y `GET /api/tags` (no
-`POST /api/library/refresh`). El icono de refresh de biblioteca está en la
-cabecera compartida de todas las páginas.
+`POST /api/library/refresh`). **Refresh** está en Admin zone y sirve para
+insertar vídeos subidos por FTP; la cabecera ya no lleva ese icono.
 
 Ubicaciones definitivas tras `completed`:
 

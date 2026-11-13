@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 
 import { parseDatabaseConfig } from "./application/database-config.js";
+import { resolveCastConfig } from "./application/resolve-cast-config.js";
 import { resolveUploadProcessingConfig } from "./application/resolve-upload-processing-config.js";
 
 loadBackendEnv();
@@ -41,6 +42,7 @@ export const config = {
   database,
   sqlitePath,
   authPublicRead: process.env.AUTH_PUBLIC_READ !== "false",
+  ...resolveCastConfig(process.env),
   indexReloadIntervalMs: readNonNegativeInteger(process.env.INDEX_RELOAD_INTERVAL_MS, 60_000, "INDEX_RELOAD_INTERVAL_MS"),
   ...resolveUploadProcessingConfig(process.env, { sqlitePath }),
 };

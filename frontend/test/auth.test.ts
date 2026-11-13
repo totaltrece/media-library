@@ -59,6 +59,12 @@ describe("header auth", () => {
     expect(wrapper.find('[data-testid="auth-login"]').exists()).toBe(true);
 
     await wrapper.get('[data-testid="auth-login"]').trigger("click");
+    expect(wrapper.get('[data-testid="login-password"]').attributes("type")).toBe("password");
+    await wrapper.get('[data-testid="login-password-toggle"]').trigger("click");
+    expect(wrapper.get('[data-testid="login-password"]').attributes("type")).toBe("text");
+    expect(wrapper.get('[data-testid="login-password-toggle"]').attributes("aria-label")).toBe("Hide password");
+    await wrapper.get('[data-testid="login-password-toggle"]').trigger("click");
+    expect(wrapper.get('[data-testid="login-password"]').attributes("type")).toBe("password");
     await wrapper.get('[data-testid="login-username"]').setValue("admin");
     await wrapper.get('[data-testid="login-password"]').setValue("password1");
     await wrapper.get("form.login-modal").trigger("submit");
