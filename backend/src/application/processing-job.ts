@@ -52,6 +52,12 @@ export function isActiveProcessingJob(job: ProcessingJob): boolean {
   return job.state.status === "uploading" || job.state.status === "processing";
 }
 
+export function oldestQueuedProcessingJob(jobs: readonly ProcessingJob[]): ProcessingJob | null {
+  const queued = jobs.filter((job) => job.state.status === "queued");
+  queued.sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+  return queued[0] ?? null;
+}
+
 export function isTerminalProcessingJob(job: ProcessingJob): boolean {
   return job.state.status === "completed" || job.state.status === "failed";
 }
@@ -92,7 +98,9 @@ export function canTransitionProcessingJob(from: ProcessingJobState, to: Process
 function allowedTransitions(from: ProcessingJobState): ProcessingJobState[] {
   switch (from.status) {
     case "idle":
-      return [{ status: "uploading" }];
+      return [{ status: "uploading" }, { status: "queued" }, failedPlaceholder];
+    case "queued":
+      return [{ status: "uploading" }, failedPlaceholder];
     case "uploading":
       return [{ status: "processing", phase: "processing" }, failedPlaceholder];
     case "processing":

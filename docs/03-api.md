@@ -501,10 +501,13 @@ POST /api/admin/uploads
 Content-Type: multipart/form-data
 ```
 
-Field: `video` (exactly one file).
+Field: `video` (exactly one file per request). The upload page sends one
+request per selected video.
 
 The request returns **202 Accepted** after the file is stored in the job
-workspace. Processing and installation continue in the background.
+workspace. Processing and installation continue in the background. When the
+worker is free, `status` is `uploading`. When another job is already
+`uploading` or `processing`, the file is stored and `status` is `queued`.
 
 ```json
 {
@@ -514,6 +517,8 @@ workspace. Processing and installation continue in the background.
 ```
 
 Poll `GET /api/admin/uploads/:jobId` until `status` is `completed` or `failed`.
+`GET /api/admin/uploads/open` returns the running job and every `queued` job
+(`200` with `jobs: []` when none are open).
 When completed, the video is in `LIBRARY_PATH`, registered in SQLite without
 tags, and present in the in-memory search index.
 
@@ -527,9 +532,9 @@ GET /api/admin/uploads/:jobId
 
 Returns the job status. Unknown jobs return **404 Not Found**.
 
-A second upload while a job is active returns **409 Conflict** with the
-active `jobId`.
-A video whose id already exists in SQLite or on disk returns **409 Conflict**.
+A video whose id already exists in SQLite, on disk, or on another unfinished
+upload job returns **409 Conflict**. A second file is queued instead of
+rejected while a job is running.
 A file larger than `UPLOAD_MAX_BYTES` returns **413 Payload Too Large**.
 A missing or invalid file returns **400 Bad Request**.
 Processing and installation failures are reported on `GET` as `status: "failed"`

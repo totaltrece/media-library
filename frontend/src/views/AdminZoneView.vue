@@ -5,87 +5,121 @@
       subtitle="Manage view users and write a MariaDB catalog snapshot to the SQLite file."
     />
 
-    <section class="admin-zone-section" aria-labelledby="admin-users-heading">
-      <h2 id="admin-users-heading">Admin users</h2>
-      <p class="admin-zone-copy">Create and remove view-only accounts. Admin accounts stay on the CLI.</p>
-
-      <LoadingIndicator v-if="loading" message="Loading users..." />
-      <ErrorMessage v-else-if="error" :message="error" />
-
-      <template v-else>
-        <form class="user-create" @submit.prevent="addUser">
-          <label class="visually-hidden" for="new-user-username">Username</label>
-          <input
-            id="new-user-username"
-            v-model="createUsername"
-            autocomplete="off"
-            data-testid="new-user-username"
-            placeholder="Username"
-            type="text"
-          />
-          <label class="visually-hidden" for="new-user-password">Password</label>
-          <input
-            id="new-user-password"
-            v-model="createPassword"
-            autocomplete="new-password"
-            data-testid="new-user-password"
-            placeholder="Password"
-            type="password"
-          />
-          <button class="primary-button" data-testid="add-user" type="submit" :disabled="saving">
-            Add view user
-          </button>
-        </form>
-
-        <ErrorMessage v-if="actionError" :message="actionError" />
-
-        <p v-if="users.length === 0" class="status-message info">No view users yet.</p>
-
-        <ul v-else class="user-list" aria-label="View users">
-          <li v-for="user in users" :key="user.id" class="user-item">
-            <span class="user-name">{{ user.username }}</span>
-            <span class="user-role">{{ user.role }}</span>
-            <button
-              :aria-label="`Delete ${user.username}`"
-              class="danger-button"
-              data-testid="delete-user"
-              type="button"
-              :disabled="saving"
-              @click="askDelete(user)"
-            >
-              Delete
+    <div class="admin-zone-split">
+      <section class="admin-zone-section" aria-labelledby="admin-users-heading">
+        <h2 id="admin-users-heading">Create view user</h2>
+        <p class="admin-zone-copy">Create a view-only account. Admin accounts stay on the CLI.</p>
+        <div class="admin-zone-actions">
+          <form class="user-create" @submit.prevent="addUser">
+            <label class="visually-hidden" for="new-user-username">Username</label>
+            <input
+              id="new-user-username"
+              v-model="createUsername"
+              autocomplete="off"
+              data-testid="new-user-username"
+              placeholder="Username"
+              type="text"
+            />
+            <label class="visually-hidden" for="new-user-password">Password</label>
+            <input
+              id="new-user-password"
+              v-model="createPassword"
+              autocomplete="new-password"
+              data-testid="new-user-password"
+              placeholder="Password"
+              type="password"
+            />
+            <button class="primary-button backup-button" data-testid="add-user" type="submit" :disabled="saving || loading">
+              Add view user
             </button>
-          </li>
-        </ul>
-      </template>
-    </section>
+          </form>
+          <ErrorMessage v-if="actionError && confirmingUser === null" :message="actionError" />
+        </div>
+      </section>
 
-    <section class="admin-zone-section" aria-labelledby="backup-db-heading">
-      <h2 id="backup-db-heading">Backup db</h2>
-      <p class="admin-zone-copy">
-        Copies tag types, tags, videos, relations, and users (including password hashes) from
-        MariaDB into <code>SQLITE_PATH</code>. Sessions are not copied. The live app keeps using
-        MariaDB. This is unavailable while the app itself is running on SQLite.
-      </p>
+      <section class="admin-zone-section" aria-labelledby="current-users-heading">
+        <h2 id="current-users-heading">Current users</h2>
+        <p class="admin-zone-copy">View accounts that can sign in. Delete removes the account.</p>
+        <div class="admin-zone-actions">
+          <LoadingIndicator v-if="loading" message="Loading users..." />
+          <ErrorMessage v-else-if="error" :message="error" />
+          <template v-else>
+            <ErrorMessage v-if="actionError && confirmingUser !== null" :message="actionError" />
+            <p v-if="users.length === 0" class="status-message info">No view users yet.</p>
+            <ul v-else class="user-list" aria-label="View users">
+              <li v-for="user in users" :key="user.id" class="user-item">
+                <span class="user-name">{{ user.username }}</span>
+                <span class="user-role">{{ user.role }}</span>
+                <button
+                  :aria-label="`Delete ${user.username}`"
+                  class="danger-button"
+                  data-testid="delete-user"
+                  type="button"
+                  :disabled="saving"
+                  @click="askDelete(user)"
+                >
+                  Delete
+                </button>
+              </li>
+            </ul>
+          </template>
+        </div>
+      </section>
+    </div>
 
-      <ErrorMessage v-if="backupError" :message="backupError" />
+    <div class="admin-zone-split">
+      <section class="admin-zone-section" aria-labelledby="backup-db-heading">
+        <h2 id="backup-db-heading">Backup db</h2>
+        <p class="admin-zone-copy">
+          Copies tag types, tags, videos, relations, and users (including password hashes) from
+          MariaDB into <code>SQLITE_PATH</code>. Sessions are not copied. The live app keeps using
+          MariaDB. This is unavailable while the app itself is running on SQLite.
+        </p>
+        <div class="admin-zone-actions">
+          <ErrorMessage v-if="backupError" :message="backupError" />
 
-      <button
-        class="primary-button backup-button"
-        data-testid="create-backup"
-        type="button"
-        :disabled="backupSaving"
-        @click="runBackup"
-      >
-        Create backup
-      </button>
+          <button
+            class="primary-button backup-button"
+            data-testid="create-backup"
+            type="button"
+            :disabled="backupSaving"
+            @click="runBackup"
+          >
+            Create backup
+          </button>
 
-      <p v-if="backupResult" class="status-message info" data-testid="backup-result">
-        Wrote {{ backupResult.videos }} videos, {{ backupResult.tags }} tags,
-        {{ backupResult.relations }} relations, {{ backupResult.users }} users, and
-        {{ backupResult.tagTypes }} tag types to {{ backupResult.sqlitePath }}.
-      </p>
-    </section>
+          <p v-if="backupResult" class="status-message info" data-testid="backup-result">
+            Wrote {{ backupResult.videos }} videos, {{ backupResult.tags }} tags,
+            {{ backupResult.relations }} relations, {{ backupResult.users }} users, and
+            {{ backupResult.tagTypes }} tag types to {{ backupResult.sqlitePath }}.
+          </p>
+        </div>
+      </section>
+
+      <section class="admin-zone-section" aria-labelledby="refresh-library-heading">
+        <h2 id="refresh-library-heading">Refresh</h2>
+        <p class="admin-zone-copy">
+          Inserts videos uploaded by FTP so they show up in the library.
+        </p>
+        <div class="admin-zone-actions">
+          <ErrorMessage v-if="refreshError" :message="refreshError" />
+
+          <button
+            class="primary-button backup-button"
+            data-testid="refresh-library"
+            type="button"
+            :disabled="refreshSaving"
+            @click="runRefresh"
+          >
+            Refresh
+          </button>
+
+          <p v-if="refreshResult" class="status-message info" data-testid="refresh-result">
+            The library now includes {{ refreshResult.count }} videos.
+          </p>
+        </div>
+      </section>
+    </div>
 
     <div
       v-if="confirmingUser"
@@ -118,8 +152,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 
-import { createCatalogBackup, createManagedUser, deleteManagedUser, fetchManagedUsers } from "../api/client.js";
-import type { CatalogBackupResult, ManagedUser } from "../api/types.js";
+import { createCatalogBackup, createManagedUser, deleteManagedUser, fetchManagedUsers, refreshLibrary } from "../api/client.js";
+import type { CatalogBackupResult, ManagedUser, RefreshLibraryResponse } from "../api/types.js";
 import AppHeader from "../components/AppHeader.vue";
 import ErrorMessage from "../components/ErrorMessage.vue";
 import LoadingIndicator from "../components/LoadingIndicator.vue";
@@ -135,6 +169,9 @@ const confirmingUser = ref<ManagedUser | null>(null);
 const backupSaving = ref(false);
 const backupError = ref<string | null>(null);
 const backupResult = ref<CatalogBackupResult | null>(null);
+const refreshSaving = ref(false);
+const refreshError = ref<string | null>(null);
+const refreshResult = ref<RefreshLibraryResponse | null>(null);
 
 onMounted(() => {
   void loadUsers();
@@ -204,6 +241,24 @@ async function confirmDelete(): Promise<void> {
   }
 }
 
+async function runRefresh(): Promise<void> {
+  if (refreshSaving.value) {
+    return;
+  }
+
+  refreshSaving.value = true;
+  refreshError.value = null;
+  refreshResult.value = null;
+
+  try {
+    refreshResult.value = await refreshLibrary();
+  } catch (createError: unknown) {
+    refreshError.value = createError instanceof Error ? createError.message : "Unable to refresh the library.";
+  } finally {
+    refreshSaving.value = false;
+  }
+}
+
 async function runBackup(): Promise<void> {
   if (backupSaving.value) {
     return;
@@ -225,9 +280,37 @@ async function runBackup(): Promise<void> {
 
 <style scoped>
 .admin-zone-section {
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 0.75rem;
   display: grid;
   gap: 0.75rem;
   margin-bottom: 2rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.admin-zone-split {
+  align-items: start;
+  column-gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 2rem;
+  row-gap: 0.75rem;
+}
+
+.admin-zone-split .admin-zone-section {
+  align-items: start;
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  margin-bottom: 0;
+}
+
+.admin-zone-actions {
+  align-content: start;
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
 }
 
 .admin-zone-section h2 {
@@ -241,7 +324,9 @@ async function runBackup(): Promise<void> {
 }
 
 .backup-button {
+  align-self: start;
   justify-self: start;
+  white-space: nowrap;
   width: max-content;
 }
 
@@ -257,18 +342,24 @@ async function runBackup(): Promise<void> {
   width: 1px;
 }
 
+.user-create,
+.user-list {
+  justify-self: stretch;
+  width: 100%;
+}
+
 .user-create {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 0.5rem;
+  justify-items: start;
 }
 
 .user-create input {
   border: 1px solid #dadce0;
   border-radius: 0.5rem;
-  flex: 1 1 10rem;
   font: inherit;
   padding: 0.5rem 0.75rem;
+  width: 100%;
 }
 
 .user-list {

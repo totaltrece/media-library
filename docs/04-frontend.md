@@ -61,7 +61,7 @@ After sign-in, the initial screen contains:
 - compact tag search box with selected tags inside the field
 - all videos on first load; results update as soon as a tag is added or removed
 - clearing every selected tag shows the full catalog again
-- shared header: View, Upload video, Admin tags, and refresh library
+- shared header: View, Upload videos, Tag catalog, and Tag types
 - search results: thumbnail plays the video, Edit video opens the editor
 
 Searching should feel immediate and responsive.
@@ -117,13 +117,15 @@ returns to `/`, which reloads the catalog from `GET /api/search` and
 `GET /api/tags`.
 
 `/` shares the same header as `/admin/videos/upload`, `/admin/tags`, and
-`/admin/tag-types`: **View**, **Upload video**, **Admin tags**, **Tag types**,
-and refresh library
-(`POST /api/library/refresh`). The current section is highlighted. Upload
+`/admin/tag-types`: **View**, **Upload videos**, **Tag catalog**, and **Tag types**.
+The current section is highlighted. **Refresh** lives in Admin zone and calls
+`POST /api/library/refresh` to insert videos uploaded by FTP. Upload
 lives at `/admin/videos/upload`: it loads `GET /api/admin/uploads/active` on
-enter. If a job is `uploading` or `processing`, it shows the progress zone
-and polls `GET /api/admin/uploads/:jobId`. Otherwise it shows the upload
-picker. `POST /api/admin/uploads` uses multipart field `video`. During HEVC
+enter and `GET /api/admin/uploads/open` when a job is running, so queued
+videos come back with the page. The picker accepts several files and posts
+them one by one (`multipart` field `video`). The running job shows its phases
+and polls `GET /api/admin/uploads/:jobId`. Waiting videos are listed as
+queued. The picker stays hidden while any of those jobs is open. During HEVC
 conversion the processing step shows `progress` (0–100). `/` does not include
 this upload zone. After a successful upload, **View in Untagged** returns to
 `/?untagged=1`; the upload page does not call `POST /api/library/refresh`.

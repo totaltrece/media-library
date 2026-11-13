@@ -120,24 +120,29 @@ crea el job, escribe el fichero en `sourcePath` y responde `202` con `jobId`.
 `BackgroundUploadJobRunner` ejecuta `CompleteUploadUseCase` en background
 (pipeline M3 + instalación M5). `GET /api/admin/uploads/:jobId` consulta el
 estado. `GET /api/admin/uploads/active` devuelve el job activo (`uploading` o
-`processing`) o `404`. Durante `convert()`, FFmpeg usa `-progress pipe:1` y el
+`processing`) o `404`. `GET /api/admin/uploads/open` devuelve ese job y los
+`queued`. Durante `convert()`, FFmpeg usa `-progress pipe:1` y el
 job guarda `progress` (0–100) en memoria.
 
 Los jobs siguen en `InMemoryProcessingJobStore`. Si Node se reinicia con un
-job activo, ese job se pierde; no se reanuda. No hay cola.
+job activo o en cola, ese trabajo se pierde; no se reanuda. La cola vive en
+ese mismo almacén: varios jobs `queued`, un solo job `uploading` o
+`processing`.
 
 ## UI de subida (M6.2)
 
 La administración comparte cabecera entre `/` (**View**),
-`/admin/videos/upload` (**Upload video**) y `/admin/tags` (**Admin tags**),
-más el refresh de biblioteca.
+`/admin/videos/upload` (**Upload videos**), `/admin/tags` (**Tag catalog**)
+y `/admin/tag-types` (**Tag types**). **Refresh** está en Admin zone, no en
+la cabecera.
 
 `/admin/videos/upload` es la página que recupera y muestra el upload activo. Al
-entrar consulta `GET /api/admin/uploads/active`. Si hay un job activo,
-muestra las fases y continúa el polling de `GET /api/admin/uploads/:jobId`
-cada segundo (mismo composable que un upload iniciado en esa sesión). Si no
-hay job activo, muestra el selector de subida. Un job activo oculta el
-selector. `/` no muestra esta zona.
+entrar consulta `GET /api/admin/uploads/active` y, si hay job,
+`GET /api/admin/uploads/open` para los que esperan. Muestra las fases del job
+en curso y hace polling de `GET /api/admin/uploads/:jobId` cada segundo. El
+selector admite varios ficheros. La UI los envía de uno en uno. El primero
+se procesa; el resto aparece como cola. Un job abierto oculta el selector.
+`/` no muestra esta zona.
 
 Durante la conversión HEVC, la fase **Processing video** muestra el
 porcentaje real (`progress`) y una barra corta. Al pasar a
@@ -146,8 +151,8 @@ sin conversión no muestra progreso de FFmpeg.
 
 Al completar, **View in Untagged** vuelve a `/?untagged=1`. El
 catálogo recarga `GET /api/search` y `GET /api/tags` (no
-`POST /api/library/refresh`). El icono de refresh de biblioteca está en la
-cabecera compartida de todas las páginas.
+`POST /api/library/refresh`). **Refresh** está en Admin zone y sirve para
+insertar vídeos subidos por FTP; la cabecera ya no lleva ese icono.
 
 Ubicaciones definitivas tras `completed`:
 
@@ -168,19 +173,20 @@ No se usa `POST /api/library/refresh` internamente.
 
 Como mínimo:
 
-`idle`, `uploading`, `processing`, `generating_thumbnail`, `finalizing`, `installing`, `completed`, `failed`.
+`idle`, `uploading`, `queued`, `processing`, `generating_thumbnail`, `finalizing`, `installing`, `completed`, `failed`.
 
 En código, el job usa un union discriminado (`ProcessingJobState`):
 
-- `status` es el ciclo de vida: `idle` | `uploading` | `processing` | `completed` | `failed`.
+- `status` es el ciclo de vida: `idle` | `uploading` | `queued` | `processing` | `completed` | `failed`.
 - `phase` detalla el paso mientras `status` es `processing`: `processing` | `generating_thumbnail` | `finalizing` | `installing`.
 
-`queued` y `cancelled` se podrán añadir como nuevos `status` sin cambiar los
-existentes. El MVP rechaza un segundo job activo; no hay cola todavía.
+`queued` es el estado de un vídeo ya guardado que espera al worker.
+`cancelled` se podrá añadir más adelante sin cambiar los estados existentes.
 
-## Un único job
+## Un único worker
 
-MVP: máximo un procesamiento activo. Un segundo upload se rechaza claramente. No introducir todavía una cola distribuida ni procesamiento paralelo.
+Varios vídeos pueden esperar en cola. Solo uno se procesa a la vez. No hay
+procesamiento paralelo.
 
 ## Atomicidad
 

@@ -3,7 +3,6 @@
     <AppHeader
       title="Tag catalog"
       subtitle="Rename or delete tags used across the library."
-      @refreshed="onLibraryRefreshed"
     />
 
     <LoadingIndicator v-if="loading" message="Loading tags..." />
@@ -288,10 +287,6 @@ async function loadTags(): Promise<void> {
   } finally {
     loading.value = false;
   }
-}
-
-async function onLibraryRefreshed(): Promise<void> {
-  await loadTags();
 }
 
 function startEdit(tag: CatalogTag): void {

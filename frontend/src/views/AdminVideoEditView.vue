@@ -3,7 +3,6 @@
     <AppHeader
       title="Edit video"
       :subtitle="pageSubtitle"
-      @refreshed="loadVideo"
     />
 
     <LoadingIndicator v-if="loading" message="Loading video..." />

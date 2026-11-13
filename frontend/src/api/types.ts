@@ -102,11 +102,12 @@ export interface TagTypesResponse {
   types: TagType[];
 }
 
-export type UploadJobStatus = "idle" | "uploading" | "processing" | "completed" | "failed";
+export type UploadJobStatus = "idle" | "uploading" | "queued" | "processing" | "completed" | "failed";
 
 export type UploadJobPhase =
   | "idle"
   | "uploading"
+  | "queued"
   | "processing"
   | "generating_thumbnail"
   | "finalizing"
@@ -123,6 +124,10 @@ export interface UploadJobOutputs {
 export interface UploadAcceptedResponse {
   jobId: string;
   status: UploadJobStatus;
+}
+
+export interface OpenUploadJobsResponse {
+  jobs: UploadJobView[];
 }
 
 export interface UploadJobView {

@@ -57,7 +57,6 @@ describe("header auth", () => {
     await flushPromises();
 
     expect(wrapper.find('[data-testid="auth-login"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="Refresh library"]').exists()).toBe(false);
 
     await wrapper.get('[data-testid="auth-login"]').trigger("click");
     expect(wrapper.get('[data-testid="login-password"]').attributes("type")).toBe("password");
@@ -71,8 +70,16 @@ describe("header auth", () => {
     await wrapper.get("form.login-modal").trigger("submit");
     await flushPromises();
 
+    expect(wrapper.get('[data-testid="nav-tags"]').text()).toBe("Tag catalog");
     expect(wrapper.get('[data-testid="auth-username"]').text()).toBe("admin");
-    expect(wrapper.get('[aria-label="Refresh library"]').attributes("disabled")).toBeUndefined();
+    const navOrder = [...wrapper.get(".app-header-user").element.children].map((node) => {
+      const el = node as HTMLElement;
+      return el.dataset.testid ?? el.getAttribute("aria-label") ?? el.textContent?.trim() ?? "";
+    });
+    const usernameAt = navOrder.indexOf("auth-username");
+    const logoutAt = navOrder.indexOf("auth-logout");
+    expect(usernameAt).toBe(0);
+    expect(logoutAt).toBe(usernameAt + 1);
 
     await wrapper.get('[data-testid="auth-logout"]').trigger("click");
     await flushPromises();

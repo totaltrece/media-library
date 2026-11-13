@@ -1,6 +1,7 @@
 export type ProcessingJobStatus =
   | "idle"
   | "uploading"
+  | "queued"
   | "processing"
   | "completed"
   | "failed";
@@ -8,6 +9,7 @@ export type ProcessingJobStatus =
 export type ProcessingJobPhase =
   | "idle"
   | "uploading"
+  | "queued"
   | "processing"
   | "generating_thumbnail"
   | "finalizing"
@@ -24,6 +26,7 @@ export type ProcessingPhase =
 export type ProcessingJobState =
   | { status: "idle" }
   | { status: "uploading" }
+  | { status: "queued" }
   | { status: "processing"; phase: ProcessingPhase }
   | { status: "completed"; videoId: string }
   | { status: "failed"; error: string };

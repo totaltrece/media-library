@@ -4,12 +4,15 @@ import type { VideoProbeResult, VideoProcessor } from "../ports/video-processor.
 import { ActiveProcessingJobError } from "./active-processing-job-error.js";
 import { clampConversionProgress } from "./conversion-progress.js";
 import { needsH264Conversion } from "./needs-h264-conversion.js";
-import { resolveCanonicalUploadName } from "./resolve-canonical-upload-name.js";
 import {
   createProcessingJob,
+  isActiveProcessingJob,
+  isTerminalProcessingJob,
   transitionProcessingJob,
   type ProcessingJob,
 } from "./processing-job.js";
+import { resolveCanonicalUploadName } from "./resolve-canonical-upload-name.js";
+import { VideoAlreadyExistsError } from "./video-already-exists-error.js";
 
 export interface ProcessVideoJobInput {
   inputPath: string;
@@ -76,10 +79,10 @@ export class ProcessVideoJobUseCase {
       throw new Error("Processing job original name must not be empty");
     }
 
-    const active = this.jobs.findActive();
+    const blocking = this.jobs.list().find((job) => !isTerminalProcessingJob(job));
 
-    if (active !== null) {
-      throw new ActiveProcessingJobError(active.id);
+    if (blocking !== undefined) {
+      throw new ActiveProcessingJobError(blocking.id);
     }
 
     let job = createProcessingJob({ originalName, id: input.jobId });
@@ -88,6 +91,64 @@ export class ProcessVideoJobUseCase {
     const paths = await this.workspace.prepareJob(job.id);
 
     return { job, paths };
+  }
+
+  /**
+   * Reserves a workspace for one HTTP upload without starting processing.
+   * The job stays `idle` until `publishStoredUpload` after the file is stored.
+   */
+  async stageUpload(input: { originalName: string }): Promise<StartedProcessingJob> {
+    const originalName = input.originalName.trim();
+
+    if (originalName.length === 0) {
+      throw new Error("Processing job original name must not be empty");
+    }
+
+    const duplicate = this.jobs.list().find((job) => job.originalName === originalName && !isTerminalProcessingJob(job));
+
+    if (duplicate !== undefined) {
+      throw new VideoAlreadyExistsError(originalName);
+    }
+
+    const job = createProcessingJob({ originalName });
+    this.jobs.create(job);
+
+    try {
+      const paths = await this.workspace.prepareJob(job.id);
+      return { job, paths };
+    } catch (error: unknown) {
+      await this.failStartedJob(job, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Marks a stored upload as the active job, or queues it behind the current worker.
+   * Queued jobs already have their source file on disk.
+   */
+  publishStoredUpload(jobId: string): ProcessingJob {
+    const job = this.requireJob(jobId);
+
+    if (job.state.status !== "idle") {
+      return job;
+    }
+
+    const wait = this.jobs.list().some((candidate) =>
+      candidate.id !== job.id && (isActiveProcessingJob(candidate) || candidate.state.status === "queued"),
+    );
+
+    return this.save(transitionProcessingJob(job, wait ? { status: "queued" } : { status: "uploading" }));
+  }
+
+  promoteQueued(jobId: string): ProcessingJob {
+    const active = this.jobs.findActive();
+
+    if (active !== null) {
+      throw new ActiveProcessingJobError(active.id);
+    }
+
+    const job = this.requireJob(jobId);
+    return this.save(transitionProcessingJob(job, { status: "uploading" }));
   }
 
   async execute(
