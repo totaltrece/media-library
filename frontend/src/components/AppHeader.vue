@@ -231,8 +231,8 @@ async function onLogout(): Promise<void> {
 
 <style scoped>
 .app-header-copy {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 1 1 16rem;
+  min-width: min(100%, 16rem);
 }
 
 .app-header-copy p {
@@ -247,9 +247,12 @@ async function onLogout(): Promise<void> {
 .app-header-tools {
   align-items: center;
   display: flex;
-  flex-wrap: nowrap;
-  gap: 1.15rem;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.15rem;
   justify-content: flex-end;
+  max-width: 100%;
+  width: max-content;
 }
 
 .app-header-user {
@@ -262,9 +265,9 @@ async function onLogout(): Promise<void> {
 .app-nav {
   align-items: center;
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: flex-end;
-  white-space: nowrap;
+  max-width: 100%;
 }
 
 .app-nav-sep {

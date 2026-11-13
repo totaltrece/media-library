@@ -306,6 +306,18 @@ async function runBackup(): Promise<void> {
   margin-bottom: 0;
 }
 
+@media (max-width: 720px) {
+  .admin-zone-split {
+    grid-template-columns: 1fr;
+    row-gap: 1.5rem;
+  }
+
+  .admin-zone-split .admin-zone-section {
+    grid-row: auto;
+    grid-template-rows: none;
+  }
+}
+
 .admin-zone-actions {
   align-content: start;
   display: grid;

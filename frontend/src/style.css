@@ -9,9 +9,9 @@
 }
 
 .app-header-row {
-  align-items: flex-start;
+  align-items: flex-end;
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap-reverse;
   gap: 1rem;
   justify-content: space-between;
 }
